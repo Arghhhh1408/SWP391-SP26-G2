@@ -59,14 +59,54 @@ public class UpdateUserController extends HttpServlet {
             user.setPhone(phone);
             user.setRoleID(roleID);
 
+            // Validate Phone Format
+            if (!utils.ValidationUtils.isValidPhone(phone)) {
+                request.setAttribute("error",
+                        "Invalid phone number format! Must be 10 digits starting with 03, 07, 08, 09.");
+                // Preserve input (user object is already populated above)
+                request.setAttribute("user", user);
+                // Load roles
+                RoleDAO roleDao = new RoleDAO();
+                List<Role> listOfRole = roleDao.getAllRole();
+                request.setAttribute("listOfRole", listOfRole);
+                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+                return;
+            }
+
+            // Validate Email Format
+            if (!utils.ValidationUtils.isValidEmail(email)) {
+                request.setAttribute("error", "Invalid email format!");
+                // Preserve input
+                request.setAttribute("user", user);
+                // Load roles
+                RoleDAO roleDao = new RoleDAO();
+                List<Role> listOfRole = roleDao.getAllRole();
+                request.setAttribute("listOfRole", listOfRole);
+                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+                return;
+            }
+
             UserDAO dao = new UserDAO();
+
+            String error = dao.checkDuplicateForUpdate(id, username, email, phone);
+            if (error != null) {
+                request.setAttribute("error", error);
+
+                request.setAttribute("user", user);
+
+                RoleDAO roleDao = new RoleDAO();
+                List<Role> listOfRole = roleDao.getAllRole();
+                request.setAttribute("listOfRole", listOfRole);
+
+                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+                return;
+            }
+
             boolean result = dao.updateUser(user);
 
             if (result) {
-                // Update successful, redirect to admin page or show success message
                 response.sendRedirect("admin");
             } else {
-                // Update failed
                 request.setAttribute("error", "Update failed!");
                 request.setAttribute("user", user);
                 RoleDAO roleDao = new RoleDAO();
@@ -77,14 +117,6 @@ public class UpdateUserController extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("error", "An error occurred: " + e.getMessage());
-            // Need to reconstruct user to keep input data or just forward
-            // For simplicity, just forwarding, but ideally should pass back the user input
-            // However, 'user' variable might be effectively final or we can try to access
-            // it if declared outside try?
-            // Actually 'user' is inside try.
-            // If exception happens before user creation, we can't set it.
-            // But most exceptions would be DB related after user creation.
-            // Let's not overcomplicate the catch block for now, just forward.
             request.getRequestDispatcher("updateUser.jsp").forward(request, response);
         }
     }

@@ -12,6 +12,8 @@
 
             <body>
                 <h1>Cập nhật thông tin tài khoản</h1>
+                <a href="admin">Back to Admin</a>
+                <h3 style="color:red">${requestScope.error}</h3>
 
                 <form action="updateuser" method="POST">
                     <table>
@@ -20,10 +22,10 @@
                             <td><input readonly name="id" value="${requestScope.user.getUserID()}" /></td>
                             <td>UserName:</td>
                             <td>
-                                
+
                                 <input type="text" name="username" value="${requestScope.user.getUsername()}" />
                             </td>
-                            
+
                         </tr>
                         <tr>
                             <td>FullName:</td>

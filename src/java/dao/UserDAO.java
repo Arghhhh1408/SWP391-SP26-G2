@@ -179,6 +179,37 @@ public class UserDAO extends DBContext {
         return null; // No duplicate
     }
 
+    public String checkDuplicateForUpdate(int userID, String username, String email, String phone) {
+        try {
+            String sql = "SELECT * FROM [User] WHERE Username = ? AND UserID != ?";
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, username);
+            stm.setInt(2, userID);
+            if (stm.executeQuery().next()) {
+                return "Username already exists";
+            }
+
+            sql = "SELECT * FROM [User] WHERE Email = ? AND UserID != ?";
+            stm = connection.prepareStatement(sql);
+            stm.setString(1, email);
+            stm.setInt(2, userID);
+            if (stm.executeQuery().next()) {
+                return "Email already exists";
+            }
+
+            sql = "SELECT * FROM [User] WHERE Phone = ? AND UserID != ?";
+            stm = connection.prepareStatement(sql);
+            stm.setString(1, phone);
+            stm.setInt(2, userID);
+            if (stm.executeQuery().next()) {
+                return "Phone number already exists";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null; // No duplicate
+    }
+
     public List<User> getDeletedUsers() {
         List<User> list = new ArrayList<>();
         String sql = "select * from [User] where IsActive = 0";

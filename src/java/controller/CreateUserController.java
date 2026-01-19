@@ -2,7 +2,6 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
  */
-
 package controller;
 
 import dao.RoleDAO;
@@ -50,6 +49,26 @@ public class CreateUserController extends HttpServlet {
         String username = request.getParameter("username");
         String password = request.getParameter("password");
         int roleID = Integer.parseInt(request.getParameter("role"));
+
+        // Validate Phone Format
+        if (!utils.ValidationUtils.isValidPhone(phone)) {
+            request.setAttribute("error",
+                    "Invalid phone number format! Must be 10 digits starting with 03, 07, 08, 09.");
+            
+            RoleDAO roleDao = new RoleDAO();
+            request.setAttribute("listOfRole", roleDao.getAllRole());
+            request.getRequestDispatcher("createUser.jsp").forward(request, response);
+            return;
+        }
+
+        // Validate Email Format
+        if (!utils.ValidationUtils.isValidEmail(email)) {
+            request.setAttribute("error", "Invalid email format!");
+            RoleDAO roleDao = new RoleDAO();
+            request.setAttribute("listOfRole", roleDao.getAllRole());
+            request.getRequestDispatcher("createUser.jsp").forward(request, response);
+            return;
+        }
 
         UserDAO dao = new UserDAO();
         String error = dao.checkDuplicate(username, email, phone);
