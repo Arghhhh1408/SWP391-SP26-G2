@@ -15,7 +15,7 @@
 
 
                 <a href="createuser">Cấp tài khoản mới cho User</a><br><!-- comment -->
-                <a href="deletedUsers">Tài khoản đã xóa</a><br><!-- comment -->             
+                <a href="deletedUsers">Tài khoản đã xóa</a><br><!-- comment -->
                 <a href="logout">Đăng xuất</a>
 
 
@@ -58,14 +58,22 @@
                                 <td>${i.getPhone()}</td>
                                 <td>${i.getCreateDate()}</td>
                                 <td> <a href="#">Xem chi tiết</a> </td>
-                                <td> <a href="#">Sửa</a> </td>
-                                <td> <a href="deleteUser?id=${i.getUserID()}"
-                                        onclick="return confirm('Are you sure you want to delete this user?');">Xóa</a>
+                                <td>
+                                    <c:if test="${i.getRoleID() != 0}">
+                                        <a href="updateuser?id=${i.getUserID()}">Sửa</a>
+                                    </c:if>
+                                </td>
+                                <td>
+                                    <c:if test="${i.getRoleID() != 0}">
+                                        <a href="deleteUser?id=${i.getUserID()}"
+                                            onclick="return confirm('Are you sure you want to delete this user?');">Xóa</a>
+                                    </c:if>
                                 </td>
                             </tr>
                         </c:forEach>
                     </tbody>
                 </table>
+                <h3 style="color: green">${notification}</h3>
                 <br><!-- comment -->
                 <h3>Lọc tài khoản</h3>
                 <form action="admin">
@@ -95,7 +103,7 @@
                     </table>
                     <input type="submit" value="LỌC" />
                 </form>
-                <h3>${notification}</h3>
+                
 
             </body>
 
