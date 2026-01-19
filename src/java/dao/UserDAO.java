@@ -216,4 +216,43 @@ public class UserDAO extends DBContext {
         return false;
     }
 
+    public User searchUserByID(int id) {
+        String sql = "select * from [User] where UserID = ?";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, id);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                User user = new User(rs.getString("Username"),
+                        rs.getString("PasswordHash"),
+                        rs.getString("FullName"),
+                        rs.getInt("RoleID"),
+                        rs.getString("Email"),
+                        rs.getString("Phone"),
+                        rs.getBoolean("IsActive"));
+                user.setUserID(rs.getInt("UserID"));
+                return user;
+            }
+        } catch (Exception e) {
+        }
+        return null;
+    }
+
+    public boolean updateUser(User user) {
+        String sql = "UPDATE [User] SET Username = ?, FullName = ?, RoleID = ?, Email = ?, Phone = ? WHERE UserID = ?";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, user.getUsername());
+            stm.setString(2, user.getFullName());
+            stm.setInt(3, user.getRoleID());
+            stm.setString(4, user.getEmail());
+            stm.setString(5, user.getPhone());
+            stm.setInt(6, user.getUserID());
+            int rows = stm.executeUpdate();
+            return rows > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
