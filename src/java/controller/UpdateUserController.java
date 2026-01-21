@@ -105,9 +105,17 @@ public class UpdateUserController extends HttpServlet {
             boolean result = dao.updateUser(user);
 
             if (result) {
-                response.sendRedirect("admin");
+                request.setAttribute("message", "Sửa tài khoản thành công");
+                request.setAttribute("status", "success");
+                request.setAttribute("user", user);
+                // Load roles
+                RoleDAO roleDao = new RoleDAO();
+                List<Role> listOfRole = roleDao.getAllRole();
+                request.setAttribute("listOfRole", listOfRole);
+                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
             } else {
-                request.setAttribute("error", "Update failed!");
+                request.setAttribute("message", "Sửa tài khoản thất bại");
+                request.setAttribute("status", "failure");
                 request.setAttribute("user", user);
                 RoleDAO roleDao = new RoleDAO();
                 List<Role> listOfRole = roleDao.getAllRole();

@@ -12,7 +12,7 @@
 
             <body>
                 <h1>Danh sách tài khoản đã xóa</h1>
-                <a href="admin">Back to Admin</a>
+                <a href="admin">Quay lại Admin Dashboard</a>
                 <br><br>
                 <table border="1">
                     <thead>

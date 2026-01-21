@@ -22,8 +22,8 @@ import model.User;
  *
  * @author minhtuan
  */
-@WebServlet(name = "AdminController", urlPatterns = { "/admin" })
-public class AdminController extends HttpServlet {
+@WebServlet(name = "UserListController", urlPatterns = { "/userList" })
+public class UserListController extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -35,14 +35,31 @@ public class AdminController extends HttpServlet {
             return;
         }
 
+        UserDAO dao = new UserDAO();
+        RoleDAO dao1 = new RoleDAO();
+        List<Role> listOfRole = dao1.getAllRole();
+        request.setAttribute("listOfRole", listOfRole);
+
+        String name = request.getParameter("name");
+        String email = request.getParameter("email");
+        String phone = request.getParameter("phone");
+        String roleName = request.getParameter("option");
+        List<User> list;
+
+        if (name != null || email != null || phone != null || roleName != null) {
+            list = dao.searchUsers(name, email, phone, roleName);
+        } else {
+            list = dao.getAllUsers();
+        }
+
         String notification = (String) session.getAttribute("notification");
         if (notification != null) {
             request.setAttribute("notification", notification);
             session.removeAttribute("notification");
         }
 
-        request.getRequestDispatcher("admin.jsp").forward(request, response);
-
+        request.setAttribute("list", list);
+        request.getRequestDispatcher("userList.jsp").forward(request, response);
     }
 
     @Override
@@ -50,5 +67,4 @@ public class AdminController extends HttpServlet {
             throws ServletException, IOException {
 
     }
-
 }
