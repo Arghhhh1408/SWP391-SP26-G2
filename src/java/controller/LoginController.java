@@ -18,7 +18,7 @@ import model.User;
  *
  * @author minhtuan
  */
-@WebServlet(name = "LoginController", urlPatterns = {"/login"})
+@WebServlet(name = "LoginController", urlPatterns = { "/login" })
 public class LoginController extends HttpServlet {
 
     @Override
@@ -41,7 +41,7 @@ public class LoginController extends HttpServlet {
             if (user.getRoleID() == 0) {
                 response.sendRedirect("admin");
             } else {
-                response.sendRedirect("home.jsp");
+                response.sendRedirect("category");
             }
         } else {
             request.setAttribute("err", "Sai tài khoản hoặc mật khẩu!");
