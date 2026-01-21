@@ -1,9 +1,6 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Filter.java to edit this template
- */
 package filter;
 
+import java.io.IOException;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -14,45 +11,41 @@ import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.io.IOException;
 import model.User;
 
-/**
- *
- * @author minhtuan
- */
-@WebFilter(filterName = "AuthorizationFilter", urlPatterns = { "/admin", "/admin/*" })
+@WebFilter(filterName = "AuthorizationFilter", urlPatterns = { "/category" })
 public class AuthorizationFilter implements Filter {
 
-    
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response,
-            FilterChain chain)
-            throws IOException, ServletException {
+    public void init(FilterConfig filterConfig) throws ServletException {
+    }
 
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
-        HttpSession session = httpRequest.getSession();
+        HttpSession session = httpRequest.getSession(false);
 
-        User u = (User) session.getAttribute("acc");
+        User user = (session != null) ? (User) session.getAttribute("acc") : null;
 
-        // AdminController logic: if (u == null || u.getRoleID() != 0)
-        if (u == null || u.getRoleID() != 0) {
-            httpResponse.sendRedirect(httpRequest.getContextPath() + "/login");
+        if (user == null) {
+            // Not logged in
+            httpResponse.sendRedirect("login.jsp");
         } else {
-            chain.doFilter(request, response);
+            // Logged in, check role
+            int roleId = user.getRoleID();
+            // Role 1: Warehouse Staff, Role 2: Manager
+            if (roleId == 1 || roleId == 2) {
+                chain.doFilter(request, response);
+            } else {
+                // Not authorized (e.g., Admin or Sales)
+                httpResponse.sendRedirect("login.jsp");
+            }
         }
     }
 
-    
     @Override
     public void destroy() {
     }
-
-    
-    @Override
-    public void init(FilterConfig filterConfig) {
-
-    }
-
 }
