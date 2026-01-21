@@ -21,7 +21,6 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "DeleteUserController", urlPatterns = { "/deleteUser" })
 public class DeleteUserController extends HttpServlet {
 
-    
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -29,16 +28,21 @@ public class DeleteUserController extends HttpServlet {
         UserDAO dao = new UserDAO();
         dao.deleteUser(id);
         HttpSession session = request.getSession();
-        session.setAttribute("notification", "Deleted successfully!");
-        response.sendRedirect("admin");
+        try {
+            dao.deleteUser(id);
+            request.setAttribute("message", "Xóa tài khoản thành công");
+            request.setAttribute("status", "success");
+        } catch (Exception e) {
+            request.setAttribute("message", "Xóa tài khoản thất bại");
+            request.setAttribute("status", "failure");
+            e.printStackTrace();
+        }
+        request.getRequestDispatcher("userList").forward(request, response);
     }
 
-    
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
     }
-
-    
 
 }

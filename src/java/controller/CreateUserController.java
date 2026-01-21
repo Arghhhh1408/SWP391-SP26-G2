@@ -54,7 +54,7 @@ public class CreateUserController extends HttpServlet {
         if (!utils.ValidationUtils.isValidPhone(phone)) {
             request.setAttribute("error",
                     "Invalid phone number format! Must be 10 digits starting with 03, 07, 08, 09.");
-            
+
             RoleDAO roleDao = new RoleDAO();
             request.setAttribute("listOfRole", roleDao.getAllRole());
             request.getRequestDispatcher("createUser.jsp").forward(request, response);
@@ -83,13 +83,16 @@ public class CreateUserController extends HttpServlet {
         User newUser = new User(username, password, fullName, roleID, email, phone, true);
         boolean success = dao.addUser(newUser);
 
-        HttpSession session = request.getSession();
         if (success) {
-            session.setAttribute("notification", "Tạo tài khoản mới thành công");
+            request.setAttribute("message", "Cấp tài khoản mới thành công");
+            request.setAttribute("status", "success");
         } else {
-            session.setAttribute("notification", "Tạo tài khoản mới thất bại");
+            request.setAttribute("message", "Cấp tài khoản mới thất bại");
+            request.setAttribute("status", "failure");
         }
-        response.sendRedirect("admin");
+        RoleDAO roleDao = new RoleDAO();
+        request.setAttribute("listOfRole", roleDao.getAllRole());
+        request.getRequestDispatcher("createUser.jsp").forward(request, response);
     }
 
 }

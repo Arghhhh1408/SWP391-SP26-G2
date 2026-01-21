@@ -12,7 +12,7 @@
 
             <body>
                 <h1>Cập nhật thông tin tài khoản</h1>
-                <a href="admin">Back to Admin</a>
+                <a href="admin">Quay lại Admin Dashboard</a>
                 <h3 style="color:red">${requestScope.error}</h3>
 
                 <form action="updateuser" method="POST">
@@ -53,6 +53,15 @@
                         </tr>
                     </table>
                 </form>
+                            <c:if test="${not empty message}">
+                    <h3 style="color: ${status == 'success' ? 'green' : 'red'}">${message}</h3>
+                    <a href="admin">Quay lại admin</a> |
+                    <a href="userList">Xem danh sách tài khoản</a>
+                    <br><br>
+                </c:if>
+                <c:if test="${empty message}">
+                    
+                </c:if>
             </body>
 
             </html>
