@@ -286,4 +286,18 @@ public class UserDAO extends DBContext {
         }
         return false;
     }
+
+    public boolean resetPassword(int userID, String passwordHash) {
+        String sql = "UPDATE [User] SET PasswordHash = ? WHERE UserID = ?";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, passwordHash);
+            stm.setInt(2, userID);
+            int rows = stm.executeUpdate();
+            return rows > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

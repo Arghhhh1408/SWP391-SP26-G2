@@ -76,7 +76,7 @@
                                 <td>${i.getEmail()}</td>
                                 <td>${i.getPhone()}</td>
                                 <td>${i.getCreateDate()}</td>
-                                <td> <a href="#">Xem chi tiết</a> </td>
+                                <td> <a href="resetpassword?id=${i.getUserID()}">Reset Mật khẩu</a> </td>
                                 <td>
                                     <c:if test="${i.getRoleID() != 0}">
                                         <a href="updateuser?id=${i.getUserID()}">Sửa</a>
