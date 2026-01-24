@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import model.User;
 
 /**
  *
@@ -26,14 +27,31 @@ public class DeleteUserController extends HttpServlet {
             throws ServletException, IOException {
         int id = Integer.parseInt(request.getParameter("id"));
         UserDAO dao = new UserDAO();
-        dao.deleteUser(id);
         HttpSession session = request.getSession();
         try {
-            dao.deleteUser(id);
-            request.setAttribute("message", "Xóa tài khoản thành công");
-            request.setAttribute("status", "success");
+            boolean success = dao.deleteUser(id); // Use boolean result
+            if (success) {
+                request.setAttribute("message", "Xóa tài khoản thành công");
+                request.setAttribute("status", "success");
+
+                // Log the action
+                dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+                model.SystemLog log = new model.SystemLog();
+                model.User admin = (model.User) session.getAttribute("acc");
+                int adminId = (admin != null) ? admin.getUserID() : 0;
+
+                log.setUserID(adminId);
+                log.setAction("DELETE_USER");
+                log.setTargetObject("User ID: " + id);
+                log.setDescription("Deleted user with ID: " + id);
+                log.setIpAddress(request.getRemoteAddr());
+                logDAO.insertLog(log);
+            } else {
+                request.setAttribute("message", "Xóa tài khoản thất bại");
+                request.setAttribute("status", "failure");
+            }
         } catch (Exception e) {
-            request.setAttribute("message", "Xóa tài khoản thất bại");
+            request.setAttribute("message", "Xóa tài khoản thất bại: " + e.getMessage());
             request.setAttribute("status", "failure");
             e.printStackTrace();
         }

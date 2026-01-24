@@ -27,6 +27,9 @@ public class ResetPasswordController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        User admin = (User) request.getSession().getAttribute("acc");
+        int adminId = (admin != null) ? admin.getUserID() : 0; // 0 or handle error
+
         int id = Integer.parseInt(request.getParameter("id"));
         UserDAO userDAO = new UserDAO();
         // Reset password to 123
@@ -39,6 +42,16 @@ public class ResetPasswordController extends HttpServlet {
 
         if (success) {
             request.setAttribute("notification", "Reset password successfully.");
+            
+            dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+            model.SystemLog log = new model.SystemLog();
+           
+            log.setUserID(adminId);
+            log.setAction("RESET_PASSWORD");
+            log.setTargetObject("User ID: " + id);
+            log.setDescription("Reset password to 123");
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
         } else {
             request.setAttribute("notification", "Reset password failed.");
         }
