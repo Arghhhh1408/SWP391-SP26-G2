@@ -300,4 +300,18 @@ public class UserDAO extends DBContext {
         }
         return false;
     }
+    
+    public String getNameByID(int id){
+        String sql = "select FullName from [User] where UserID = ?";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, id);
+            ResultSet rs = stm.executeQuery();
+            while(rs.next()){
+                return rs.getString("FullName");
+            }
+        } catch (Exception e) {
+        }
+        return null;
+    }
 }

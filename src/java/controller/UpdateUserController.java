@@ -14,6 +14,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import model.Role;
 import model.User;
@@ -107,6 +108,21 @@ public class UpdateUserController extends HttpServlet {
             if (result) {
                 request.setAttribute("message", "Sửa tài khoản thành công");
                 request.setAttribute("status", "success");
+
+                // Log the action
+                dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+                model.SystemLog log = new model.SystemLog();
+                HttpSession session = request.getSession();
+                User admin = (User) session.getAttribute("acc");
+                int adminId = (admin != null) ? admin.getUserID() : 0;
+
+                log.setUserID(adminId);
+                log.setAction("UPDATE_USER");
+                log.setTargetObject("User ID: " + id);
+                log.setDescription("Updated user profile: " + username);
+                log.setIpAddress(request.getRemoteAddr());
+                logDAO.insertLog(log);
+
                 request.setAttribute("user", user);
                 // Load roles
                 RoleDAO roleDao = new RoleDAO();
