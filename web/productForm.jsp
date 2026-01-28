@@ -46,8 +46,8 @@
                         <td><input type="number" step="0.01" name="price" value="${product.price}" required></td>
                     </tr>
                     <tr>
-                        <td>Quantity:</td>
-                        <td><input type="number" name="quantity" value="${product.quantity}" required></td>
+                        <td>Stock Quantity:</td>
+                        <td><input type="number" name="stockQuantity" value="${product.stockQuantity}" required></td>
                     </tr>
                     <tr>
                         <td>Unit:</td>
@@ -68,6 +68,10 @@
                     <tr>
                         <td>Image URL:</td>
                         <td><input type="text" name="imageURL" value="${product.imageURL}" required></td>
+                    </tr>
+                    <tr>
+                        <td>Warranty Period (Months):</td>
+                        <td><input type="number" name="warrantyPeriod" value="${product.warrantyPeriod}" min="0" placeholder="0 for no warranty"></td>
                     </tr>
                     <tr>
                         <td>Description:</td>

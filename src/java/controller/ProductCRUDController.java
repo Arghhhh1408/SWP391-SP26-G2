@@ -61,23 +61,27 @@ public class ProductCRUDController extends HttpServlet {
 
             double cost = 0;
             double price = 0;
-            int quantity = 0;
+            int stockQuantity = 0;
+            int warrantyPeriod = 0;
 
             try {
                 categoryId = Integer.parseInt(request.getParameter("categoryId"));
                 String costStr = request.getParameter("cost");
                 String priceStr = request.getParameter("price");
-                String quantityStr = request.getParameter("quantity");
+                String stockQuantityStr = request.getParameter("stockQuantity");
+                String warrantyPeriodStr = request.getParameter("warrantyPeriod");
 
                 if (costStr != null && !costStr.isEmpty())
                     cost = Double.parseDouble(costStr);
                 if (priceStr != null && !priceStr.isEmpty())
                     price = Double.parseDouble(priceStr);
-                if (quantityStr != null && !quantityStr.isEmpty())
-                    quantity = Integer.parseInt(quantityStr);
+                if (stockQuantityStr != null && !stockQuantityStr.isEmpty())
+                    stockQuantity = Integer.parseInt(stockQuantityStr);
+                if (warrantyPeriodStr != null && !warrantyPeriodStr.isEmpty())
+                    warrantyPeriod = Integer.parseInt(warrantyPeriodStr);
 
             } catch (NumberFormatException e) {
-                request.setAttribute("error", "Invalid number format for Cost, Price, or Quantity");
+                request.setAttribute("error", "Invalid number format for Cost, Price, Stock Quantity, or Warranty Period");
                 List<Category> categories = dao.getAllCategories();
                 request.setAttribute("categories", categories);
 
@@ -96,8 +100,8 @@ public class ProductCRUDController extends HttpServlet {
                 return;
             }
 
-            if (cost < 0 || price < 0 || quantity < 0) {
-                request.setAttribute("error", "Cost, Price, and Quantity must be non-negative!");
+            if (cost < 0 || price < 0 || stockQuantity < 0 || warrantyPeriod < 0) {
+                request.setAttribute("error", "Cost, Price, Stock Quantity, and Warranty Period must be non-negative!");
                 List<Category> categories = dao.getAllCategories();
                 request.setAttribute("categories", categories);
 
@@ -106,7 +110,8 @@ public class ProductCRUDController extends HttpServlet {
                 pError.setSku(sku);
                 pError.setCost(cost);
                 pError.setPrice(price);
-                pError.setQuantity(quantity);
+                pError.setStockQuantity(stockQuantity);
+                pError.setWarrantyPeriod(warrantyPeriod);
                 pError.setUnit(unit);
                 pError.setDescription(description);
                 pError.setImageURL(imageURL);
@@ -123,7 +128,8 @@ public class ProductCRUDController extends HttpServlet {
             p.setSku(sku);
             p.setCost(cost);
             p.setPrice(price);
-            p.setQuantity(quantity);
+            p.setStockQuantity(stockQuantity);
+            p.setWarrantyPeriod(warrantyPeriod);
             p.setUnit(unit);
             p.setDescription(description);
             p.setImageURL(imageURL);

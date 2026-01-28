@@ -8,57 +8,125 @@
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <title>Product Categories</title>
                 <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                    }
+
                     table {
-                        border-collapse: collapse;
+                        border-collapse: separate;
+                        border-spacing: 2px;
                         width: 100%;
-                        margin-top: 20px;
                     }
 
                     th,
                     td {
-                        border: 1px solid black;
-                        padding: 8px;
+                        border: 1px solid #777;
+                        padding: 4px;
                         text-align: left;
+                    }
+
+                    th {
+                        font-weight: bold;
+                    }
+
+                    .action-link {
+                        border: 1px solid black;
+                        padding: 2px 5px;
+                        text-decoration: underline;
+                        color: blue;
+                        margin-right: 2px;
+                        font-size: 0.9em;
+                    }
+
+                    .active-category {
+                        font-weight: bold;
+                        text-decoration: none;
+                        color: black;
+                    }
+
+                    .category-menu {
+                        list-style: none;
+                        padding: 0;
+                        display: flex;
+                        gap: 10px;
+                    }
+
+                    .subcategory-menu {
+                        display: none;
+                        position: absolute;
+                        background: white;
+                        border: 1px solid black;
+                        padding: 5px;
+                        z-index: 10;
+                    }
+
+                    .category-item:hover .subcategory-menu {
+                        display: block;
                     }
                 </style>
             </head>
 
             <body>
-                <h1 href="category">Categories</h1>
-                <a href="logout">Đăng xuất</a> |
-                <a href="addProduct">Add Product</a> |
-                <a href="manageCategories">Manage Categories</a>
-
-                <p>
-                    <label for="categorySelect">Filter by Category:</label>
-                    <select id="categorySelect" onchange="window.location.href=this.value">
-                        <option value="category" ${empty param.categoryId ? 'selected' : '' }>All Products</option>
+                <div class="nav-links">
+                    <h2>Inventory Management</h2>
+                    <a href="category">Home</a> |
+                    <a href="addProduct">Add Product</a> |
+                    <a href="manageCategories">Manage Categories</a> |
+                    <a href="logout" style="color: red;">Logout</a>
+                </div>
+                <br><br/>
+                <div class="category-nav">
+                    <strong>Category:</strong>
+                    <ul class="category-menu">
+                        <li class="category-item">
+                            <a href="category"
+                                class="category-link ${empty selectedCategoryId ? 'active-category' : ''}">All
+                                Products</a>
+                        </li>
                         <c:forEach items="${categories}" var="c">
-                            <option value="category?categoryId=${c.id}" ${c.id==param.categoryId ? 'selected' : '' }>
-                                ${c.name}</option>
+                            <c:if test="${empty c.parentID}">
+                                <li class="category-item">
+                                    <a href="category?categoryId=${c.id}"
+                                        class="category-link ${c.id == selectedCategoryId ? 'active-category' : ''}">${c.name}</a>
+
+                                    <c:set var="hasSub" value="false" />
+                                    <c:forEach items="${categories}" var="subCheck">
+                                        <c:if test="${subCheck.parentID == c.id}">
+                                            <c:set var="hasSub" value="true" />
+                                        </c:if>
+                                    </c:forEach>
+
+                                    <c:if test="${hasSub}">
+                                        <ul class="subcategory-menu">
+                                            <c:forEach items="${categories}" var="sub">
+                                                <c:if test="${sub.parentID == c.id}">
+                                                    <li class="subcategory-item">
+                                                        <a href="category?categoryId=${sub.id}"
+                                                            class="subcategory-link ${sub.id == selectedCategoryId ? 'active-category' : ''}">${sub.name}</a>
+                                                    </li>
+                                                </c:if>
+                                            </c:forEach>
+                                        </ul>
+                                    </c:if>
+                                </li>
+                            </c:if>
                         </c:forEach>
-                    </select>
-                </p>
+                    </ul>
+                </div>
 
-                <!-- Search Form -->
-                <form action="category" method="get" style="margin: 15px 0; padding: 10px 0;">
-                    <strong>Search:</strong>
-                    <input type="text" id="keyword" name="keyword" value="${keyword}" placeholder="Name or SKU"
-                        style="margin: 0 5px; padding: 5px; width: 180px;">
-
-                    <label for="minPrice" style="margin-left: 10px;">Price:</label>
-                    <input type="number" id="minPrice" name="minPrice" value="${minPrice}" min="0" step="1000"
-                        placeholder="Min" style="margin: 0 3px; padding: 5px; width: 100px;">
-                    -
-                    <input type="number" id="maxPrice" name="maxPrice" value="${maxPrice}" min="0" step="1000"
-                        placeholder="Max" style="margin: 0 3px; padding: 5px; width: 100px;">
-
-                    <c:if test="${not empty param.categoryId}">
-                        <input type="hidden" name="categoryId" value="${param.categoryId}">
-                    </c:if>
-                    <button type="submit" style="margin: 0 5px; padding: 5px 15px;">Search</button>
-                    <a href="category" style="margin-left: 5px;">Clear</a>
-                </form>
+                <div class="search-section">
+                    <form action="category" method="get">
+                        Search: <input type="text" name="keyword" value="${keyword}" placeholder="Name/SKU">
+                        Price: <input type="number" name="minPrice" value="${minPrice}" style="width: 80px;"> -
+                        <input type="number" name="maxPrice" value="${maxPrice}" style="width: 80px;">
+                        <c:if test="${not empty param.categoryId}">
+                            <input type="hidden" name="categoryId" value="${param.categoryId}">
+                        </c:if>
+                        <button type="submit">Filter</button>
+                        <a href="category">[Reset]</a>
+                    </form>
+                </div>
 
                 <h1>Products</h1>
 
@@ -74,16 +142,16 @@
                 </c:if>
 
                 <c:if test="${not empty products}">
-                    <table>
+                    <table border="1">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
                                 <th>Image</th>
                                 <th>Price</th>
-                                <th>Quantity</th>
+                                <th>Stock</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th colspan="3">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -91,19 +159,21 @@
                                 <tr>
                                     <td>${p.id}</td>
                                     <td><a href="productDetail?id=${p.id}">${p.name}</a></td>
-                                    <td><img src="${p.imageURL}" alt="${p.name}" style="width: 50px; height: auto;">
-                                    </td>
+                                    <td><img src="${p.imageURL}" alt="${p.name}" style="width: 40px;"></td>
                                     <td>
-                                        <fmt:formatNumber value="${p.price}" type="number" groupingUsed="true"
-                                            maxFractionDigits="0" />
+                                        <fmt:formatNumber value="${p.price}" type="number" />
                                     </td>
-                                    <td>${p.quantity}</td>
+                                    <td>${p.stockQuantity}</td>
                                     <td>${p.status}</td>
                                     <td>
-                                        <a href="productDetail?id=${p.id}">View</a> |
-                                        <a href="editProduct?id=${p.id}">Edit</a> |
-                                        <a href="deleteProduct?id=${p.id}"
-                                            onclick="return confirm('Are you sure?');">Delete</a>
+                                        <a href="productDetail?id=${p.id}" class="action-link">Xem chi tiết</a>
+                                    </td>
+                                    <td>
+                                        <a href="editProduct?id=${p.id}" class="action-link">Sửa</a>
+                                    </td>
+                                    <td>
+                                        <a href="deleteProduct?id=${p.id}" class="action-link"
+                                            onclick="return confirm('Xóa?');">Xóa</a>
                                     </td>
                                 </tr>
                             </c:forEach>

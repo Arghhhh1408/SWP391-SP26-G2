@@ -26,11 +26,17 @@ public class CategoryCRUDController extends HttpServlet {
                 request.setAttribute("categories", categories);
                 request.getRequestDispatcher("manageCategories.jsp").forward(request, response);
             } else if (action.equals("/addCategory")) {
+                // Load all categories for parent category dropdown
+                List<Category> categories = dao.getAllCategories();
+                request.setAttribute("categories", categories);
                 request.getRequestDispatcher("categoryForm.jsp").forward(request, response);
             } else if (action.equals("/editCategory")) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 Category category = dao.getCategoryById(id);
+                // Load all categories for parent dropdown
+                List<Category> categories = dao.getAllCategories();
                 request.setAttribute("category", category);
+                request.setAttribute("categories", categories);
                 request.getRequestDispatcher("categoryForm.jsp").forward(request, response);
             } else if (action.equals("/deleteCategory")) {
                 int id = Integer.parseInt(request.getParameter("id"));
@@ -51,12 +57,30 @@ public class CategoryCRUDController extends HttpServlet {
 
         try {
             String name = request.getParameter("name");
+            String description = request.getParameter("description");
+            String parentIDStr = request.getParameter("parentID");
+            Integer parentID = null;
+            
+            // Parse parentID if provided and not empty
+            if (parentIDStr != null && !parentIDStr.trim().isEmpty() && !parentIDStr.equals("0")) {
+                try {
+                    parentID = Integer.parseInt(parentIDStr);
+                } catch (NumberFormatException e) {
+                    // Keep parentID as null if parsing fails
+                }
+            }
+            
             Category c = new Category();
             c.setName(name);
+            c.setDescription(description);
+            c.setParentID(parentID);
 
             if (action.equals("/addCategory")) {
                 if (dao.isCategoryExists(name)) {
                     request.setAttribute("error", "Category name already exists!");
+                    List<Category> categories = dao.getAllCategories();
+                    request.setAttribute("categories", categories);
+                    request.setAttribute("category", c);
                     request.getRequestDispatcher("categoryForm.jsp").forward(request, response);
                     return;
                 }

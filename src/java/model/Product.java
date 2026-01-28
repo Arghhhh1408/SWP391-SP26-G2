@@ -6,10 +6,11 @@ public class Product {
     private String sku;
     private double cost;
     private double price;
-    private int quantity;
+    private int stockQuantity;
     private String unit;
     private String description;
     private String imageURL;
+    private int warrantyPeriod;
     private String status;
     private int categoryId;
     private java.sql.Timestamp createDate;
@@ -18,18 +19,19 @@ public class Product {
     public Product() {
     }
 
-    public Product(int id, String name, String sku, double cost, double price, int quantity, String unit,
-            String description, String imageURL, String status, int categoryId, java.sql.Timestamp createDate,
-            java.sql.Timestamp updateDate) {
+    public Product(int id, String name, String sku, double cost, double price, int stockQuantity, String unit,
+            String description, String imageURL, int warrantyPeriod, String status, int categoryId, 
+            java.sql.Timestamp createDate, java.sql.Timestamp updateDate) {
         this.id = id;
         this.name = name;
         this.sku = sku;
         this.cost = cost;
         this.price = price;
-        this.quantity = quantity;
+        this.stockQuantity = stockQuantity;
         this.unit = unit;
         this.description = description;
         this.imageURL = imageURL;
+        this.warrantyPeriod = warrantyPeriod;
         this.status = status;
         this.categoryId = categoryId;
         this.createDate = createDate;
@@ -76,12 +78,12 @@ public class Product {
         this.price = price;
     }
 
-    public int getQuantity() {
-        return quantity;
+    public int getStockQuantity() {
+        return stockQuantity;
     }
 
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
+    public void setStockQuantity(int stockQuantity) {
+        this.stockQuantity = stockQuantity;
     }
 
     public String getUnit() {
@@ -106,6 +108,14 @@ public class Product {
 
     public void setImageURL(String imageURL) {
         this.imageURL = imageURL;
+    }
+
+    public int getWarrantyPeriod() {
+        return warrantyPeriod;
+    }
+
+    public void setWarrantyPeriod(int warrantyPeriod) {
+        this.warrantyPeriod = warrantyPeriod;
     }
 
     public String getStatus() {

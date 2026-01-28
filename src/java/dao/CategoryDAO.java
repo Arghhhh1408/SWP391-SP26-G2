@@ -16,11 +16,12 @@ public class CategoryDAO extends DBContext {
         PreparedStatement st = connection.prepareStatement(sql);
         ResultSet rs = st.executeQuery();
         while (rs.next()) {
-            // Trying "CategoryID" and "CategoryName" based on naming convention
-            // If "CategoryName" fails, might be "Name"
             int id = rs.getInt("CategoryID");
             String name = rs.getString("CategoryName");
-            list.add(new Category(id, name));
+            String description = rs.getString("Description");
+            Integer parentID = (Integer) rs.getObject("ParentID");
+            Category category = new Category(id, name, description, parentID);
+            list.add(category);
         }
         return list;
     }
@@ -40,6 +41,7 @@ public class CategoryDAO extends DBContext {
                     rs.getString("Unit"),
                     rs.getString("Description"),
                     rs.getString("ImageURL"),
+                    rs.getInt("WarrantyPeriod"),
                     rs.getString("Status") != null ? rs.getString("Status").trim() : null,
                     rs.getInt("CategoryID"),
                     rs.getTimestamp("CreatedDate"),
@@ -50,7 +52,14 @@ public class CategoryDAO extends DBContext {
 
     public List<Product> getProductsByCategoryId(int categoryId) throws Exception {
         List<Product> list = new ArrayList<>();
-        String sql = "SELECT * FROM Products WHERE CategoryID = ?";
+        String sql = "WITH CategoryTree AS (\n" +
+                     "    SELECT CategoryID FROM Categories WHERE CategoryID = ?\n" +
+                     "    UNION ALL\n" +
+                     "    SELECT c.CategoryID FROM Categories c\n" +
+                     "    INNER JOIN CategoryTree ct ON c.ParentID = ct.CategoryID\n" +
+                     ")\n" +
+                     "SELECT p.* FROM Products p\n" +
+                     "WHERE p.CategoryID IN (SELECT CategoryID FROM CategoryTree)";
         PreparedStatement st = connection.prepareStatement(sql);
         st.setInt(1, categoryId);
         ResultSet rs = st.executeQuery();
@@ -64,6 +73,7 @@ public class CategoryDAO extends DBContext {
                     rs.getString("Unit"),
                     rs.getString("Description"),
                     rs.getString("ImageURL"),
+                    rs.getInt("WarrantyPeriod"),
                     rs.getString("Status") != null ? rs.getString("Status").trim() : null,
                     rs.getInt("CategoryID"),
                     rs.getTimestamp("CreatedDate"),
@@ -73,10 +83,16 @@ public class CategoryDAO extends DBContext {
     }
 
     public boolean addCategory(Category c) {
-        String sql = "INSERT INTO Categories (CategoryName) VALUES (?)";
+        String sql = "INSERT INTO Categories (CategoryName, Description, ParentID) VALUES (?, ?, ?)";
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setString(1, c.getName());
+            st.setString(2, c.getDescription());
+            if (c.getParentID() != null) {
+                st.setInt(3, c.getParentID());
+            } else {
+                st.setNull(3, java.sql.Types.INTEGER);
+            }
             return st.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -85,11 +101,17 @@ public class CategoryDAO extends DBContext {
     }
 
     public boolean updateCategory(Category c) {
-        String sql = "UPDATE Categories SET CategoryName = ? WHERE CategoryID = ?";
+        String sql = "UPDATE Categories SET CategoryName = ?, Description = ?, ParentID = ? WHERE CategoryID = ?";
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setString(1, c.getName());
-            st.setInt(2, c.getId());
+            st.setString(2, c.getDescription());
+            if (c.getParentID() != null) {
+                st.setInt(3, c.getParentID());
+            } else {
+                st.setNull(3, java.sql.Types.INTEGER);
+            }
+            st.setInt(4, c.getId());
             return st.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -116,7 +138,10 @@ public class CategoryDAO extends DBContext {
             st.setInt(1, id);
             ResultSet rs = st.executeQuery();
             if (rs.next()) {
-                return new Category(rs.getInt("CategoryID"), rs.getString("CategoryName"));
+                String name = rs.getString("CategoryName");
+                String description = rs.getString("Description");
+                Integer parentID = (Integer) rs.getObject("ParentID");
+                return new Category(id, name, description, parentID);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -125,19 +150,20 @@ public class CategoryDAO extends DBContext {
     }
 
     public boolean addProduct(Product p) {
-        String sql = "INSERT INTO Products (Name, SKU, Cost, Price, StockQuantity, Unit, Description, ImageURL, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+        String sql = "INSERT INTO Products (Name, SKU, Cost, Price, StockQuantity, Unit, Description, ImageURL, WarrantyPeriod, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setString(1, p.getName());
             st.setString(2, p.getSku());
             st.setDouble(3, p.getCost());
             st.setDouble(4, p.getPrice());
-            st.setInt(5, p.getQuantity());
+            st.setInt(5, p.getStockQuantity());
             st.setString(6, p.getUnit());
             st.setString(7, p.getDescription());
             st.setString(8, p.getImageURL());
-            st.setString(9, p.getStatus());
-            st.setInt(10, p.getCategoryId());
+            st.setInt(9, p.getWarrantyPeriod());
+            st.setString(10, p.getStatus());
+            st.setInt(11, p.getCategoryId());
             return st.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -146,19 +172,20 @@ public class CategoryDAO extends DBContext {
     }
 
     public boolean updateProduct(Product p) throws Exception {
-        String sql = "UPDATE Products SET Name=?, SKU=?, Cost=?, Price=?, StockQuantity=?, Unit=?, Description=?, ImageURL=?, Status=?, CategoryID=?, UpdatedDate=GETDATE() WHERE ProductID=?";
+        String sql = "UPDATE Products SET Name=?, SKU=?, Cost=?, Price=?, StockQuantity=?, Unit=?, Description=?, ImageURL=?, WarrantyPeriod=?, Status=?, CategoryID=?, UpdatedDate=GETDATE() WHERE ProductID=?";
         PreparedStatement st = connection.prepareStatement(sql);
         st.setString(1, p.getName());
         st.setString(2, p.getSku());
         st.setDouble(3, p.getCost());
         st.setDouble(4, p.getPrice());
-        st.setInt(5, p.getQuantity());
+        st.setInt(5, p.getStockQuantity());
         st.setString(6, p.getUnit());
         st.setString(7, p.getDescription());
         st.setString(8, p.getImageURL());
-        st.setString(9, p.getStatus());
-        st.setInt(10, p.getCategoryId());
-        st.setInt(11, p.getId());
+        st.setInt(9, p.getWarrantyPeriod());
+        st.setString(10, p.getStatus());
+        st.setInt(11, p.getCategoryId());
+        st.setInt(12, p.getId());
         return st.executeUpdate() > 0;
     }
 
@@ -190,6 +217,7 @@ public class CategoryDAO extends DBContext {
                         rs.getString("Unit"),
                         rs.getString("Description"),
                         rs.getString("ImageURL"),
+                        rs.getInt("WarrantyPeriod"),
                         rs.getString("Status") != null ? rs.getString("Status").trim() : null,
                         rs.getInt("CategoryID"),
                         rs.getTimestamp("CreatedDate"),
@@ -243,7 +271,19 @@ public class CategoryDAO extends DBContext {
     public List<Product> searchProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId)
             throws Exception {
         List<Product> list = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE 1=1");
+        StringBuilder sql = new StringBuilder();
+        
+        if (categoryId != null) {
+            sql.append("WITH CategoryTree AS (\n" +
+                       "    SELECT CategoryID FROM Categories WHERE CategoryID = ?\n" +
+                       "    UNION ALL\n" +
+                       "    SELECT c.CategoryID FROM Categories c\n" +
+                       "    INNER JOIN CategoryTree ct ON c.ParentID = ct.CategoryID\n" +
+                       ")\n");
+            sql.append("SELECT * FROM Products WHERE 1=1 AND CategoryID IN (SELECT CategoryID FROM CategoryTree)");
+        } else {
+            sql.append("SELECT * FROM Products WHERE 1=1");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -254,13 +294,13 @@ public class CategoryDAO extends DBContext {
         if (maxPrice != null) {
             sql.append(" AND Price <= ?");
         }
-        if (categoryId != null) {
-            sql.append(" AND CategoryID = ?");
-        }
 
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
 
+        if (categoryId != null) {
+            st.setInt(paramIndex++, categoryId);
+        }
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
             st.setString(paramIndex++, searchPattern);
@@ -271,9 +311,6 @@ public class CategoryDAO extends DBContext {
         }
         if (maxPrice != null) {
             st.setDouble(paramIndex++, maxPrice);
-        }
-        if (categoryId != null) {
-            st.setInt(paramIndex++, categoryId);
         }
 
         ResultSet rs = st.executeQuery();
@@ -287,6 +324,7 @@ public class CategoryDAO extends DBContext {
                     rs.getString("Unit"),
                     rs.getString("Description"),
                     rs.getString("ImageURL"),
+                    rs.getInt("WarrantyPeriod"),
                     rs.getString("Status") != null ? rs.getString("Status").trim() : null,
                     rs.getInt("CategoryID"),
                     rs.getTimestamp("CreatedDate"),
@@ -296,7 +334,19 @@ public class CategoryDAO extends DBContext {
     }
 
     public int countProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId) throws Exception {
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM Products WHERE 1=1");
+        StringBuilder sql = new StringBuilder();
+        
+        if (categoryId != null) {
+            sql.append("WITH CategoryTree AS (\n" +
+                       "    SELECT CategoryID FROM Categories WHERE CategoryID = ?\n" +
+                       "    UNION ALL\n" +
+                       "    SELECT c.CategoryID FROM Categories c\n" +
+                       "    INNER JOIN CategoryTree ct ON c.ParentID = ct.CategoryID\n" +
+                       ")\n");
+            sql.append("SELECT COUNT(*) FROM Products WHERE 1=1 AND CategoryID IN (SELECT CategoryID FROM CategoryTree)");
+        } else {
+            sql.append("SELECT COUNT(*) FROM Products WHERE 1=1");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -307,13 +357,13 @@ public class CategoryDAO extends DBContext {
         if (maxPrice != null) {
             sql.append(" AND Price <= ?");
         }
-        if (categoryId != null) {
-            sql.append(" AND CategoryID = ?");
-        }
 
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
 
+        if (categoryId != null) {
+            st.setInt(paramIndex++, categoryId);
+        }
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
             st.setString(paramIndex++, searchPattern);
@@ -324,9 +374,6 @@ public class CategoryDAO extends DBContext {
         }
         if (maxPrice != null) {
             st.setDouble(paramIndex++, maxPrice);
-        }
-        if (categoryId != null) {
-            st.setInt(paramIndex++, categoryId);
         }
 
         ResultSet rs = st.executeQuery();
@@ -339,7 +386,19 @@ public class CategoryDAO extends DBContext {
     public List<Product> searchProductsPaginated(String keyword, Double minPrice, Double maxPrice, Integer categoryId,
             int page, int pageSize) throws Exception {
         List<Product> list = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE 1=1");
+        StringBuilder sql = new StringBuilder();
+        
+        if (categoryId != null) {
+            sql.append("WITH CategoryTree AS (\n" +
+                       "    SELECT CategoryID FROM Categories WHERE CategoryID = ?\n" +
+                       "    UNION ALL\n" +
+                       "    SELECT c.CategoryID FROM Categories c\n" +
+                       "    INNER JOIN CategoryTree ct ON c.ParentID = ct.CategoryID\n" +
+                       ")\n");
+            sql.append("SELECT * FROM Products WHERE 1=1 AND CategoryID IN (SELECT CategoryID FROM CategoryTree)");
+        } else {
+            sql.append("SELECT * FROM Products WHERE 1=1");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -350,9 +409,6 @@ public class CategoryDAO extends DBContext {
         if (maxPrice != null) {
             sql.append(" AND Price <= ?");
         }
-        if (categoryId != null) {
-            sql.append(" AND CategoryID = ?");
-        }
 
         // Add pagination using SQL Server OFFSET/FETCH
         sql.append(" ORDER BY ProductID OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
@@ -360,6 +416,9 @@ public class CategoryDAO extends DBContext {
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
 
+        if (categoryId != null) {
+            st.setInt(paramIndex++, categoryId);
+        }
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
             st.setString(paramIndex++, searchPattern);
@@ -370,9 +429,6 @@ public class CategoryDAO extends DBContext {
         }
         if (maxPrice != null) {
             st.setDouble(paramIndex++, maxPrice);
-        }
-        if (categoryId != null) {
-            st.setInt(paramIndex++, categoryId);
         }
 
         // Calculate offset
@@ -391,6 +447,7 @@ public class CategoryDAO extends DBContext {
                     rs.getString("Unit"),
                     rs.getString("Description"),
                     rs.getString("ImageURL"),
+                    rs.getInt("WarrantyPeriod"),
                     rs.getString("Status") != null ? rs.getString("Status").trim() : null,
                     rs.getInt("CategoryID"),
                     rs.getTimestamp("CreatedDate"),
