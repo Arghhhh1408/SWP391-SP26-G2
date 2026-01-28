@@ -17,6 +17,7 @@
                 <a href="createuser">Cấp tài khoản mới cho User</a><br><!-- comment -->
                 <a href="deletedUsers">Tài khoản đã xóa</a><br><!-- comment -->
                 <a href="systemlog">Xem lịch sử hoạt động</a><br><!-- comment -->
+                <a href="pos">Xem danh sách sản phẩm </a><br><!-- comment -->
                 <a href="logout">Đăng xuất</a><br>
                 
 
