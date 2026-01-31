@@ -211,10 +211,43 @@ public class UserDAO extends DBContext {
     }
 
     public List<User> getDeletedUsers() {
+        return getDeletedUsers(null, null, null, -1);
+    }
+
+    public List<User> getDeletedUsers(String name, String email, String phone, Integer roleID) {
         List<User> list = new ArrayList<>();
-        String sql = "select * from [User] where IsActive = 0";
+        String sql = "SELECT * FROM [User] WHERE IsActive = 0";
+
+        if (name != null && !name.trim().isEmpty()) {
+            sql += " AND (Username LIKE ? OR FullName LIKE ?)";
+        }
+        if (email != null && !email.trim().isEmpty()) {
+            sql += " AND Email LIKE ?";
+        }
+        if (phone != null && !phone.trim().isEmpty()) {
+            sql += " AND Phone LIKE ?";
+        }
+        if (roleID != null && roleID != -1) {
+            sql += " AND RoleID = ?";
+        }
+
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
+            int index = 1;
+            if (name != null && !name.trim().isEmpty()) {
+                stm.setString(index++, "%" + name + "%");
+                stm.setString(index++, "%" + name + "%");
+            }
+            if (email != null && !email.trim().isEmpty()) {
+                stm.setString(index++, "%" + email + "%");
+            }
+            if (phone != null && !phone.trim().isEmpty()) {
+                stm.setString(index++, "%" + phone + "%");
+            }
+            if (roleID != null && roleID != -1) {
+                stm.setInt(index++, roleID);
+            }
+
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {
                 User u = new User();
@@ -231,7 +264,7 @@ public class UserDAO extends DBContext {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return new ArrayList<>();
     }
 
     public boolean restoreUser(int userID) {
@@ -300,14 +333,14 @@ public class UserDAO extends DBContext {
         }
         return false;
     }
-    
-    public String getNameByID(int id){
+
+    public String getNameByID(int id) {
         String sql = "select FullName from [User] where UserID = ?";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             stm.setInt(1, id);
             ResultSet rs = stm.executeQuery();
-            while(rs.next()){
+            while (rs.next()) {
                 return rs.getString("FullName");
             }
         } catch (Exception e) {
