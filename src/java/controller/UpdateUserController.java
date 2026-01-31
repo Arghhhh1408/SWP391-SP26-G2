@@ -38,7 +38,7 @@ public class UpdateUserController extends HttpServlet {
         RoleDAO dao = new RoleDAO();
         List<Role> listOfRole = dao.getAllRole();
         request.setAttribute("listOfRole", listOfRole);
-        request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+        request.getRequestDispatcher("userDetail.jsp").forward(request, response);
     }
 
     @Override
@@ -70,7 +70,7 @@ public class UpdateUserController extends HttpServlet {
                 RoleDAO roleDao = new RoleDAO();
                 List<Role> listOfRole = roleDao.getAllRole();
                 request.setAttribute("listOfRole", listOfRole);
-                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
                 return;
             }
 
@@ -83,7 +83,7 @@ public class UpdateUserController extends HttpServlet {
                 RoleDAO roleDao = new RoleDAO();
                 List<Role> listOfRole = roleDao.getAllRole();
                 request.setAttribute("listOfRole", listOfRole);
-                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
                 return;
             }
 
@@ -99,7 +99,7 @@ public class UpdateUserController extends HttpServlet {
                 List<Role> listOfRole = roleDao.getAllRole();
                 request.setAttribute("listOfRole", listOfRole);
 
-                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
                 return;
             }
 
@@ -128,7 +128,7 @@ public class UpdateUserController extends HttpServlet {
                 RoleDAO roleDao = new RoleDAO();
                 List<Role> listOfRole = roleDao.getAllRole();
                 request.setAttribute("listOfRole", listOfRole);
-                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
             } else {
                 request.setAttribute("message", "Sửa tài khoản thất bại");
                 request.setAttribute("status", "failure");
@@ -136,12 +136,12 @@ public class UpdateUserController extends HttpServlet {
                 RoleDAO roleDao = new RoleDAO();
                 List<Role> listOfRole = roleDao.getAllRole();
                 request.setAttribute("listOfRole", listOfRole);
-                request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
             }
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("error", "An error occurred: " + e.getMessage());
-            request.getRequestDispatcher("updateUser.jsp").forward(request, response);
+            request.getRequestDispatcher("userDetail.jsp").forward(request, response);
         }
     }
 

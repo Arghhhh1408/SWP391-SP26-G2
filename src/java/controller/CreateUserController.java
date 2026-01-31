@@ -37,7 +37,7 @@ public class CreateUserController extends HttpServlet {
         RoleDAO dao = new RoleDAO();
         List<Role> listOfRole = dao.getAllRole();
         request.setAttribute("listOfRole", listOfRole);
-        request.getRequestDispatcher("createUser.jsp").forward(request, response);
+        request.getRequestDispatcher("userDetail.jsp").forward(request, response);
     }
 
     @Override
@@ -59,7 +59,7 @@ public class CreateUserController extends HttpServlet {
 
             
             request.setAttribute("listOfRole", roleDao.getAllRole());
-            request.getRequestDispatcher("createUser.jsp").forward(request, response);
+            request.getRequestDispatcher("userDetail.jsp").forward(request, response);
             return;
         }
 
@@ -67,7 +67,7 @@ public class CreateUserController extends HttpServlet {
         if (!utils.ValidationUtils.isValidEmail(email)) {
             request.setAttribute("error", "Invalid email format!");            
             request.setAttribute("listOfRole", roleDao.getAllRole());
-            request.getRequestDispatcher("createUser.jsp").forward(request, response);
+            request.getRequestDispatcher("userDetail.jsp").forward(request, response);
             return;
         }
 
@@ -76,7 +76,7 @@ public class CreateUserController extends HttpServlet {
         if (error != null) {
             request.setAttribute("error", error);
             request.setAttribute("listOfRole", roleDao.getAllRole());
-            request.getRequestDispatcher("createUser.jsp").forward(request, response);
+            request.getRequestDispatcher("userDetail.jsp").forward(request, response);
             return;
         }
 
@@ -106,7 +106,7 @@ public class CreateUserController extends HttpServlet {
             request.setAttribute("status", "failure");
         }
         request.setAttribute("listOfRole", roleDao.getAllRole());
-        request.getRequestDispatcher("createUser.jsp").forward(request, response);
+        request.getRequestDispatcher("userDetail.jsp").forward(request, response);
     }
 
 }
