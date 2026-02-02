@@ -11,7 +11,7 @@ public class DBContext {
         try {
             String url = "jdbc:sqlserver://localhost:1433;databaseName=SimpleInventoryManagement;encrypt=true;trustServerCertificate=true";
             String username = "sa";
-            String pass = "123";
+            String pass = "1234";
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver"); //tool database
             connection = DriverManager.getConnection(url,username,pass); // bat dau connect
         } catch (Exception e) {
