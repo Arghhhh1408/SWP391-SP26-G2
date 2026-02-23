@@ -75,7 +75,7 @@ public class SupplierListController extends HttpServlet {
         List<Supplier> list;
 
         if (supplierName != null || supplierPhone != null || supplierAddress != null || supplierEmail != null || status != null) {
-            list = supplierdao.searchUsers(supplierName, supplierPhone, supplierAddress, supplierEmail);
+            list = supplierdao.searchSupplier(supplierName, supplierPhone, supplierAddress, supplierEmail);
         } else {
             list = supplierdao.getAllSupllier();
         }

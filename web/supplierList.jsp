@@ -38,7 +38,7 @@
         </form>
 
         <br><!-- comment -->
-        <a href="">Thêm nhà cung cấp mới</a>
+        <a href="addSupplier?action=add">Thêm nhà cung cấp mới</a>
 
 
 
@@ -75,12 +75,12 @@
 
                         <td>
                             <c:if test="${s.id != 0}">
-                                <a href="updateuser?id=${s.id}">Sửa</a>
+                                <a href="addSupplier?action=edit&id=${s.id}">Sửa</a>
                             </c:if>
                         </td>
                         <td>
                             <c:if test="${s.id != 0}">
-                                <a href="deleteUser?id=${s.id}"
+                                <a href="addSupplier?action=delete&id=${s.id}"
                                    onclick="return confirm('Bạn có chắc chắn muốn xóa nhà cung cấp?');">Xóa</a>
                             </c:if>
                         </td>
@@ -88,16 +88,6 @@
                 </c:forEach>
             </tbody>
         </table>
-<!--        <h3 style="color: green">${notification}</h3>
-        <br> comment -->
-
-
-        <%--<c:if test="${not empty message}">--%>
-<!--            <h3 style="color: ${status == 'success' ? 'green' : 'red'}">${message}</h3>
-            <a href="admin">Quay lại admin</a>-->
-        <!--            <a href="">Xem danh sách tài khoản đã xóa</a>-->
-        <!--            <br><br>-->
-        <%-- </c:if> --%>
     </body>
 
 </html>
