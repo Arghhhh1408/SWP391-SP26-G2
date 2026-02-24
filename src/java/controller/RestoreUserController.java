@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import model.User;
 
 /**
  *
@@ -31,6 +32,19 @@ public class RestoreUserController extends HttpServlet {
 
         if (success) {
             session.setAttribute("notification", "Khôi phục tài khoản thành công");
+
+            // Log the action
+            dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+            model.SystemLog log = new model.SystemLog();
+            model.User admin = (model.User) session.getAttribute("acc");
+            int adminId = (admin != null) ? admin.getUserID() : 0;
+
+            log.setUserID(adminId);
+            log.setAction("RESTORE_USER");
+            log.setTargetObject("User ID: " + userID);
+            log.setDescription("Restored user with ID: " + userID);
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
         } else {
             session.setAttribute("notification", "Khôi phục tài khoản thất bại");
         }

@@ -37,7 +37,7 @@ public class CreateUserController extends HttpServlet {
         RoleDAO dao = new RoleDAO();
         List<Role> listOfRole = dao.getAllRole();
         request.setAttribute("listOfRole", listOfRole);
-        request.getRequestDispatcher("createUser.jsp").forward(request, response);
+        request.getRequestDispatcher("userDetail.jsp").forward(request, response);
     }
 
     @Override
@@ -49,24 +49,25 @@ public class CreateUserController extends HttpServlet {
         String username = request.getParameter("username");
         String password = request.getParameter("password");
         int roleID = Integer.parseInt(request.getParameter("role"));
-
+        RoleDAO roleDao = new RoleDAO();
+        String roleName = roleDao.getRoleNameByID(roleID);
+        
         // Validate Phone Format
         if (!utils.ValidationUtils.isValidPhone(phone)) {
             request.setAttribute("error",
                     "Invalid phone number format! Must be 10 digits starting with 03, 07, 08, 09.");
 
-            RoleDAO roleDao = new RoleDAO();
+            
             request.setAttribute("listOfRole", roleDao.getAllRole());
-            request.getRequestDispatcher("createUser.jsp").forward(request, response);
+            request.getRequestDispatcher("userDetail.jsp").forward(request, response);
             return;
         }
 
         // Validate Email Format
         if (!utils.ValidationUtils.isValidEmail(email)) {
-            request.setAttribute("error", "Invalid email format!");
-            RoleDAO roleDao = new RoleDAO();
+            request.setAttribute("error", "Invalid email format!");            
             request.setAttribute("listOfRole", roleDao.getAllRole());
-            request.getRequestDispatcher("createUser.jsp").forward(request, response);
+            request.getRequestDispatcher("userDetail.jsp").forward(request, response);
             return;
         }
 
@@ -74,9 +75,8 @@ public class CreateUserController extends HttpServlet {
         String error = dao.checkDuplicate(username, email, phone);
         if (error != null) {
             request.setAttribute("error", error);
-            RoleDAO roleDao = new RoleDAO();
             request.setAttribute("listOfRole", roleDao.getAllRole());
-            request.getRequestDispatcher("createUser.jsp").forward(request, response);
+            request.getRequestDispatcher("userDetail.jsp").forward(request, response);
             return;
         }
 
@@ -86,13 +86,27 @@ public class CreateUserController extends HttpServlet {
         if (success) {
             request.setAttribute("message", "Cấp tài khoản mới thành công");
             request.setAttribute("status", "success");
+
+            // Log the action
+            dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+            model.SystemLog log = new model.SystemLog();
+            // Get admin ID from session
+            HttpSession session = request.getSession();
+            User admin = (User) session.getAttribute("acc");
+            int adminId = (admin != null) ? admin.getUserID() : 0;
+
+            log.setUserID(adminId);
+            log.setAction("CREATE_USER");
+            log.setTargetObject("New User: " + username);
+            log.setDescription("Created new user with Role: " + roleName);
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
         } else {
             request.setAttribute("message", "Cấp tài khoản mới thất bại");
             request.setAttribute("status", "failure");
         }
-        RoleDAO roleDao = new RoleDAO();
         request.setAttribute("listOfRole", roleDao.getAllRole());
-        request.getRequestDispatcher("createUser.jsp").forward(request, response);
+        request.getRequestDispatcher("userDetail.jsp").forward(request, response);
     }
 
 }

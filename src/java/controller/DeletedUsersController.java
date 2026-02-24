@@ -33,8 +33,24 @@ public class DeletedUsersController extends HttpServlet {
             return;
         }
 
+        String name = request.getParameter("name");
+        String email = request.getParameter("email");
+        String phone = request.getParameter("phone");
+        String roleStr = request.getParameter("role");
+        int roleID = -1;
+        try {
+            if (roleStr != null && !roleStr.isEmpty()) {
+                roleID = Integer.parseInt(roleStr);
+            }
+        } catch (NumberFormatException e) {
+            roleID = -1;
+        }
+
         UserDAO dao = new UserDAO();
-        List<User> list = dao.getDeletedUsers();
+        List<User> list = dao.getDeletedUsers(name, email, phone, roleID);
+
+        dao.RoleDAO roleDAO = new dao.RoleDAO();
+        request.setAttribute("listOfRole", roleDAO.getAllRole());
 
         request.setAttribute("list", list);
         String notification = (String) session.getAttribute("notification");

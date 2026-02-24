@@ -15,12 +15,12 @@
                 <a href="admin">Quay lại Admin Dashboard</a>
                 <br>
                 
-                <h3>Lọc tài khoản</h3>
+                <h3>Tìm kiếm tài khoản</h3>
                 <form action="userList">
                     <table>
                         <tr>
                             <td>Tên:</td>
-                            <td><input type="text" name="name" value="${param.name}" /></td>
+                            <td><input type="text" name="name" value="${param.name}" placeholder="Username or Fullname"/></td>
                             <td>Email:</td>
                             <td><input type="text" name="email" value="${param.email}" /></td>
                         </tr>
@@ -40,10 +40,11 @@
                         </tr>
                         
                     </table>
-                    <input type="submit" value="LỌC" />
+                    <input type="submit" value="Tìm Kiếm" />
                 </form>
                         
                         <br><!-- comment -->
+                        <a href="createuser">Thêm Tài Khoản Mới</a>
                         
                       
                 
@@ -76,7 +77,7 @@
                                 <td>${i.getEmail()}</td>
                                 <td>${i.getPhone()}</td>
                                 <td>${i.getCreateDate()}</td>
-                                <td> <a href="#">Xem chi tiết</a> </td>
+                                <td> <a href="resetpassword?id=${i.getUserID()}">Reset Mật khẩu</a> </td>
                                 <td>
                                     <c:if test="${i.getRoleID() != 0}">
                                         <a href="updateuser?id=${i.getUserID()}">Sửa</a>

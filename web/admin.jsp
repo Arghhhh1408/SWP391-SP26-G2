@@ -15,10 +15,12 @@
 
                 <a href="userList">Xem danh sách tài khoản</a><br><!-- comment -->
                 <a href="createuser">Cấp tài khoản mới cho User</a><br><!-- comment -->
+                <a href="supplierList">Xem danh sách nhà cung cấp</a><br><!-- comment -->
                 <a href="deletedUsers">Tài khoản đã xóa</a><br><!-- comment -->
+                <a href="systemlog">Xem lịch sử hoạt động</a><br><!-- comment -->              
                 <a href="logout">Đăng xuất</a><br>
                 
-
+                
                 <br><!-- comment -->
                 <br><!-- comment -->
                 <br><!-- comment -->

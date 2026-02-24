@@ -38,6 +38,16 @@ public class LoginController extends HttpServlet {
         if (user != null) {
             HttpSession session = request.getSession();
             session.setAttribute("acc", user);
+
+            // Log success
+            dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+            model.SystemLog log = new model.SystemLog();
+            log.setUserID(user.getUserID());
+            log.setAction("LOGIN");
+            log.setTargetObject("User: " + user.getUsername());
+            log.setDescription("Login successful");
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
             if (user.getRoleID() == 0) {
                 response.sendRedirect("admin");
             } else {
@@ -47,6 +57,19 @@ public class LoginController extends HttpServlet {
             request.setAttribute("err", "Sai tài khoản hoặc mật khẩu!");
             request.setAttribute("username", username);
             request.setAttribute("password", password);
+
+            // Log failure
+            dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+            model.SystemLog log = new model.SystemLog();
+            // Since login failed, we might not have a user ID.
+            // We can use 0 or a specific system ID.
+            log.setUserID(0);
+            log.setAction("LOGIN_FAILED");
+            log.setTargetObject("IP: " + request.getRemoteAddr());
+            log.setDescription("Failed login attempt for username: " + username);
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
+
             request.getRequestDispatcher("login.jsp").forward(request, response);
         }
     }
