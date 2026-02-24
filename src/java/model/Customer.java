@@ -1,31 +1,29 @@
 package model;
 
-public class Supplier {
-    private int supplierID;
+public class Customer {
+    private int customerID;
     private String name;
     private String phone;
     private String address;
     private String email;
-    private boolean isActive;
 
-    public Supplier() {
+    public Customer() {
     }
 
-    public Supplier(int supplierID, String name, String phone, String address, String email, boolean isActive) {
-        this.supplierID = supplierID;
+    public Customer(int customerID, String name, String phone, String address, String email) {
+        this.customerID = customerID;
         this.name = name;
         this.phone = phone;
         this.address = address;
         this.email = email;
-        this.isActive = isActive;
     }
 
-    public int getSupplierID() {
-        return supplierID;
+    public int getCustomerID() {
+        return customerID;
     }
 
-    public void setSupplierID(int supplierID) {
-        this.supplierID = supplierID;
+    public void setCustomerID(int customerID) {
+        this.customerID = customerID;
     }
 
     public String getName() {
@@ -60,16 +58,8 @@ public class Supplier {
         this.email = email;
     }
 
-    public boolean isIsActive() {
-        return isActive;
-    }
-
-    public void setIsActive(boolean isActive) {
-        this.isActive = isActive;
-    }
-
     @Override
     public String toString() {
-        return "Supplier{" + "supplierID=" + supplierID + ", name=" + name + ", phone=" + phone + ", isActive=" + isActive + '}';
+        return "Customer{" + "customerID=" + customerID + ", name=" + name + ", phone=" + phone + '}';
     }
 }

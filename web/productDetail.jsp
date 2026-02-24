@@ -67,7 +67,18 @@
                             maxFractionDigits="0" />
                     </div>
                     <div class="detail-row">
-                        <span class="label">Quantity:</span> ${product.quantity} ${product.unit}
+                        <span class="label">Stock Quantity:</span> ${product.stockQuantity} ${product.unit}
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Warranty Period:</span>
+                        <c:choose>
+                            <c:when test="${product.warrantyPeriod > 0}">
+                                ${product.warrantyPeriod} months
+                            </c:when>
+                            <c:otherwise>
+                                No warranty
+                            </c:otherwise>
+                        </c:choose>
                     </div>
                     <div class="detail-row">
                         <span class="label">Status:</span> ${product.status}
