@@ -84,9 +84,7 @@
     <div class="no-print">
         <button type="button" onclick="window.print()">In hóa đơn</button>
 
-        <button type="button" onclick="submitFinish()">
-            Hoàn tất (trừ kho + xóa giỏ)
-        </button>
+        <button type="button" onclick="submitFinish()"> Hoàn tất</button>
 
         <a href="${pageContext.request.contextPath}/pos">Quay lại POS</a>
     </div>
@@ -105,27 +103,13 @@
 
 
 
-        <script>
-      const nameInput = document.getElementById('customerName');
-      const phoneInput = document.getElementById('customerPhone');
-      const printName = document.getElementById('printName');
-      const printPhone = document.getElementById('printPhone');
-
-      function sync() {
-          printName.textContent = nameInput.value;
-          printPhone.textContent = phoneInput.value;
-          document.getElementById('hiddenCustomerName').value = nameInput.value;
-          document.getElementById('hiddenCustomerPhone').value = phoneInput.value;
-      }
-
-      function submitFinish() {
-          sync(); // đảm bảo hidden có dữ liệu mới nhất
-          document.getElementById('finishForm').submit();
-      }
-
-      nameInput.addEventListener('input', sync);
-      phoneInput.addEventListener('input', sync);
-    </script>
+    <script>
+    function submitFinish() {
+      // nếu bạn có nơi lưu tên/sđt thì gán vào hidden ở đây
+      // hiện tại invoice.jsp không có input customerName/customerPhone nên sẽ gửi rỗng
+      document.getElementById('finishForm').submit();
+    }
+</script>
 
 
     </body>

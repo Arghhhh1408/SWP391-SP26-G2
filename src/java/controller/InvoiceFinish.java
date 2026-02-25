@@ -79,6 +79,7 @@ public class InvoiceFinish extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("acc") == null) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -92,23 +93,27 @@ public class InvoiceFinish extends HttpServlet {
             return;
         }
 
-        // snapshot giỏ để dùng sau khi xóa cart
         java.util.List<CartItem> items = new java.util.ArrayList<>(cart.values());
+        String redirectUrl = request.getContextPath() + "/pos?success=1";
 
-        // =========================
-        // (A) TRỪ KHO + XÓA GIỎ (BẮT BUỘC OK)
-        // =========================
         ProductDAO productDAO = new ProductDAO();
         Connection conn = productDAO.connection;
 
         try {
+            // =========================
+            // (A) TRỪ KHO
+            // =========================
             conn.setAutoCommit(false);
 
             for (CartItem it : items) {
-                boolean ok = productDAO.decreaseStock(conn, 0, 0);
+                boolean ok = productDAO.decreaseStock(conn,
+                        it.getProductId(),
+                        it.getQty());
+
                 if (!ok) {
                     conn.rollback();
-                    response.sendRedirect(request.getContextPath() + "/pos?err=not_enough_stock");
+                    redirectUrl = request.getContextPath() + "/pos?err=not_enough_stock";
+                    response.sendRedirect(redirectUrl);
                     return;
                 }
             }
@@ -122,7 +127,8 @@ public class InvoiceFinish extends HttpServlet {
             } catch (Exception ignored) {
             }
             e.printStackTrace();
-            response.sendRedirect(request.getContextPath() + "/pos?err=finish_failed");
+            redirectUrl = request.getContextPath() + "/pos?err=finish_failed";
+            response.sendRedirect(redirectUrl);
             return;
         } finally {
             try {
@@ -136,9 +142,8 @@ public class InvoiceFinish extends HttpServlet {
         }
 
         // =========================
-        // (B) LƯU LỊCH SỬ (LỖI THÌ BỎ QUA)
+        // (B) LƯU LỊCH SỬ (LỖI THÌ KHÔNG ẢNH HƯỞNG BÁN)
         // =========================
-        String redirectUrl = request.getContextPath() + "/orders"; // mặc định nhảy lịch sử
         try {
             model.User user = (model.User) session.getAttribute("acc");
             int userId = user.getUserID();
@@ -149,56 +154,43 @@ public class InvoiceFinish extends HttpServlet {
                 totalAmount += it.getLineTotal();
             }
 
-            // mở connection mới để lưu lịch sử
-            utils.DBContext db = new utils.DBContext();
+            DBContext db = new DBContext();
             Connection c2 = db.connection;
 
             try {
                 c2.setAutoCommit(false);
 
-                // ===== LẤY THÔNG TIN KHÁCH TỪ FORM =====
                 String customerName = request.getParameter("customerName");
                 String customerPhone = request.getParameter("customerPhone");
+
                 if (customerName == null) {
                     customerName = "";
                 }
                 if (customerPhone == null) {
                     customerPhone = "";
                 }
+
                 customerName = customerName.trim();
                 customerPhone = customerPhone.trim();
 
-                // ===== TÍNH CUSTOMER ID =====
                 dao.CustomerDAO customerDAO = new dao.CustomerDAO();
                 customerDAO.connection = c2;
 
                 int customerId;
                 if (customerName.isEmpty() && customerPhone.isEmpty()) {
-                    customerId = customerDAO.getWalkInCustomerId(); // thường = 1
+                    customerId = customerDAO.getWalkInCustomerId();
                 } else {
                     customerId = customerDAO.getOrCreateCustomerId(customerName, customerPhone);
                 }
 
-                // log để chắc chắn không còn luôn = 1
-                int walkinId = customerDAO.getWalkInCustomerId();
-                System.out.println("FINISH: name=[" + customerName + "] phone=[" + customerPhone + "] -> customerId="
-                        + customerId + " (walkinId=" + walkinId + ")");
-                model.User u = (model.User) session.getAttribute("acc");
-
-                String note = request.getParameter("note");
-                if (note == null) {
-                    note = "";
-                }
-
-                String status = "PAID";
-                Timestamp now = new Timestamp(System.currentTimeMillis());
-
                 dao.StockOutDAO stockOutDAO = new dao.StockOutDAO(c2);
+                int stockOutId = stockOutDAO.insertStockOut(
+                        customerId,
+                        userId,
+                        totalAmount,
+                        createdBy
+                );
 
-                // totalAmount bạn đã tính sẵn
-                int stockOutId = stockOutDAO.insertStockOut(customerId, userId, totalAmount, createdBy);
-
-                // items là List<CartItem> snapshot
                 stockOutDAO.insertDetails(stockOutId, items);
 
                 c2.commit();
@@ -209,7 +201,6 @@ public class InvoiceFinish extends HttpServlet {
                 } catch (Exception ignored) {
                 }
                 ex.printStackTrace();
-                // lịch sử lỗi thì vẫn coi như bán xong
                 redirectUrl = request.getContextPath() + "/pos?msg=done_no_history";
             } finally {
                 try {
@@ -227,6 +218,9 @@ public class InvoiceFinish extends HttpServlet {
             redirectUrl = request.getContextPath() + "/pos?msg=done_no_history";
         }
 
+        // =========================
+        // CHỈ REDIRECT 1 LẦN DUY NHẤT Ở ĐÂY
+        // =========================
         response.sendRedirect(redirectUrl);
     }
 
