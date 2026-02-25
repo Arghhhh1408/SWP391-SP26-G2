@@ -1,20 +1,27 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package model;
 
-import java.sql.Timestamp;
-
+/**
+ *
+ * @author minhtuan
+ */
 public class SystemLog {
     private int logID;
     private int userID;
     private String action;
     private String targetObject;
     private String description;
-    private Timestamp logDate;
+    private java.sql.Timestamp logDate; // Using Timestamp for datetime
     private String ipAddress;
 
     public SystemLog() {
     }
 
-    public SystemLog(int logID, int userID, String action, String targetObject, String description, Timestamp logDate, String ipAddress) {
+    public SystemLog(int logID, int userID, String action, String targetObject, String description,
+            java.sql.Timestamp logDate, String ipAddress) {
         this.logID = logID;
         this.userID = userID;
         this.action = action;
@@ -64,11 +71,11 @@ public class SystemLog {
         this.description = description;
     }
 
-    public Timestamp getLogDate() {
+    public java.sql.Timestamp getLogDate() {
         return logDate;
     }
 
-    public void setLogDate(Timestamp logDate) {
+    public void setLogDate(java.sql.Timestamp logDate) {
         this.logDate = logDate;
     }
 
@@ -80,8 +87,13 @@ public class SystemLog {
         this.ipAddress = ipAddress;
     }
 
-    @Override
-    public String toString() {
-        return "SystemLog{" + "logID=" + logID + ", userID=" + userID + ", action=" + action + ", targetObject=" + targetObject + ", logDate=" + logDate + '}';
+    private String name; // Transient field for display
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }

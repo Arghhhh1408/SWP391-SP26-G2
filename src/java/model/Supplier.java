@@ -1,39 +1,47 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package model;
 
+/**
+ *
+ * @author dotha
+ */
 public class Supplier {
-    private int supplierID;
-    private String name;
+    private int id;
+    private String supplierName;
     private String phone;
     private String address;
     private String email;
-    private boolean isActive;
+    private boolean status;
 
     public Supplier() {
     }
 
-    public Supplier(int supplierID, String name, String phone, String address, String email, boolean isActive) {
-        this.supplierID = supplierID;
-        this.name = name;
+    public Supplier(int id, String supplierName, String phone, String address, String email, boolean status) {
+        this.id = id;
+        this.supplierName = supplierName;
         this.phone = phone;
         this.address = address;
         this.email = email;
-        this.isActive = isActive;
+        this.status = status;
     }
 
-    public int getSupplierID() {
-        return supplierID;
+    public int getId() {
+        return id;
     }
 
-    public void setSupplierID(int supplierID) {
-        this.supplierID = supplierID;
+    public void setId(int id) {
+        this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public String getSupplierName() {
+        return supplierName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setSupplierName(String supplierName) {
+        this.supplierName = supplierName;
     }
 
     public String getPhone() {
@@ -60,16 +68,17 @@ public class Supplier {
         this.email = email;
     }
 
-    public boolean isIsActive() {
-        return isActive;
+    public boolean isStatus() {
+        return status;
     }
 
-    public void setIsActive(boolean isActive) {
-        this.isActive = isActive;
+    public void setStatus(boolean status) {
+        this.status = status;
     }
 
     @Override
     public String toString() {
-        return "Supplier{" + "supplierID=" + supplierID + ", name=" + name + ", phone=" + phone + ", isActive=" + isActive + '}';
+        return "Supplier{" + "id=" + id + ", supplierName=" + supplierName + ", phone=" + phone + ", address=" + address + ", email=" + email + ", status=" + status + '}';
     }
+    
 }
