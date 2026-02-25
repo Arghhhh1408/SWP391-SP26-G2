@@ -112,7 +112,7 @@ public class SupplierDAO extends DBContext {
 
     public List<Supplier> getAllSupllier() {
         List<Supplier> list = new ArrayList();
-        String sql = "select * from [Suppliers]";
+        String sql = "SELECT * FROM [Suppliers] ORDER BY SupplierID ASC";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             ResultSet rs = stm.executeQuery();
