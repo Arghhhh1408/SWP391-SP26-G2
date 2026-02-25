@@ -23,24 +23,6 @@
                         <td><input type="text" name="name" value="${category.name}" required></td>
                     </tr>
                     <tr>
-                        <td>Description:</td>
-                        <td><textarea name="description" rows="3" cols="50">${category.description}</textarea></td>
-                    </tr>
-                    <tr>
-                        <td>Parent Category:</td>
-                        <td>
-                            <select name="parentID">
-                                <option value="0">-- None (Top Level) --</option>
-                                <c:forEach items="${categories}" var="c">
-                                    <c:if test="${empty category || c.id != category.id}">
-                                        <option value="${c.id}" ${category.parentID==c.id ? 'selected' : '' }>${c.name}
-                                        </option>
-                                    </c:if>
-                                </c:forEach>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
                         <td colspan="2"><input type="submit"
                                 value="${empty category ? 'Add Category' : 'Update Category'}"></td>
                     </tr>
