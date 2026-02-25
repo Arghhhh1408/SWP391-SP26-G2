@@ -15,7 +15,7 @@ import utils.SecurityUtils;
  * @author dotha
  */
 public class SupplierDAO extends DBContext {
-    
+
     public String checkDuplicate(String suppliername, String email, String phone) {
         try {
             String sql = "SELECT * FROM [Suppliers] WHERE Name = ?";
@@ -25,14 +25,14 @@ public class SupplierDAO extends DBContext {
                 return "Supplier already exists";
             }
 
-            sql = "SELECT * FROM [Supplier] WHERE Email = ?";
+            sql = "SELECT * FROM [Suppliers] WHERE Email = ?";
             stm = connection.prepareStatement(sql);
             stm.setString(1, email);
             if (stm.executeQuery().next()) {
                 return "Email already exists";
             }
 
-            sql = "SELECT * FROM [Supplier] WHERE Phone = ?";
+            sql = "SELECT * FROM [Suppliers] WHERE Phone = ?";
             stm = connection.prepareStatement(sql);
             stm.setString(1, phone);
             if (stm.executeQuery().next()) {
@@ -43,7 +43,40 @@ public class SupplierDAO extends DBContext {
         }
         return null; // No duplicate
     }
-    
+
+    public String checkDuplicateForUpdate(int id, String supplierName, String email, String phone) {
+        try {
+
+            String sql = "SELECT 1 FROM Suppliers WHERE Name = ? AND SupplierID <> ?";
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, supplierName);
+            stm.setInt(2, id);
+            if (stm.executeQuery().next()) {
+                return "Supplier name already exists!";
+            }
+
+            sql = "SELECT 1 FROM Suppliers WHERE Email = ? AND SupplierID <> ?";
+            stm = connection.prepareStatement(sql);
+            stm.setString(1, email);
+            stm.setInt(2, id);
+            if (stm.executeQuery().next()) {
+                return "Email already exists!";
+            }
+
+            sql = "SELECT 1 FROM Suppliers WHERE Phone = ? AND SupplierID <> ?";
+            stm = connection.prepareStatement(sql);
+            stm.setString(1, phone);
+            stm.setInt(2, id);
+            if (stm.executeQuery().next()) {
+                return "Phone number already exists!";
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public Supplier getSupplierById(int id) {
         Supplier s = null;
         String sql = "SELECT * FROM Suppliers WHERE SupplierID = ?";
@@ -64,7 +97,7 @@ public class SupplierDAO extends DBContext {
         }
         return s;
     }
-    
+
     public void deleteSupplier(int id) {
         String sql = "DELETE FROM Suppliers WHERE SupplierID = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -112,7 +145,7 @@ public class SupplierDAO extends DBContext {
 
     public List<Supplier> getAllSupllier() {
         List<Supplier> list = new ArrayList();
-        String sql = "SELECT * FROM [Suppliers] ORDER BY SupplierID ASC";
+        String sql = "SELECT * FROM [Suppliers]";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             ResultSet rs = stm.executeQuery();

@@ -3,6 +3,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
  */
 package controller;
+
 import dao.SupplierDAO;
 import dao.SystemLogDAO;
 import java.io.IOException;
@@ -16,19 +17,21 @@ import model.Supplier;
 import model.SystemLog;
 import model.User;
 import utils.ValidationUtils;
+
 /**
  *
  * @author dotha
  */
 @WebServlet(name = "addSupplierController", urlPatterns = {"/addSupplier"})
 public class addSupplierController extends HttpServlet {
+
     private SupplierDAO dao;
-    
+
     @Override
     public void init() throws ServletException {
         dao = new SupplierDAO();
     }
-    
+
     /**
      * Handles the HTTP <code>GET</code> method.
      *
@@ -95,7 +98,7 @@ public class addSupplierController extends HttpServlet {
         }
         response.sendRedirect(request.getContextPath() + "/supplierList");
     }
-    
+
     /**
      * Handles the HTTP <code>POST</code> method.
      *
@@ -175,6 +178,12 @@ public class addSupplierController extends HttpServlet {
                         break;
                     }
                     Supplier oldSupplier = dao.getSupplierById(id);
+                    String duplicateError = dao.checkDuplicateForUpdate(id, newName, newEmail, newPhone);
+                    if (duplicateError != null) {
+                        message = duplicateError;
+                        status = "error";
+                        break;
+                    }
                     if (oldSupplier == null) {
                         message = "Không tìm thấy nhà cung cấp!";
                         status = "error";
@@ -196,7 +205,7 @@ public class addSupplierController extends HttpServlet {
                         }
                         if (oldSupplier.isStatus() != newStatus) {
                             changes.append("Trạng thái: ").append(oldSupplier.isStatus() ? "Hoạt động" : "Ngừng")
-                                   .append("-> ").append(newStatus ? "Hoạt động" : "Ngừng").append(";");
+                                    .append("-> ").append(newStatus ? "Hoạt động" : "Ngừng").append(";");
                         }
                         if (changes.toString().endsWith("Các thay đổi: ")) {
                             changes.append("Không có thay đổi nào!");
@@ -230,7 +239,7 @@ public class addSupplierController extends HttpServlet {
         session.setAttribute("status", status);
         response.sendRedirect(request.getContextPath() + "/supplierList");
     }
-    
+
     /**
      * Returns a short description of the servlet.
      *
