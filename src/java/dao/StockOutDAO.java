@@ -1,0 +1,57 @@
+package dao;
+
+import utils.DBContext;
+
+import java.sql.*;
+import java.util.Collection;
+import model.CartItem;
+
+public class StockOutDAO extends DBContext {
+
+    public int insertStockOut(int customerId, int createdByUserId,
+                          double totalAmount, String note) throws Exception {
+
+    String sql = """
+        INSERT INTO dbo.StockOut(CustomerID, Date, TotalAmount, CreatedBy, Note, Status)
+        VALUES(?, SYSDATETIME(), ?, ?, ?, 'Completed')
+    """;
+
+    try (PreparedStatement ps =
+            connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+        ps.setInt(1, customerId);
+        ps.setDouble(2, totalAmount);
+        ps.setInt(3, createdByUserId); // vì CreatedBy là int
+        ps.setString(4, note);
+
+        ps.executeUpdate();
+
+        try (ResultSet keys = ps.getGeneratedKeys()) {
+            if (keys.next()) return keys.getInt(1);
+        }
+    }
+    throw new SQLException("Không lấy được StockOutID");
+}
+
+
+    public void insertDetails(int stockOutId, Collection<CartItem> items) throws Exception {
+        String sql = """
+            INSERT INTO dbo.StockOutDetails(StockOutID, ProductID, Quantity)
+            VALUES(?, ?, ?)
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (CartItem it : items) {
+                ps.setInt(1, stockOutId);
+                ps.setInt(2, it.getProductId());
+                ps.setInt(3, it.getQty());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+     public StockOutDAO(Connection conn) {
+        this.connection = conn;
+    }
+     
+}
