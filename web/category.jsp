@@ -27,7 +27,8 @@
                 <h1 href="category">Categories</h1>
                 <a href="logout">Đăng xuất</a> |
                 <a href="addProduct">Add Product</a> |
-                <a href="manageCategories">Manage Categories</a>
+                <a href="manageCategories">Manage Categories</a> |
+                <a href = "stockinList">Stockin List</a>
 
                 <p>
                     <label for="categorySelect">Filter by Category:</label>
