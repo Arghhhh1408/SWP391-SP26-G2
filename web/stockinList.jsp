@@ -54,7 +54,6 @@
         <h2>Danh sách phiếu nhập hàng</h2>
 
         <a class="back-btn" href="category">← Quay lại trang sản phẩm</a>
-        <p>Debug size: ${stockList.size()}</p>
         <c:if test="${empty stockList}">
             <p>Chưa có phiếu nhập hàng nào.</p>
         </c:if>
