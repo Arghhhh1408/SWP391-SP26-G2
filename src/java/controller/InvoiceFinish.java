@@ -96,30 +96,60 @@ public class InvoiceFinish extends HttpServlet {
         java.util.List<CartItem> items = new java.util.ArrayList<>(cart.values());
         String redirectUrl = request.getContextPath() + "/pos?success=1";
 
-        ProductDAO productDAO = new ProductDAO();
-        Connection conn = productDAO.connection;
+        model.User user = (model.User) session.getAttribute("acc");
+        int userId = user.getUserID();
+        String createdBy = user.getUsername();
+
+        String customerName = request.getParameter("customerName");
+        String customerPhone = request.getParameter("customerPhone");
+        if (customerName == null) {
+            customerName = "";
+        }
+        if (customerPhone == null) {
+            customerPhone = "";
+        }
+        customerName = customerName.trim();
+        customerPhone = customerPhone.trim();
+
+        double totalAmount = 0;
+        for (CartItem it : items) {
+            totalAmount += it.getLineTotal();
+        }
+
+        DBContext db = new DBContext();
+        Connection conn = db.connection;
 
         try {
-            // =========================
-            // (A) TRỪ KHO
-            // =========================
             conn.setAutoCommit(false);
 
+            // 1) Trừ kho (dùng ProductDAO nhưng truyền SAME conn)
+            ProductDAO productDAO = new ProductDAO();
             for (CartItem it : items) {
-                boolean ok = productDAO.decreaseStock(conn,
-                        it.getProductId(),
-                        it.getQty());
-
+                boolean ok = productDAO.decreaseStock(conn, it.getProductId(), it.getQty());
                 if (!ok) {
                     conn.rollback();
-                    redirectUrl = request.getContextPath() + "/pos?err=not_enough_stock";
-                    response.sendRedirect(redirectUrl);
+                    response.sendRedirect(request.getContextPath() + "/pos?err=not_enough_stock");
                     return;
                 }
             }
 
+            // 2) Tính customerId
+            dao.CustomerDAO customerDAO = new dao.CustomerDAO();
+            customerDAO.connection = conn;
+
+            int customerId = (customerName.isEmpty() && customerPhone.isEmpty())
+                    ? customerDAO.getWalkInCustomerId()
+                    : customerDAO.getOrCreateCustomerId(customerName, customerPhone);
+
+            // 3) Insert StockOut + details
+            dao.StockOutDAO stockOutDAO = new dao.StockOutDAO(conn);
+            int stockOutId = stockOutDAO.insertStockOut(customerId, userId, totalAmount, createdBy);
+            stockOutDAO.insertDetails(stockOutId, items);
+
             conn.commit();
-            session.removeAttribute("cart"); // chỉ xóa sau commit OK
+
+            // 4) Xóa giỏ SAU commit
+            session.removeAttribute("cart");
 
         } catch (Exception e) {
             try {
@@ -128,8 +158,6 @@ public class InvoiceFinish extends HttpServlet {
             }
             e.printStackTrace();
             redirectUrl = request.getContextPath() + "/pos?err=finish_failed";
-            response.sendRedirect(redirectUrl);
-            return;
         } finally {
             try {
                 conn.setAutoCommit(true);
@@ -141,96 +169,17 @@ public class InvoiceFinish extends HttpServlet {
             }
         }
 
-        // =========================
-        // (B) LƯU LỊCH SỬ (LỖI THÌ KHÔNG ẢNH HƯỞNG BÁN)
-        // =========================
-        try {
-            model.User user = (model.User) session.getAttribute("acc");
-            int userId = user.getUserID();
-            String createdBy = user.getUsername();
-
-            double totalAmount = 0;
-            for (CartItem it : items) {
-                totalAmount += it.getLineTotal();
-            }
-
-            DBContext db = new DBContext();
-            Connection c2 = db.connection;
-
-            try {
-                c2.setAutoCommit(false);
-
-                String customerName = request.getParameter("customerName");
-                String customerPhone = request.getParameter("customerPhone");
-
-                if (customerName == null) {
-                    customerName = "";
-                }
-                if (customerPhone == null) {
-                    customerPhone = "";
-                }
-
-                customerName = customerName.trim();
-                customerPhone = customerPhone.trim();
-
-                dao.CustomerDAO customerDAO = new dao.CustomerDAO();
-                customerDAO.connection = c2;
-
-                int customerId;
-                if (customerName.isEmpty() && customerPhone.isEmpty()) {
-                    customerId = customerDAO.getWalkInCustomerId();
-                } else {
-                    customerId = customerDAO.getOrCreateCustomerId(customerName, customerPhone);
-                }
-
-                dao.StockOutDAO stockOutDAO = new dao.StockOutDAO(c2);
-                int stockOutId = stockOutDAO.insertStockOut(
-                        customerId,
-                        userId,
-                        totalAmount,
-                        createdBy
-                );
-
-                stockOutDAO.insertDetails(stockOutId, items);
-
-                c2.commit();
-
-            } catch (Exception ex) {
-                try {
-                    c2.rollback();
-                } catch (Exception ignored) {
-                }
-                ex.printStackTrace();
-                redirectUrl = request.getContextPath() + "/pos?msg=done_no_history";
-            } finally {
-                try {
-                    c2.setAutoCommit(true);
-                } catch (Exception ignored) {
-                }
-                try {
-                    c2.close();
-                } catch (Exception ignored) {
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            redirectUrl = request.getContextPath() + "/pos?msg=done_no_history";
-        }
-
-        // =========================
-        // CHỈ REDIRECT 1 LẦN DUY NHẤT Ở ĐÂY
-        // =========================
         response.sendRedirect(redirectUrl);
     }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
+
+/**
+ * Returns a short description of the servlet.
+ *
+ * @return a String containing servlet description
+ */
+@Override
+public String getServletInfo() {
         return "Short description";
     }// </editor-fold>
 

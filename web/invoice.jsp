@@ -47,8 +47,8 @@
 
     <!-- HIỂN THỊ TRÊN HÓA ĐƠN -->
     <div class="small">
-        Khách hàng: <span id="printName"></span><br/>
-        SĐT: <span id="printPhone"></span>
+        Khách hàng: ${sessionScope.customerName}<br/>
+        SĐT: ${sessionScope.customerPhone}
     </div>
 
     <div class="line"></div>
@@ -92,12 +92,11 @@
     <form id="finishForm"
           action="${pageContext.request.contextPath}/invoice/finish"
           method="post">
-        <input type="hidden" name="customerId" value="1" />
         <input type="hidden" name="note" value="" />
 
         <!-- thêm 2 hidden này để JS đổ dữ liệu -->
-        <input type="hidden" id="hiddenCustomerName" name="customerName" value="" />
-        <input type="hidden" id="hiddenCustomerPhone" name="customerPhone" value="" />
+        <input type="hidden" name="customerName" value="${sessionScope.customerName}" />
+        <input type="hidden" name="customerPhone" value="${sessionScope.customerPhone}" />
     </form>
 
 

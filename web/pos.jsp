@@ -46,7 +46,11 @@
     <c:if test="${not empty cart}">
         <table border="1">
             <tr>
-                <th>SKU</th><th>Tên</th><th>Giá</th><th>SL</th><th>Thành tiền</th>
+                <th>SKU</th>
+                <th>Tên</th>
+                <th>Giá</th>
+                <th>SL</th>
+                <th>Thành tiền</th>
             </tr>
 
             <c:set var="grandTotal" value="0" />
@@ -57,6 +61,8 @@
                     <td>${it.price}</td>
                     <td>${it.qty}</td>
                     <td>${it.lineTotal}</td>
+                    <td><button type="delete">Xóa</button>
+</td>
                 </tr>
                 <c:set var="grandTotal" value="${grandTotal + it.lineTotal}" />
             </c:forEach>
