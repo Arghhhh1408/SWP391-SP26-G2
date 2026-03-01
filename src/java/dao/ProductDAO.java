@@ -80,5 +80,19 @@ public class ProductDAO extends DBContext {
         return ps.executeUpdate() == 1; // 1 row updated => đủ hàng
     }
 }
+    public int getStockById(int productId) {
+    String sql = "SELECT StockQuantity FROM dbo.Products WHERE ProductID = ?";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        ps.setInt(1, productId);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt("StockQuantity");
+            }
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    return 0;
+}
 
 }

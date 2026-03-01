@@ -94,14 +94,20 @@ public class InvoiceFinish extends HttpServlet {
         }
 
         java.util.List<CartItem> items = new java.util.ArrayList<>(cart.values());
-        String redirectUrl = request.getContextPath() + "/pos?success=1";
 
         model.User user = (model.User) session.getAttribute("acc");
         int userId = user.getUserID();
         String createdBy = user.getUsername();
 
+        // Lấy thông tin khách: ưu tiên request, nếu rỗng thì lấy từ session (Checkout đã set)
         String customerName = request.getParameter("customerName");
         String customerPhone = request.getParameter("customerPhone");
+        if (customerName == null) {
+            customerName = (String) session.getAttribute("customerName");
+        }
+        if (customerPhone == null) {
+            customerPhone = (String) session.getAttribute("customerPhone");
+        }
         if (customerName == null) {
             customerName = "";
         }
@@ -122,10 +128,13 @@ public class InvoiceFinish extends HttpServlet {
         try {
             conn.setAutoCommit(false);
 
-            // 1) Trừ kho (dùng ProductDAO nhưng truyền SAME conn)
+            // 1) TRỪ KHO (chặn âm)
             ProductDAO productDAO = new ProductDAO();
             for (CartItem it : items) {
-                boolean ok = productDAO.decreaseStock(conn, it.getProductId(), it.getQty());
+                int pid = it.getProductId();
+                int qty = it.getQty(); // đảm bảo CartItem có getQty()
+
+                boolean ok = productDAO.decreaseStock(conn, pid, qty);
                 if (!ok) {
                     conn.rollback();
                     response.sendRedirect(request.getContextPath() + "/pos?err=not_enough_stock");
@@ -133,7 +142,7 @@ public class InvoiceFinish extends HttpServlet {
                 }
             }
 
-            // 2) Tính customerId
+            // 2) CUSTOMER ID
             dao.CustomerDAO customerDAO = new dao.CustomerDAO();
             customerDAO.connection = conn;
 
@@ -141,15 +150,23 @@ public class InvoiceFinish extends HttpServlet {
                     ? customerDAO.getWalkInCustomerId()
                     : customerDAO.getOrCreateCustomerId(customerName, customerPhone);
 
-            // 3) Insert StockOut + details
+            // 3) INSERT StockOut + Details (lịch sử)
             dao.StockOutDAO stockOutDAO = new dao.StockOutDAO(conn);
-            int stockOutId = stockOutDAO.insertStockOut(customerId, userId, totalAmount, createdBy);
+            String note = request.getParameter("note");
+            if (note == null) note = "";
+            int stockOutId = stockOutDAO.insertStockOut(customerId, userId, totalAmount, note);
             stockOutDAO.insertDetails(stockOutId, items);
 
             conn.commit();
 
-            // 4) Xóa giỏ SAU commit
+            // 4) XÓA GIỎ SAU COMMIT
             session.removeAttribute("cart");
+
+            // (tuỳ) clear info khách
+            // session.removeAttribute("customerName");
+            // session.removeAttribute("customerPhone");
+            response.sendRedirect(request.getContextPath() + "/pos?success=1");
+            return;
 
         } catch (Exception e) {
             try {
@@ -157,29 +174,28 @@ public class InvoiceFinish extends HttpServlet {
             } catch (Exception ignored) {
             }
             e.printStackTrace();
-            redirectUrl = request.getContextPath() + "/pos?err=finish_failed";
+            response.sendRedirect(request.getContextPath() + "/pos?err=finish_failed");
+            return;
+
         } finally {
             try {
                 conn.setAutoCommit(true);
             } catch (Exception ignored) {
             }
             try {
-                conn.close();
+                db.closeConnection();
             } catch (Exception ignored) {
             }
         }
-
-        response.sendRedirect(redirectUrl);
     }
 
-
-/**
- * Returns a short description of the servlet.
- *
- * @return a String containing servlet description
- */
-@Override
-public String getServletInfo() {
+    /**
+     * Returns a short description of the servlet.
+     *
+     * @return a String containing servlet description
+     */
+    @Override
+    public String getServletInfo() {
         return "Short description";
     }// </editor-fold>
 
