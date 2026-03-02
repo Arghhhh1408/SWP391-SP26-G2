@@ -45,7 +45,7 @@ public class addSupplierController extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 0) {
+        if (u == null || u.getRoleID() != 1) {
             response.sendRedirect("login");
             return;
         }
@@ -59,8 +59,8 @@ public class addSupplierController extends HttpServlet {
                 session.setAttribute("status", "success");
                 SystemLogDAO logDao = new SystemLogDAO();
                 SystemLog log = new SystemLog();
-                int adminId = (u != null) ? u.getUserID() : 0;
-                log.setUserID(adminId);
+                int userID = (u != null) ? u.getUserID() : 1;
+                log.setUserID(userID);
                 log.setAction("DELETE_SUPPLIER");
                 log.setTargetObject("Supplier ID: " + id);
                 log.setDescription("Deleted supplier");
@@ -113,7 +113,7 @@ public class addSupplierController extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 0) {  // Sửa điều kiện check admin
+        if (u == null || u.getRoleID() != 1) {  // Sửa điều kiện check warehouse staff
             response.sendRedirect("login");
             return;
         }
@@ -127,7 +127,7 @@ public class addSupplierController extends HttpServlet {
             switch (action) {
                 case "addSupplier": {
                     String name = request.getParameter("supplierName");
-                    String phone = request.getParameter("phone");  // Sửa để khớp với JSP nếu cần (trước dùng supplierPhone)
+                    String phone = request.getParameter("phone");
                     String address = request.getParameter("address");
                     String email = request.getParameter("email");
                     if (!ValidationUtils.isValidPhone(phone)) {
@@ -151,8 +151,8 @@ public class addSupplierController extends HttpServlet {
                     status = "success";
                     SystemLogDAO logDao = new SystemLogDAO();
                     SystemLog log = new SystemLog();
-                    int adminId = (u != null) ? u.getUserID() : 0;
-                    log.setUserID(adminId);
+                    int userID = (u != null) ? u.getUserID() : 1;
+                    log.setUserID(userID);
                     log.setAction("CREATE_SUPPLIER");
                     log.setTargetObject("New Supplier: " + name);
                     log.setDescription("Created new supplier");
@@ -214,8 +214,8 @@ public class addSupplierController extends HttpServlet {
                         status = "success";
                         SystemLogDAO logDAO = new SystemLogDAO();
                         SystemLog log = new SystemLog();
-                        int adminId = (u != null) ? u.getUserID() : 0;
-                        log.setUserID(adminId);
+                        int userID = (u != null) ? u.getUserID() : 1;
+                        log.setUserID(userID);
                         log.setAction("UPDATE_SUPPLIER");
                         log.setTargetObject("Supplier ID: " + id);
                         log.setDescription(changes.toString());

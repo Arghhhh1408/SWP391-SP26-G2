@@ -54,28 +54,34 @@
         <h2>Danh sách phiếu nhập hàng</h2>
 
         <a class="back-btn" href="category">← Quay lại trang sản phẩm</a>
-        <c:if test="${empty stockList}">
-            <p>Chưa có phiếu nhập hàng nào.</p>
-        </c:if>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mã phiếu</th>
+                    <th>Nhà cung cấp</th>
+                    <th>Sản phẩm</th>
+                    <th>Số lượng</th>
+                    <th>Giá nhập</th>
+                    <th>Thành tiền</th>
+                    <th>Ngày nhập</th>
+                    <th>Nhân viên nhập</th>
+                    <th>Ghi chú</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
 
-        <c:if test="${not empty stockList}">
-            <table>
-                <thead>
+                <!-- Trường hợp không có dữ liệu -->
+                <c:if test="${empty stockList}">
                     <tr>
-                        <th>Mã phiếu</th>
-                        <th>Nhà cung cấp</th>
-                        <th>Sản phẩm</th>
-                        <th>Số lượng</th>
-                        <th>Giá nhập</th>
-                        <th>Thành tiền</th>
-                        <th>Ngày nhập</th>
-                        <th>Nhân viên nhập</th>
-                        <th>Ghi chú</th>
-                        <th>Trạng thái</th>
+                        <td colspan="10" style="text-align:center; padding:12px;">
+                            Không có phiếu nhập hàng nào
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
+                </c:if>
 
+                <!-- Trường hợp có dữ liệu -->
+                <c:if test="${not empty stockList}">
                     <c:forEach var="s" items="${stockList}">
                         <c:forEach var="d" items="${s.details}">
                             <tr>
@@ -107,14 +113,13 @@
                             </tr>
                         </c:forEach>
                     </c:forEach>
+                </c:if>
 
-                </tbody>
-            </table>
-
-            <div>
-                <a href="createStockIn">+ Tạo phiếu nhập hàng</a>
-            </div>
-        </c:if>
+            </tbody>
+        </table>
+        <div>
+            <a href="createStockIn">+ Tạo phiếu nhập hàng</a>
+        </div>
 
     </body>
 </html>

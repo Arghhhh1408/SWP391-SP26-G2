@@ -5,6 +5,9 @@
 --%>
 
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
+
 <!DOCTYPE html>
 <html>
     <head>
@@ -15,7 +18,11 @@
 
         <h2>TẠO PHIẾU NHẬP KHO</h2>
 
-        <a href="category">Back to List</a>
+        <a href="createStockIn?action=clear&redirect=1">
+            ← Quay lại danh sách phiếu nhập
+        </a>
+        <br>
+
         <!-- Hiển thị thông báo -->
         <%
             String message = (String) request.getAttribute("message");
@@ -25,6 +32,61 @@
         <%
             }
         %>
+
+        <!-- ===================== -->
+        <!-- 1) TÌM & CHỌN SẢN PHẨM -->
+        <!-- ===================== -->
+        <h3>Tìm & chọn sản phẩm</h3>
+
+        <form action="createStockIn" method="get">
+            <input type="text" name="keyword" value="${keyword}" placeholder="Nhập tên hoặc SKU..." style="width:320px;">
+            <button type="submit">Tìm</button>
+            <a href="createStockIn?action=clear" style="margin-left:10px;">Xóa danh sách đã chọn</a>
+        </form>
+
+        <c:if test="${not empty productList}">
+            <table border="1" cellpadding="8" cellspacing="0" width="100%" style="margin-top:10px;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên</th>
+                        <th>SKU</th>
+                        <th>ĐVT</th>
+                        <th>Giá bán</th>
+                        <th>Tồn</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <c:forEach var="p" items="${productList}">
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.name}</td>
+                            <td>${p.sku}</td>
+                            <td>${p.unit}</td>
+                            <td>
+                                <fmt:formatNumber value="${p.price}" type="number" groupingUsed="true"/>
+                            </td>
+                            <td>${p.quantity}</td>
+                            <td>
+                                <a href="createStockIn?action=add&pid=${p.id}&keyword=${keyword}">Chọn</a>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                </tbody>
+            </table>
+        </c:if>
+
+        <c:if test="${empty productList}">
+            <p style="margin-top:10px;">Không có sản phẩm phù hợp.</p>
+        </c:if>
+
+        <hr>
+
+        <!-- ============================ -->
+        <!-- 2) TẠO PHIẾU NHẬP (POST FORM) -->
+        <!-- ============================ -->
+        <h3>Thông tin phiếu nhập & sản phẩm đã chọn</h3>
 
         <form action="createStockIn" method="post">
 
@@ -44,38 +106,69 @@
                     Ghi chú:<br>
                     <textarea name="note" rows="3" cols="40"></textarea>
                 </p>
+
+                <p>
+                    Thanh toán:<br>
+                    <label>
+                        <input type="radio" name="paymentOption" value="paid" checked>
+                        Đã thanh toán
+                    </label>
+                    <label style="margin-left:12px;">
+                        <input type="radio" name="paymentOption" value="pay_later">
+                        Thanh toán sau
+                    </label>
+                </p>
             </fieldset>
 
             <br>
 
             <fieldset>
-                <legend>Chi tiết sản phẩm</legend>
+                <legend>Danh sách sản phẩm đã chọn</legend>
 
-                <!-- Dòng sản phẩm 1 -->
-                <p>
-                    Product ID:
-                    <input type="number" name="productId" required>
+                <table border="1" cellpadding="8" cellspacing="0" width="100%">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên</th>
+                            <th>SKU</th>
+                            <th>ĐVT</th>
+                            <th>Số lượng</th>
+                            <th>Giá nhập</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <c:if test="${empty cart}">
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding:12px;">
+                                    Chưa có sản phẩm nào được chọn
+                                </td>
+                            </tr>
+                        </c:if>
 
-                    Quantity:
-                    <input type="number" name="quantity" required>
-
-                    Unit Cost:
-                    <input type="number" step="0.01" name="unitCost" required>
-                </p>
-
-                <!-- Dòng sản phẩm 2 -->
-                <p>
-                    Product ID:
-                    <input type="number" name="productId">
-
-                    Quantity:
-                    <input type="number" name="quantity">
-
-                    Unit Cost:
-                    <input type="number" step="0.01" name="unitCost">
-                </p>
-
-                <!-- Có thể copy thêm nhiều dòng nếu muốn -->
+                        <c:if test="${not empty cart}">
+                            <c:forEach var="entry" items="${cart}">
+                                <c:set var="p" value="${entry.value}"/>
+                                <tr>
+                                    <td>${p.id}</td>
+                                    <td>${p.name}</td>
+                                    <td>${p.sku}</td>
+                                    <td>${p.unit}</td>
+                                    <td>
+                                        <input type="number" name="qty_${p.id}" min="1" value="1" required style="width:90px;">
+                                    </td>
+                                    <td>
+                                        <!-- Vì ProductDAO hiện chưa trả Cost, tạm default = Price -->
+                                        <input type="number" name="cost_${p.id}" min="0" step="0.01" value="${p.price}" required style="width:130px;">
+                                    </td>
+                                    <td>
+                                        <a href="createStockIn?action=remove&pid=${p.id}&keyword=${keyword}">Xóa</a>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                        </c:if>
+                    </tbody>
+                </table>
 
             </fieldset>
 

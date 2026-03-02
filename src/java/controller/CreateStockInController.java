@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import model.StockIn;
 import model.StockInDetail;
 import model.User;
@@ -75,16 +76,61 @@ public class CreateStockInController extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("acc");
-
-        // 2 = Warehouse (đổi theo DB của bạn)
         if (user.getRoleID() != 1) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
                     "Chỉ Warehouse Staff mới được tạo phiếu nhập.");
             return;
         }
 
-        request.getRequestDispatcher("stockinForm.jsp")
-                .forward(request, response);
+        // ====== CART trong session: Map<productId, Product>
+        @SuppressWarnings("unchecked")
+        Map<Integer, model.Product> cart
+                = (Map<Integer, model.Product>) session.getAttribute("stockinCart");
+
+        if (cart == null) {
+            cart = new java.util.LinkedHashMap<>();
+            session.setAttribute("stockinCart", cart);
+        }
+
+        // ====== Xử lý action: add/remove/clear
+        String action = request.getParameter("action");
+        String pidRaw = request.getParameter("pid");
+
+        dao.ProductDAO pdao = new dao.ProductDAO();
+
+        if ("add".equals(action) && pidRaw != null) {
+            try {
+                int pid = Integer.parseInt(pidRaw);
+                model.Product p = pdao.getById(pid);
+                if (p != null) {
+                    cart.put(pid, p);
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        } else if ("remove".equals(action) && pidRaw != null) {
+            try {
+                int pid = Integer.parseInt(pidRaw);
+                cart.remove(pid);
+            } catch (NumberFormatException ignored) {
+            }
+        } else if ("clear".equals(action)) {
+            cart.clear();
+            if ("1".equals(request.getParameter("redirect"))) {
+                response.sendRedirect("stockinList");
+                return;
+            }
+        }
+
+        // ====== Search products (submit GET)
+        String keyword = request.getParameter("keyword");
+        List<model.Product> productList = pdao.search(keyword);
+        request.setAttribute("keyword", keyword);
+        request.setAttribute("productList", productList);
+
+        // Đưa cart sang JSP để render
+        request.setAttribute("cart", cart);
+
+        request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
     }
 
     /**
@@ -100,39 +146,75 @@ public class CreateStockInController extends HttpServlet {
             throws ServletException, IOException {
 
         try {
-
             request.setCharacterEncoding("UTF-8");
+
+            HttpSession session = request.getSession(false);
+            if (session == null || session.getAttribute("acc") == null) {
+                response.sendRedirect("login.jsp");
+                return;
+            }
+
+            User user = (User) session.getAttribute("acc");
+
+            @SuppressWarnings("unchecked")
+            Map<Integer, model.Product> cart
+                    = (Map<Integer, model.Product>) session.getAttribute("stockinCart");
+
+            if (cart == null || cart.isEmpty()) {
+                request.setAttribute("message", "Vui lòng chọn ít nhất 1 sản phẩm!");
+                request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
+                return;
+            }
 
             // ======= PHIẾU CHÍNH =======
             StockIn stockIn = new StockIn();
             stockIn.setSupplierId(Integer.parseInt(request.getParameter("supplierId")));
-            
-            HttpSession session = request.getSession(false);
-            User user = (User) session.getAttribute("acc");
             stockIn.setCreatedBy(user.getUserID());
-            
             stockIn.setNote(request.getParameter("note"));
-            stockIn.setStatus("Completed");
 
-            // ======= CHI TIẾT =======
-            String[] productIds = request.getParameterValues("productId");
-            String[] quantities = request.getParameterValues("quantity");
-            String[] unitCosts = request.getParameterValues("unitCost");
+            // Status theo lựa chọn thanh toán
+            String paymentOption = request.getParameter("paymentOption");
+            if ("paid".equals(paymentOption)) {
+                stockIn.setStatus("Complete");
+            } else {
+                stockIn.setStatus("Pending");
+            }
 
+            // ======= CHI TIẾT từ cart =======
             List<StockInDetail> details = new ArrayList<>();
-
             double total = 0;
 
-            for (int i = 0; i < productIds.length; i++) {
+            for (Integer pid : cart.keySet()) {
+                String qtyRaw = request.getParameter("qty_" + pid);
+                String costRaw = request.getParameter("cost_" + pid);
 
-                StockInDetail detail = new StockInDetail();
-                detail.setProductId(Integer.parseInt(productIds[i]));
-                detail.setQuantity(Integer.parseInt(quantities[i]));
-                detail.setUnitCost(Double.parseDouble(unitCosts[i]));
+                if (qtyRaw == null || qtyRaw.trim().isEmpty()) {
+                    continue;
+                }
+                if (costRaw == null || costRaw.trim().isEmpty()) {
+                    continue;
+                }
 
-                total += detail.getQuantity() * detail.getUnitCost();
+                int qty = Integer.parseInt(qtyRaw.trim());
+                double cost = Double.parseDouble(costRaw.trim());
 
-                details.add(detail);
+                if (qty <= 0 || cost < 0) {
+                    continue;
+                }
+
+                StockInDetail d = new StockInDetail();
+                d.setProductId(pid);
+                d.setQuantity(qty);
+                d.setUnitCost(cost);
+
+                total += qty * cost;
+                details.add(d);
+            }
+
+            if (details.isEmpty()) {
+                request.setAttribute("message", "Vui lòng nhập số lượng và giá nhập hợp lệ!");
+                request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
+                return;
             }
 
             stockIn.setTotalAmount(total);
@@ -142,11 +224,11 @@ public class CreateStockInController extends HttpServlet {
             boolean result = dao.insertStockInWithDetails(stockIn, details);
 
             if (result) {
-                response.sendRedirect(request.getContextPath() + "/category");
+                cart.clear(); // clear cart sau khi tạo thành công
+                response.sendRedirect(request.getContextPath() + "/stockinList");
             } else {
                 request.setAttribute("message", "Tạo phiếu nhập thất bại!");
-                request.getRequestDispatcher("stockinForm.jsp")
-                        .forward(request, response);
+                request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
             }
 
         } catch (Exception e) {
