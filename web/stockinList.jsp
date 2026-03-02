@@ -53,28 +53,26 @@
 
         <h2>Danh sách phiếu nhập hàng</h2>
 
-        <a class="back-btn" href="category">← Quay lại trang sản phẩm</a>
-        <table>
+        <a href="category">← Quay lại trang sản phẩm</a>
+
+        <table border="1" cellpadding="8" cellspacing="0" width="100%">
             <thead>
                 <tr>
-                    <th>Mã phiếu</th>
+                    <th>Mã đơn nhập</th>
+                    <th>Ngày tạo</th>
                     <th>Nhà cung cấp</th>
-                    <th>Sản phẩm</th>
-                    <th>Số lượng</th>
-                    <th>Giá nhập</th>
-                    <th>Thành tiền</th>
-                    <th>Ngày nhập</th>
-                    <th>Nhân viên nhập</th>
-                    <th>Ghi chú</th>
+                    <th>Nhân viên tạo</th>
+                    <th>Số lượng nhập</th>
+                    <th>Giá trị đơn</th>
                     <th>Trạng thái</th>
                 </tr>
             </thead>
-            <tbody>
 
+            <tbody>
                 <!-- Trường hợp không có dữ liệu -->
                 <c:if test="${empty stockList}">
                     <tr>
-                        <td colspan="10" style="text-align:center; padding:12px;">
+                        <td colspan="7" style="text-align:center; padding:12px;">
                             Không có phiếu nhập hàng nào
                         </td>
                     </tr>
@@ -83,41 +81,34 @@
                 <!-- Trường hợp có dữ liệu -->
                 <c:if test="${not empty stockList}">
                     <c:forEach var="s" items="${stockList}">
-                        <c:forEach var="d" items="${s.details}">
-                            <tr>
-                                <td>${s.stockInId}</td>
-                                <td>${s.supplierName}</td>
-                                <td>${d.productName}</td>
-                                <td>${d.quantity}</td>
+                        <tr>
+                            <td>${s.stockInId}</td>
 
-                                <td>
-                                    <fmt:formatNumber value="${d.unitCost}" 
-                                                      type="number" 
-                                                      groupingUsed="true" />
-                                </td>
+                            <td>
+                                <fmt:formatDate value="${s.date}" pattern="dd/MM/yyyy HH:mm" />
+                            </td>
 
-                                <td>
-                                    <fmt:formatNumber value="${d.subTotal}" 
-                                                      type="number" 
-                                                      groupingUsed="true" />
-                                </td>
+                            <td>${s.supplierName}</td>
+                            <td>${s.staffName}</td>
 
-                                <td>
-                                    <fmt:formatDate value="${s.date}" 
-                                                    pattern="dd/MM/yyyy HH:mm" />
-                                </td>
+                            <!-- Tổng số lượng (tính trong model StockIn: getTotalQuantity()) -->
+                            <td>${s.totalQuantity}</td>
 
-                                <td>${s.staffName}</td>
-                                <td>${s.note}</td>
-                                <td>${s.status}</td>
-                            </tr>
-                        </c:forEach>
+                            <!-- Tổng tiền (tính trong model StockIn: getTotalAmountCalculated()) -->
+                            <td>
+                                <fmt:formatNumber value="${s.totalAmountCalculated}"
+                                                  type="number"
+                                                  groupingUsed="true" />
+                            </td>
+
+                            <td>${s.status}</td>
+                        </tr>
                     </c:forEach>
                 </c:if>
-
             </tbody>
         </table>
-        <div>
+
+        <div style="margin-top: 12px;">
             <a href="createStockIn">+ Tạo phiếu nhập hàng</a>
         </div>
 

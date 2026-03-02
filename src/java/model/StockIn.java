@@ -12,7 +12,11 @@ import java.util.List;
  * @author dotha
  */
 public class StockIn {
-    
+
+    public static final String STATUS_COMPLETE = "Complete";
+    public static final String STATUS_PENDING = "Pending";
+    public static final String STATUS_CANCELLED = "Cancelled";
+
     private int stockInId;
     private int supplierId;
     private String supplierName;
@@ -103,7 +107,31 @@ public class StockIn {
     public void setDetails(List<StockInDetail> details) {
         this.details = details;
     }
-    
-    
-    
+
+    public int getTotalQuantity() {
+        if (details == null) {
+            return 0;
+        }
+
+        int total = 0;
+        for (StockInDetail d : details) {
+            total += d.getQuantity();
+        }
+        return total;
+    }
+
+    public double getTotalAmountCalculated() {
+        if (totalAmount > 0) {
+            return totalAmount;
+        }
+        if (details == null) {
+            return 0;
+        }
+        double total = 0;
+        for (StockInDetail d : details) {
+            total += d.getQuantity() * d.getUnitCost();
+        }
+        return total;
+    }
+
 }
