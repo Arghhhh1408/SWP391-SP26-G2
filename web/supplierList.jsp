@@ -16,7 +16,7 @@
 
     <body>
         <h1>Danh sách nhà cung cấp</h1>
-        <a href="admin">Quay lại Admin Dashboard</a>
+        <a href="category">← Quay lại trang sản phẩm</a>
         <br>
 
         <h3>Tìm kiếm nhà cung cấp</h3>
