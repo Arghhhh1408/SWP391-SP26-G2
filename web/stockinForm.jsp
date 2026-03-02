@@ -15,7 +15,7 @@
 
         <h2>TẠO PHIẾU NHẬP KHO</h2>
 
-        <a href="category">Back to List</a>
+        <a href="stockinList">← Quay lại danh sách phiếu nhập</a>
         <!-- Hiển thị thông báo -->
         <%
             String message = (String) request.getAttribute("message");
@@ -75,7 +75,17 @@
                     <input type="number" step="0.01" name="unitCost">
                 </p>
 
-                <!-- Có thể copy thêm nhiều dòng nếu muốn -->
+                <p>
+                    Thanh toán:<br>
+                    <label>
+                        <input type="radio" name="paymentOption" value="paid" checked>
+                        Đã thanh toán
+                    </label>
+                    <label style="margin-left: 12px;">
+                        <input type="radio" name="paymentOption" value="pay_later">
+                        Thanh toán sau
+                    </label>
+                </p>
 
             </fieldset>
 

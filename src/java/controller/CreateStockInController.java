@@ -106,13 +106,19 @@ public class CreateStockInController extends HttpServlet {
             // ======= PHIẾU CHÍNH =======
             StockIn stockIn = new StockIn();
             stockIn.setSupplierId(Integer.parseInt(request.getParameter("supplierId")));
-            
+
             HttpSession session = request.getSession(false);
             User user = (User) session.getAttribute("acc");
             stockIn.setCreatedBy(user.getUserID());
-            
+
             stockIn.setNote(request.getParameter("note"));
-            stockIn.setStatus("Completed");
+            String paymentOption = request.getParameter("paymentOption");
+            // paid => Complete, pay_later => Pending
+            if ("paid".equals(paymentOption)) {
+                stockIn.setStatus("Complete");
+            } else {
+                stockIn.setStatus("Pending");
+            }
 
             // ======= CHI TIẾT =======
             String[] productIds = request.getParameterValues("productId");
@@ -125,14 +131,30 @@ public class CreateStockInController extends HttpServlet {
 
             for (int i = 0; i < productIds.length; i++) {
 
+                // Bỏ qua dòng trống (dòng user không nhập)
+                if (productIds[i] == null || productIds[i].trim().isEmpty()) {
+                    continue;
+                }
+                if (quantities[i] == null || quantities[i].trim().isEmpty()) {
+                    continue;
+                }
+                if (unitCosts[i] == null || unitCosts[i].trim().isEmpty()) {
+                    continue;
+                }
+
                 StockInDetail detail = new StockInDetail();
-                detail.setProductId(Integer.parseInt(productIds[i]));
-                detail.setQuantity(Integer.parseInt(quantities[i]));
-                detail.setUnitCost(Double.parseDouble(unitCosts[i]));
+                detail.setProductId(Integer.parseInt(productIds[i].trim()));
+                detail.setQuantity(Integer.parseInt(quantities[i].trim()));
+                detail.setUnitCost(Double.parseDouble(unitCosts[i].trim()));
 
                 total += detail.getQuantity() * detail.getUnitCost();
-
                 details.add(detail);
+            }
+
+            if (details.isEmpty()) {
+                request.setAttribute("message", "Vui lòng nhập ít nhất 1 sản phẩm!");
+                request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
+                return;
             }
 
             stockIn.setTotalAmount(total);
