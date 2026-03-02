@@ -9,15 +9,30 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import model.Category;
 import model.Product;
+import model.User;
 
 @WebServlet(name = "ProductCRUDController", urlPatterns = { "/addProduct", "/editProduct", "/deleteProduct" })
 public class ProductCRUDController extends HttpServlet {
 
+    private boolean ensureAdmin(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession();
+        User u = (User) session.getAttribute("acc");
+        if (u == null || u.getRoleID() != 0) {
+            response.sendRedirect("login");
+            return false;
+        }
+        return true;
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!ensureAdmin(request, response)) {
+            return;
+        }
         String action = request.getServletPath();
         CategoryDAO dao = new CategoryDAO();
 
@@ -36,17 +51,20 @@ public class ProductCRUDController extends HttpServlet {
             } else if (action.equals("/deleteProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 dao.deleteProduct(id);
-                response.sendRedirect("category");
+                response.sendRedirect("products");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            response.sendRedirect("category");
+            response.sendRedirect("products");
         }
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!ensureAdmin(request, response)) {
+            return;
+        }
         String action = request.getServletPath();
         CategoryDAO dao = new CategoryDAO();
 
@@ -62,12 +80,14 @@ public class ProductCRUDController extends HttpServlet {
             double cost = 0;
             double price = 0;
             int quantity = 0;
+            int warrantyPeriod = 0;
 
             try {
                 categoryId = Integer.parseInt(request.getParameter("categoryId"));
                 String costStr = request.getParameter("cost");
                 String priceStr = request.getParameter("price");
                 String quantityStr = request.getParameter("quantity");
+                String warrantyStr = request.getParameter("warrantyPeriod");
 
                 if (costStr != null && !costStr.isEmpty())
                     cost = Double.parseDouble(costStr);
@@ -75,9 +95,11 @@ public class ProductCRUDController extends HttpServlet {
                     price = Double.parseDouble(priceStr);
                 if (quantityStr != null && !quantityStr.isEmpty())
                     quantity = Integer.parseInt(quantityStr);
+                if (warrantyStr != null && !warrantyStr.isEmpty())
+                    warrantyPeriod = Integer.parseInt(warrantyStr);
 
             } catch (NumberFormatException e) {
-                request.setAttribute("error", "Invalid number format for Cost, Price, or Quantity");
+                request.setAttribute("error", "Invalid number format for Cost, Price, Quantity, or Warranty Period");
                 List<Category> categories = dao.getAllCategories();
                 request.setAttribute("categories", categories);
 
@@ -91,13 +113,14 @@ public class ProductCRUDController extends HttpServlet {
                 pError.setImageURL(imageURL);
                 pError.setStatus(status);
                 pError.setCategoryId(categoryId);
+                pError.setWarrantyPeriod(warrantyPeriod);
                 request.setAttribute("product", pError);
                 request.getRequestDispatcher("productForm.jsp").forward(request, response);
                 return;
             }
 
-            if (cost < 0 || price < 0 || quantity < 0) {
-                request.setAttribute("error", "Cost, Price, and Quantity must be non-negative!");
+            if (cost < 0 || price < 0 || quantity < 0 || warrantyPeriod < 0) {
+                request.setAttribute("error", "Cost, Price, Quantity, and Warranty Period must be non-negative!");
                 List<Category> categories = dao.getAllCategories();
                 request.setAttribute("categories", categories);
 
@@ -112,6 +135,7 @@ public class ProductCRUDController extends HttpServlet {
                 pError.setImageURL(imageURL);
                 pError.setStatus(status);
                 pError.setCategoryId(categoryId);
+                pError.setWarrantyPeriod(warrantyPeriod);
 
                 request.setAttribute("product", pError);
                 request.getRequestDispatcher("productForm.jsp").forward(request, response);
@@ -129,6 +153,7 @@ public class ProductCRUDController extends HttpServlet {
             p.setImageURL(imageURL);
             p.setStatus(status);
             p.setCategoryId(categoryId);
+            p.setWarrantyPeriod(warrantyPeriod);
 
             if (action.equals("/addProduct")) {
                 if (dao.isProductSkuExists(sku)) {
@@ -170,7 +195,7 @@ public class ProductCRUDController extends HttpServlet {
                     return;
                 }
             }
-            response.sendRedirect("category");
+            response.sendRedirect("products");
 
         } catch (Exception e) {
             e.printStackTrace();

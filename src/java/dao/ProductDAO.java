@@ -12,7 +12,7 @@ public class ProductDAO extends DBContext {
         List<Product> list = new ArrayList<>();
 
         String sql = """
-            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status
+            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
             FROM dbo.Products
             WHERE Status = 'Active'
               AND (Name LIKE ? OR SKU LIKE ?)
@@ -37,7 +37,7 @@ public class ProductDAO extends DBContext {
     // Lấy product theo ID (add vào cart)
     public Product getById(int id) {
         String sql = """
-            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status
+            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
             FROM dbo.Products
             WHERE ProductID = ? AND Status = 'Active'
         """;
@@ -55,6 +55,48 @@ public class ProductDAO extends DBContext {
         return null;
     }
 
+    public Product getBySku(String sku) {
+        String sql = """
+            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
+            FROM dbo.Products
+            WHERE Status = 'Active' AND SKU = ?
+        """;
+
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, sku == null ? "" : sku.trim());
+            ResultSet rs = stm.executeQuery();
+            if (rs.next()) {
+                return map(rs);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<Product> searchByName(String keyword) {
+        List<Product> list = new ArrayList<>();
+        String sql = """
+            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
+            FROM dbo.Products
+            WHERE Status = 'Active' AND Name LIKE ?
+        """;
+
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            String k = "%" + (keyword == null ? "" : keyword.trim()) + "%";
+            stm.setString(1, k);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                list.add(map(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     private Product map(ResultSet rs) throws SQLException {
         Product p = new Product();
         p.setId(rs.getInt("ProductID"));
@@ -64,6 +106,7 @@ public class ProductDAO extends DBContext {
         p.setQuantity(rs.getInt("StockQuantity"));
         p.setUnit(rs.getString("Unit"));
         p.setStatus(rs.getString("Status"));
+        p.setWarrantyPeriod(rs.getInt("WarrantyPeriod"));
         return p;
         
     }

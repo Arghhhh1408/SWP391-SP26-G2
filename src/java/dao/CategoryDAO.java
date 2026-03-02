@@ -31,7 +31,7 @@ public class CategoryDAO extends DBContext {
         PreparedStatement st = connection.prepareStatement(sql);
         ResultSet rs = st.executeQuery();
         while (rs.next()) {
-            list.add(new Product(rs.getInt("ProductID"),
+            Product p = new Product(rs.getInt("ProductID"),
                     rs.getString("Name"),
                     rs.getString("SKU"),
                     rs.getDouble("Cost"),
@@ -43,7 +43,12 @@ public class CategoryDAO extends DBContext {
                     rs.getString("Status") != null ? rs.getString("Status").trim() : null,
                     rs.getInt("CategoryID"),
                     rs.getTimestamp("CreatedDate"),
-                    rs.getTimestamp("UpdatedDate")));
+                    rs.getTimestamp("UpdatedDate"));
+            try {
+                p.setWarrantyPeriod(rs.getInt("WarrantyPeriod"));
+            } catch (Exception ignored) {
+            }
+            list.add(p);
         }
         return list;
     }
@@ -55,7 +60,7 @@ public class CategoryDAO extends DBContext {
         st.setInt(1, categoryId);
         ResultSet rs = st.executeQuery();
         while (rs.next()) {
-            list.add(new Product(rs.getInt("ProductID"),
+            Product p = new Product(rs.getInt("ProductID"),
                     rs.getString("Name"),
                     rs.getString("SKU"),
                     rs.getDouble("Cost"),
@@ -67,7 +72,12 @@ public class CategoryDAO extends DBContext {
                     rs.getString("Status") != null ? rs.getString("Status").trim() : null,
                     rs.getInt("CategoryID"),
                     rs.getTimestamp("CreatedDate"),
-                    rs.getTimestamp("UpdatedDate")));
+                    rs.getTimestamp("UpdatedDate"));
+            try {
+                p.setWarrantyPeriod(rs.getInt("WarrantyPeriod"));
+            } catch (Exception ignored) {
+            }
+            list.add(p);
         }
         return list;
     }
@@ -125,7 +135,7 @@ public class CategoryDAO extends DBContext {
     }
 
     public boolean addProduct(Product p) {
-        String sql = "INSERT INTO Products (Name, SKU, Cost, Price, StockQuantity, Unit, Description, ImageURL, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+        String sql = "INSERT INTO Products (Name, SKU, Cost, Price, StockQuantity, Unit, Description, ImageURL, WarrantyPeriod, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setString(1, p.getName());
@@ -136,8 +146,9 @@ public class CategoryDAO extends DBContext {
             st.setString(6, p.getUnit());
             st.setString(7, p.getDescription());
             st.setString(8, p.getImageURL());
-            st.setString(9, p.getStatus());
-            st.setInt(10, p.getCategoryId());
+            st.setInt(9, p.getWarrantyPeriod());
+            st.setString(10, p.getStatus());
+            st.setInt(11, p.getCategoryId());
             return st.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -146,7 +157,7 @@ public class CategoryDAO extends DBContext {
     }
 
     public boolean updateProduct(Product p) throws Exception {
-        String sql = "UPDATE Products SET Name=?, SKU=?, Cost=?, Price=?, StockQuantity=?, Unit=?, Description=?, ImageURL=?, Status=?, CategoryID=?, UpdatedDate=GETDATE() WHERE ProductID=?";
+        String sql = "UPDATE Products SET Name=?, SKU=?, Cost=?, Price=?, StockQuantity=?, Unit=?, Description=?, ImageURL=?, WarrantyPeriod=?, Status=?, CategoryID=?, UpdatedDate=GETDATE() WHERE ProductID=?";
         PreparedStatement st = connection.prepareStatement(sql);
         st.setString(1, p.getName());
         st.setString(2, p.getSku());
@@ -156,9 +167,10 @@ public class CategoryDAO extends DBContext {
         st.setString(6, p.getUnit());
         st.setString(7, p.getDescription());
         st.setString(8, p.getImageURL());
-        st.setString(9, p.getStatus());
-        st.setInt(10, p.getCategoryId());
-        st.setInt(11, p.getId());
+        st.setInt(9, p.getWarrantyPeriod());
+        st.setString(10, p.getStatus());
+        st.setInt(11, p.getCategoryId());
+        st.setInt(12, p.getId());
         return st.executeUpdate() > 0;
     }
 
@@ -181,7 +193,7 @@ public class CategoryDAO extends DBContext {
             st.setInt(1, id);
             ResultSet rs = st.executeQuery();
             if (rs.next()) {
-                return new Product(rs.getInt("ProductID"),
+                Product p = new Product(rs.getInt("ProductID"),
                         rs.getString("Name"),
                         rs.getString("SKU"),
                         rs.getDouble("Cost"),
@@ -194,6 +206,11 @@ public class CategoryDAO extends DBContext {
                         rs.getInt("CategoryID"),
                         rs.getTimestamp("CreatedDate"),
                         rs.getTimestamp("UpdatedDate"));
+                try {
+                    p.setWarrantyPeriod(rs.getInt("WarrantyPeriod"));
+                } catch (Exception ignored) {
+                }
+                return p;
             }
         } catch (Exception e) {
             e.printStackTrace();

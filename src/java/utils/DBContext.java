@@ -11,7 +11,7 @@ public class DBContext {
         try {
             String url = "jdbc:sqlserver://localhost:1433;databaseName=SimpleInventoryManagement;encrypt=true;trustServerCertificate=true";
             String username = "sa";
-            String pass = "123";
+            String pass = "123456";
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver"); //tool database
             connection = DriverManager.getConnection(url,username,pass); // bat dau connect
         } catch (Exception e) {
@@ -27,6 +27,16 @@ public class DBContext {
             }
         } catch (SQLException e) {
             System.out.println("Error closing connection: " + e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) {
+        DBContext dbContext = new DBContext();
+        if (dbContext.connection != null) {
+            System.out.println("Connection established successfully.");
+            dbContext.closeConnection();
+        } else {
+            System.out.println("Failed to establish connection.");
         }
     }
     
