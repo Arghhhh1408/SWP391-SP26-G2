@@ -67,32 +67,4 @@ public class ProductDAO extends DBContext {
         return p;
         
     }
-    public boolean decreaseStock(Connection conn, int productId, int qty) throws Exception {
-    String sql =
-        "UPDATE dbo.Products " +
-        "SET StockQuantity = StockQuantity - ? " +
-        "WHERE ProductID = ? AND Status = 'Active' AND StockQuantity >= ?";
-
-    try (PreparedStatement ps = conn.prepareStatement(sql)) {
-        ps.setInt(1, qty);
-        ps.setInt(2, productId);
-        ps.setInt(3, qty);
-        return ps.executeUpdate() == 1; // 1 row updated => đủ hàng
-    }
-}
-    public int getStockById(int productId) {
-    String sql = "SELECT StockQuantity FROM dbo.Products WHERE ProductID = ?";
-    try (PreparedStatement ps = connection.prepareStatement(sql)) {
-        ps.setInt(1, productId);
-        try (ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                return rs.getInt("StockQuantity");
-            }
-        }
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
-    return 0;
-}
-
 }

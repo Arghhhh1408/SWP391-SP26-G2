@@ -57,7 +57,7 @@ public class POSController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
         String keyword = request.getParameter("keyword");
-        if (keyword == null) keyword = "";
+
         ProductDAO dao = new ProductDAO();
         List<Product> products = dao.search(keyword);
 

@@ -50,11 +50,7 @@ public class LoginController extends HttpServlet {
             logDAO.insertLog(log);
             if (user.getRoleID() == 0) {
                 response.sendRedirect("admin");
-            }
-            if(user.getRoleID() == 3){
-                response.sendRedirect("pos");
-
-            }else {
+            } else {
                 response.sendRedirect("category");
             }
         } else {
