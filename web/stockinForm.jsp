@@ -36,7 +36,7 @@
         <!-- ===================== -->
         <!-- 1) TÌM & CHỌN SẢN PHẨM -->
         <!-- ===================== -->
-        <h3>1) Tìm & chọn sản phẩm</h3>
+        <h3>Tìm & chọn sản phẩm</h3>
 
         <form action="createStockIn" method="get">
             <input type="text" name="keyword" value="${keyword}" placeholder="Nhập tên hoặc SKU..." style="width:320px;">
@@ -86,7 +86,7 @@
         <!-- ============================ -->
         <!-- 2) TẠO PHIẾU NHẬP (POST FORM) -->
         <!-- ============================ -->
-        <h3>2) Thông tin phiếu nhập & sản phẩm đã chọn</h3>
+        <h3>Thông tin phiếu nhập & sản phẩm đã chọn</h3>
 
         <form action="createStockIn" method="post">
 
