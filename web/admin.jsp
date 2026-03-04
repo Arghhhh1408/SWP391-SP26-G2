@@ -15,8 +15,14 @@
 
                 <a href="userList">Xem danh sách tài khoản</a><br><!-- comment -->
                 <a href="createuser">Cấp tài khoản mới cho User</a><br><!-- comment -->
+                <a href="supplierList">Xem danh sách nhà cung cấp</a><br><!-- comment -->
                 <a href="deletedUsers">Tài khoản đã xóa</a><br><!-- comment -->
                 <a href="systemlog">Xem lịch sử hoạt động</a><br><!-- comment -->              
+                <a href="warrantyLookup">Tra cứu bảo hành</a><br><!-- comment -->
+                <a href="warrantyClaims">Xử lý yêu cầu bảo hành</a><br><!-- comment -->
+                <a href="returns">Trả hàng &amp; hoàn tiền</a><br><!-- comment -->
+                <a href="products">Danh sách sản phẩm (CRUD)</a><br><!-- comment -->
+                <a href="dashboard">Bảng điều khiển &amp; báo cáo</a><br><!-- comment -->
                 <a href="logout">Đăng xuất</a><br>
                 
                 

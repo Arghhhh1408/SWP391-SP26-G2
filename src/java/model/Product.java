@@ -4,6 +4,7 @@ public class Product {
     private int id;
     private String name;
     private String sku;
+    private int warrantyPeriod;
     private double cost;
     private double price;
     private int quantity;
@@ -58,6 +59,14 @@ public class Product {
 
     public void setSku(String sku) {
         this.sku = sku;
+    }
+
+    public int getWarrantyPeriod() {
+        return warrantyPeriod;
+    }
+
+    public void setWarrantyPeriod(int warrantyPeriod) {
+        this.warrantyPeriod = warrantyPeriod;
     }
 
     public double getCost() {
