@@ -10,7 +10,7 @@
 
         <body>
             <h1>${empty product ? 'Add New Product' : 'Edit Product'}</h1>
-            <a href="category">Back to List</a>
+            <a href="products">Back to List</a>
             <h3 style="color: red;">${error}</h3>
 
             <form action="${empty product ? 'addProduct' : 'editProduct'}" method="post">
@@ -48,6 +48,10 @@
                     <tr>
                         <td>Quantity:</td>
                         <td><input type="number" name="quantity" value="${product.quantity}" required></td>
+                    </tr>
+                    <tr>
+                        <td>Warranty Period (months):</td>
+                        <td><input type="number" name="warrantyPeriod" value="${product.warrantyPeriod}" min="0" required></td>
                     </tr>
                     <tr>
                         <td>Unit:</td>
