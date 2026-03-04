@@ -65,6 +65,7 @@
                     <th>Số lượng nhập</th>
                     <th>Giá trị đơn</th>
                     <th>Trạng thái</th>
+                    <th>Ghi chú</th>
                 </tr>
             </thead>
 
