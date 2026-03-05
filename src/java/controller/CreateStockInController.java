@@ -5,6 +5,7 @@
 package controller;
 
 import dao.StockInDAO;
+import dao.SystemLogDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import model.StockIn;
 import model.StockInDetail;
+import model.SystemLog;
 import model.User;
 
 /**
@@ -76,9 +78,9 @@ public class CreateStockInController extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("acc");
-        if (user.getRoleID() != 1) {
+        if (user.getRoleID() != 1 && user.getRoleID() != 2) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Chỉ Warehouse Staff mới được tạo phiếu nhập.");
+                    "Chỉ Warehouse Staff hoặc Quản lý mới được tạo phiếu nhập.");
             return;
         }
 
@@ -224,9 +226,58 @@ public class CreateStockInController extends HttpServlet {
             boolean result = dao.insertStockInWithDetails(stockIn, details);
 
             if (result) {
+                try {
+                    SystemLogDAO logDAO = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+
+                    int userID = (user != null) ? user.getUserID() : 2;
+
+                    log.setUserID(userID);
+                    log.setAction("CREATE_STOCKIN");
+                    log.setTargetObject("StockIn");
+
+                    String description = "Tạo phiếu nhập | SupplierID: "
+                            + stockIn.getSupplierId()
+                            + " | Total: " + stockIn.getTotalAmount()
+                            + " | Items: " + details.size()
+                            + " | Status: " + stockIn.getStatus();
+
+                    log.setDescription(description);
+                    log.setIpAddress(request.getRemoteAddr());
+
+                    logDAO.insertLog(log);
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
                 cart.clear(); // clear cart sau khi tạo thành công
                 response.sendRedirect(request.getContextPath() + "/stockinList");
             } else {
+                try {
+                    SystemLogDAO logDAO = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+
+                    int userID = (user != null) ? user.getUserID() : 2;
+
+                    log.setUserID(userID);
+                    log.setAction("CREATE_STOCKIN");
+                    log.setTargetObject("StockIn");
+
+                    String description = "Tạo phiếu nhập | SupplierID: "
+                            + stockIn.getSupplierId()
+                            + " | Total: " + stockIn.getTotalAmount()
+                            + " | Items: " + details.size()
+                            + " | Status: " + stockIn.getStatus();
+
+                    log.setDescription(description);
+                    log.setIpAddress(request.getRemoteAddr());
+
+                    logDAO.insertLog(log);
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 request.setAttribute("message", "Tạo phiếu nhập thất bại!");
                 request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
             }

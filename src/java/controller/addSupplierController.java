@@ -45,8 +45,9 @@ public class addSupplierController extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 1) {
-            response.sendRedirect("login");
+        if (u == null || u.getRoleID() != 2) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Chỉ có quản lý mới được thêm mới nhà cung cấp.");
             return;
         }
         String action = request.getParameter("action");
@@ -59,7 +60,7 @@ public class addSupplierController extends HttpServlet {
                 session.setAttribute("status", "success");
                 SystemLogDAO logDao = new SystemLogDAO();
                 SystemLog log = new SystemLog();
-                int userID = (u != null) ? u.getUserID() : 1;
+                int userID = (u != null) ? u.getUserID() : 2;
                 log.setUserID(userID);
                 log.setAction("DELETE_SUPPLIER");
                 log.setTargetObject("Supplier ID: " + id);
@@ -113,7 +114,7 @@ public class addSupplierController extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 1) {  // Sửa điều kiện check warehouse staff
+        if (u == null || u.getRoleID() != 2) {  // Sửa điều kiện check manager
             response.sendRedirect("login");
             return;
         }
@@ -151,7 +152,7 @@ public class addSupplierController extends HttpServlet {
                     status = "success";
                     SystemLogDAO logDao = new SystemLogDAO();
                     SystemLog log = new SystemLog();
-                    int userID = (u != null) ? u.getUserID() : 1;
+                    int userID = (u != null) ? u.getUserID() : 2;
                     log.setUserID(userID);
                     log.setAction("CREATE_SUPPLIER");
                     log.setTargetObject("New Supplier: " + name);
@@ -214,7 +215,7 @@ public class addSupplierController extends HttpServlet {
                         status = "success";
                         SystemLogDAO logDAO = new SystemLogDAO();
                         SystemLog log = new SystemLog();
-                        int userID = (u != null) ? u.getUserID() : 1;
+                        int userID = (u != null) ? u.getUserID() : 2;
                         log.setUserID(userID);
                         log.setAction("UPDATE_SUPPLIER");
                         log.setTargetObject("Supplier ID: " + id);
