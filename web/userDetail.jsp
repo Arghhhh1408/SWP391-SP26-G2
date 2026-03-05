@@ -93,6 +93,7 @@
                     <h3 style="color: ${status == 'success' ? 'green' : 'red'}">${message}</h3>
                     <a href="admin">Quay lại admin</a> |
                     <a href="userList">Xem danh sách tài khoản</a>
+                    <c:if test="${empty user}"> | <a href="createuser">Tiếp tục thêm tài khoản</a></c:if>
                     <br><br>
                 </c:if>
                 <c:if test="${empty message}">
