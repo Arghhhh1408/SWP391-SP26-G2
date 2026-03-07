@@ -54,7 +54,16 @@
         <h2>Danh sách phiếu nhập hàng</h2>
 
         <a href="category">← Quay lại trang sản phẩm</a>
-
+        
+        <%
+            String message = (String) request.getAttribute("message");
+            if (message != null) {
+        %>
+        <p style="color: green;"><%= message %></p>
+        <%
+            }
+        %>
+        
         <table border="1" cellpadding="8" cellspacing="0" width="100%">
             <thead>
                 <tr>

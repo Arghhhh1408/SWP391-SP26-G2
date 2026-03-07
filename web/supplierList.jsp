@@ -19,6 +19,15 @@
         <a href="category">← Quay lại trang sản phẩm</a>
         <br>
 
+        <%
+            String message = (String) request.getAttribute("message");
+            if (message != null) {
+        %>
+        <p style="color: green;"><%= message %></p>
+        <%
+            }
+        %>
+
         <h3>Tìm kiếm nhà cung cấp</h3>
         <form action="supplierList">
             <table>

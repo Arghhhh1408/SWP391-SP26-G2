@@ -14,8 +14,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.math.BigDecimal;
-import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -79,8 +77,8 @@ public class CreateStockInController extends HttpServlet {
 
         User user = (User) session.getAttribute("acc");
         if (user.getRoleID() != 1 && user.getRoleID() != 2) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Chỉ Warehouse Staff hoặc Quản lý mới được tạo phiếu nhập.");
+            request.setAttribute("message", "Chỉ Warehouse Staff hoặc Quản lý mới được tạo phiếu nhập.");
+            request.getRequestDispatcher("stockinList").forward(request, response);
             return;
         }
 

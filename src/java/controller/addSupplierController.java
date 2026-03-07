@@ -46,8 +46,8 @@ public class addSupplierController extends HttpServlet {
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
         if (u == null || u.getRoleID() != 2) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Chỉ có quản lý mới được thêm mới nhà cung cấp.");
+            request.setAttribute("message", "Chỉ có quản lý mới được thêm mới nhà cung cấp.");
+            request.getRequestDispatcher("supplierList").forward(request, response);
             return;
         }
         String action = request.getParameter("action");
@@ -115,7 +115,8 @@ public class addSupplierController extends HttpServlet {
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
         if (u == null || u.getRoleID() != 2) {  // Sửa điều kiện check manager
-            response.sendRedirect("login");
+            request.setAttribute("message", "Chỉ Warehouse Staff hoặc Quản lý mới được tạo phiếu nhập.");
+            request.getRequestDispatcher("stockinList").forward(request, response);
             return;
         }
         String action = request.getParameter("action");
