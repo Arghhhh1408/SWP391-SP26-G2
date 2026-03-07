@@ -54,7 +54,7 @@
         <h2>Danh sách phiếu nhập hàng</h2>
 
         <a href="category">← Quay lại trang sản phẩm</a>
-        
+
         <%
             String message = (String) request.getAttribute("message");
             if (message != null) {
@@ -63,7 +63,7 @@
         <%
             }
         %>
-        
+
         <table border="1" cellpadding="8" cellspacing="0" width="100%">
             <thead>
                 <tr>
@@ -75,6 +75,7 @@
                     <th>Giá trị đơn</th>
                     <th>Trạng thái</th>
                     <th>Ghi chú</th>
+                    <th>Thao tác</th>
                 </tr>
             </thead>
 
@@ -82,7 +83,7 @@
                 <!-- Trường hợp không có dữ liệu -->
                 <c:if test="${empty stockList}">
                     <tr>
-                        <td colspan="7" style="text-align:center; padding:12px;">
+                        <td colspan="9" style="text-align:center; padding:12px;">
                             Không có phiếu nhập hàng nào
                         </td>
                     </tr>
@@ -112,6 +113,21 @@
                             </td>
 
                             <td>${s.status}</td>
+                            <td>${s.note}</td>
+
+
+                            <td>
+
+                                <a href="stockinList?action=edit&id=${s.stockInId}">Sửa</a>
+
+                                |
+
+                                <a href="stockinList?action=delete&id=${s.stockInId}"
+                                   onclick="return confirm('Bạn có chắc muốn xóa không?');">
+                                    Xóa
+                                </a>
+
+                            </td>
                         </tr>
                     </c:forEach>
                 </c:if>
