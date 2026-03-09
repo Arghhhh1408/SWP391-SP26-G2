@@ -15,6 +15,7 @@
         <a href="createStockIn?action=clear&redirect=1">
             ← Quay lại danh sách phiếu nhập
         </a>
+        
         <br><br>
 
         <c:if test="${not empty message}">

@@ -45,13 +45,25 @@ public class addSupplierController extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 2) {
-            request.setAttribute("message", "Chỉ có quản lý mới được thêm mới nhà cung cấp.");
+        String action = request.getParameter("action");
+        String idStr = request.getParameter("id");
+        if (u == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+        if ("delete".equals(action) && u.getRoleID() != 1) {
+            request.setAttribute("message", "Bạn không có quyền xóa nhà cung cấp.");
             request.getRequestDispatcher("supplierList").forward(request, response);
             return;
         }
-        String action = request.getParameter("action");
-        String idStr = request.getParameter("id");
+
+        if (("add".equals(action) || "edit".equals(action))
+                && u.getRoleID() != 1 && u.getRoleID() != 2) {
+            request.setAttribute("message", "Bạn không có quyền thực hiện chức năng này.");
+            request.getRequestDispatcher("supplierList").forward(request, response);
+            return;
+        }
+
         if ("delete".equals(action) && idStr != null) {
             try {
                 int id = Integer.parseInt(idStr);

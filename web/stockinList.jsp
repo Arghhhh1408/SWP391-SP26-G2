@@ -53,7 +53,12 @@
 
         <h2>Danh sách phiếu nhập hàng</h2>
 
-        <a href="category">← Quay lại trang sản phẩm</a>
+        <c:if test="${sessionScope.acc.roleID == 1}">
+            <a href="staff_dashboard">← Quay lại bảng điều khiển của nhân viên</a>
+        </c:if>
+        <c:if test="${sessionScope.acc.roleID == 2}">
+            <a href="category">← Quay lại bảng điều khiển của quản lý</a>
+        </c:if>
 
         <%
             String message = (String) request.getAttribute("message");

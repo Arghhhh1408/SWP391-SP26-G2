@@ -16,7 +16,12 @@
 
     <body>
         <h1>Danh sách nhà cung cấp</h1>
-        <a href="category">← Quay lại trang sản phẩm</a>
+        <c:if test="${sessionScope.acc.roleID == 1}">
+            <a href="staff_dashboard">← Quay lại bảng điều khiển của nhân viên</a>
+        </c:if>
+        <c:if test="${sessionScope.acc.roleID == 2}">
+            <a href="category">← Quay lại bảng điều khiển của quản lý</a>
+        </c:if>
         <br>
 
         <%
@@ -47,10 +52,9 @@
         </form>
 
         <br><!-- comment -->
-        <a href="addSupplier?action=add">Thêm nhà cung cấp mới</a>
-
-
-
+        <c:if test="${sessionScope.acc.roleID == 2}">
+            <a href="addSupplier?action=add">Thêm nhà cung cấp mới</a>
+        </c:if>
 
         <table border="1">
             <thead>
@@ -61,16 +65,22 @@
                     <th>Địa chỉ</th>
                     <th>Email</th>
                     <th>Trạng thái</th>
+                        <c:if test="${sessionScope.acc.roleID == 2}">
+                        <th>Sửa</th>
+                        </c:if>
+                        <c:if test="${sessionScope.acc.roleID == 2}">
+                        <th>Xóa</th>
+                        </c:if>
                 </tr>
             </thead>
             <tbody>
                 <c:forEach items="${requestScope.list}" var="s">
                     <tr>
-                        <td>${s.getId()}</td>
-                        <td>${s.getSupplierName()}</td>
-                        <td>${s.getPhone()}</td>
-                        <td>${s.getAddress()}</td>
-                        <td>${s.getEmail()}</td>
+                        <td>${s.id}</td>
+                        <td>${s.supplierName}</td>
+                        <td>${s.phone}</td>
+                        <td>${s.address}</td>
+                        <td>${s.email}</td>
                         <td>
                             <c:choose>
                                 <c:when test="${s.status}">
@@ -82,17 +92,22 @@
                             </c:choose>
                         </td>
 
-                        <td>
-                            <c:if test="${s.id != 0}">
-                                <a href="addSupplier?action=edit&id=${s.id}">Sửa</a>
-                            </c:if>
-                        </td>
-                        <td>
-                            <c:if test="${s.id != 0}">
-                                <a href="addSupplier?action=delete&id=${s.id}"
-                                   onclick="return confirm('Bạn có chắc chắn muốn xóa nhà cung cấp?');">Xóa</a>
-                            </c:if>
-                        </td>
+                        <c:if test="${sessionScope.acc.roleID == 2}">
+                            <td>
+                                <c:if test="${s.id != 0}">
+                                    <a href="addSupplier?action=edit&id=${s.id}">Sửa</a>
+                                </c:if>
+                            </td>
+                        </c:if>
+
+                        <c:if test="${sessionScope.acc.roleID == 2}">
+                            <td>
+                                <c:if test="${s.id != 0}">
+                                    <a href="addSupplier?action=delete&id=${s.id}"
+                                       onclick="return confirm('Bạn có chắc chắn muốn xóa nhà cung cấp?');">Xóa</a>
+                                </c:if>
+                            </td>
+                        </c:if>
                     </tr>
                 </c:forEach>
             </tbody>
