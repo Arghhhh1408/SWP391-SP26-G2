@@ -1,5 +1,7 @@
 package model;
 
+import java.sql.Timestamp;
+
 public class Product {
     private int id;
     private String name;
@@ -13,15 +15,16 @@ public class Product {
     private String imageURL;
     private String status;
     private int categoryId;
-    private java.sql.Timestamp createDate;
-    private java.sql.Timestamp updateDate;
+    private Timestamp createDate;
+    private Timestamp updateDate;
+    private int warrantyPeriod;
 
     public Product() {
     }
 
     public Product(int id, String name, String sku, double cost, double price, int quantity, String unit,
-            String description, String imageURL, String status, int categoryId, java.sql.Timestamp createDate,
-            java.sql.Timestamp updateDate) {
+            String description, String imageURL, String status, int categoryId, Timestamp createDate,
+            Timestamp updateDate) {
         this.id = id;
         this.name = name;
         this.sku = sku;
@@ -133,24 +136,27 @@ public class Product {
         this.categoryId = categoryId;
     }
 
-    public java.sql.Timestamp getCreateDate() {
+    public Timestamp getCreateDate() {
         return createDate;
     }
 
-    public void setCreateDate(java.sql.Timestamp createDate) {
+    public void setCreateDate(Timestamp createDate) {
         this.createDate = createDate;
     }
 
-    public java.sql.Timestamp getUpdateDate() {
+    public Timestamp getUpdateDate() {
         return updateDate;
     }
 
-    public void setUpdateDate(java.sql.Timestamp updateDate) {
+    public void setUpdateDate(Timestamp updateDate) {
         this.updateDate = updateDate;
     }
 
-    @Override
-    public String toString() {
-        return "Product{" + "id=" + id + ", name=" + name + ", sku=" + sku + ", price=" + price + '}';
+    public int getWarrantyPeriod() {
+        return warrantyPeriod;
+    }
+
+    public void setWarrantyPeriod(int warrantyPeriod) {
+        this.warrantyPeriod = warrantyPeriod;
     }
 }

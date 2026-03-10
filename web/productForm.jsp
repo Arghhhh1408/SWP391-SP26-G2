@@ -5,7 +5,66 @@
 
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-            <title>${empty product ? 'Add Product' : 'Edit Product'}</title>
+            <title>${not empty product ? 'Sửa' : 'Thêm'} sản phẩm</title>
+            <style>
+                .form-card {
+                    background: #fff;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 900px;
+                    margin: 20px auto;
+                }
+
+                .form-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                }
+
+                .form-group {
+                    margin-bottom: 20px;
+                }
+
+                .form-group.full-width {
+                    grid-column: span 2;
+                }
+
+                .form-group label {
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                    color: #555;
+                    font-size: 14px;
+                }
+
+                .form-control {
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    box-sizing: border-box;
+                }
+
+                .form-control:focus {
+                    border-color: #007bff;
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+                }
+
+                textarea.form-control {
+                    height: 120px;
+                    resize: vertical;
+                }
+
+                .btn-group {
+                    margin-top: 30px;
+                    display: flex;
+                    gap: 12px;
+                    justify-content: flex-end;
+                }
+            </style>
         </head>
 
         <body>

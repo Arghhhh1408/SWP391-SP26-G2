@@ -2,7 +2,6 @@ package controller;
 
 import dao.CategoryDAO;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -20,19 +19,22 @@ public class ProductCRUDController extends HttpServlet {
             throws ServletException, IOException {
         String action = request.getServletPath();
         CategoryDAO dao = new CategoryDAO();
-
         try {
-            // Needed for category dropdown in forms
-            List<Category> categories = dao.getAllCategories();
-            request.setAttribute("categories", categories);
-
             if (action.equals("/addProduct")) {
+                List<Category> categories = dao.getAllCategories();
+                request.setAttribute("categories", categories);
                 request.getRequestDispatcher("productForm.jsp").forward(request, response);
             } else if (action.equals("/editProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                Product product = dao.getProductById(id);
-                request.setAttribute("product", product);
-                request.getRequestDispatcher("productForm.jsp").forward(request, response);
+                Product p = dao.getProductById(id);
+                if (p != null) {
+                    List<Category> categories = dao.getAllCategories();
+                    request.setAttribute("product", p);
+                    request.setAttribute("categories", categories);
+                    request.getRequestDispatcher("productForm.jsp").forward(request, response);
+                } else {
+                    response.sendRedirect("category");
+                }
             } else if (action.equals("/deleteProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 dao.deleteProduct(id);
@@ -51,12 +53,14 @@ public class ProductCRUDController extends HttpServlet {
         CategoryDAO dao = new CategoryDAO();
 
         try {
-            String name = request.getParameter("name").trim();
-            String sku = request.getParameter("sku").trim();
+            request.setCharacterEncoding("UTF-8");
+            String idStr = request.getParameter("id");
+            String name = request.getParameter("name");
+            String sku = request.getParameter("sku");
             String unit = request.getParameter("unit");
             String description = request.getParameter("description");
             String imageURL = request.getParameter("imageURL");
-            String status = request.getParameter("status") != null ? request.getParameter("status").trim() : "Active";
+            String status = request.getParameter("status");
             int categoryId = 0;
 
             double cost = 0;
@@ -130,58 +134,26 @@ public class ProductCRUDController extends HttpServlet {
             p.setStatus(status);
             p.setCategoryId(categoryId);
 
-            if (action.equals("/addProduct")) {
+            if (idStr == null || idStr.isEmpty()) {
+                // Check SKU exists
                 if (dao.isProductSkuExists(sku)) {
-                    request.setAttribute("error", "Product SKU already exists!");
+                    request.setAttribute("error", "SKU already exists!");
                     List<Category> categories = dao.getAllCategories();
                     request.setAttribute("categories", categories);
                     request.setAttribute("product", p);
                     request.getRequestDispatcher("productForm.jsp").forward(request, response);
                     return;
                 }
-                if (!dao.addProduct(p)) {
-                    request.setAttribute("error", "Failed to add product! Check database constraints.");
-                    List<Category> categories = dao.getAllCategories();
-                    request.setAttribute("categories", categories);
-                    request.setAttribute("product", p);
-                    request.getRequestDispatcher("productForm.jsp").forward(request, response);
-                    return;
-                }
-            } else if (action.equals("/editProduct")) {
-                int id = Integer.parseInt(request.getParameter("id"));
-                p.setId(id);
-                try {
-                    if (!dao.updateProduct(p)) {
-                        request.setAttribute("error",
-                                "Failed to update product! No rows affected.");
-                        List<Category> categories = dao.getAllCategories();
-                        request.setAttribute("categories", categories);
-                        request.setAttribute("product", p);
-                        request.getRequestDispatcher("productForm.jsp").forward(request, response);
-                        return;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    request.setAttribute("error", "Database Error: " + e.getMessage());
-                    List<Category> categories = dao.getAllCategories();
-                    request.setAttribute("categories", categories);
-                    request.setAttribute("product", p);
-                    request.getRequestDispatcher("productForm.jsp").forward(request, response);
-                    return;
-                }
+                dao.addProduct(p);
+            } else {
+                p.setId(Integer.parseInt(idStr));
+                dao.updateProduct(p);
             }
             response.sendRedirect("category");
 
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("error", "Error: " + e.getMessage());
-            try {
-                // Reload categories just in case
-                List<Category> categories = dao.getAllCategories();
-                request.setAttribute("categories", categories);
-            } catch (Exception ex) {
-            }
-            request.getRequestDispatcher("productForm.jsp").forward(request, response);
+            response.sendRedirect("category");
         }
     }
 }
