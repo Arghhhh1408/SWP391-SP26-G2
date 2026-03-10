@@ -16,7 +16,7 @@ public class Product {
     private int categoryId;
     private Timestamp createDate;
     private Timestamp updateDate;
-    private int warrantyPeriod;
+
 
     public Product() {
     }
@@ -143,11 +143,4 @@ public class Product {
         this.updateDate = updateDate;
     }
 
-    public int getWarrantyPeriod() {
-        return warrantyPeriod;
-    }
-
-    public void setWarrantyPeriod(int warrantyPeriod) {
-        this.warrantyPeriod = warrantyPeriod;
-    }
 }
