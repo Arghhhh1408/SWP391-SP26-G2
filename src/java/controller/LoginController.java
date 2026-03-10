@@ -18,7 +18,7 @@ import model.User;
  *
  * @author minhtuan
  */
-@WebServlet(name = "LoginController", urlPatterns = { "/login" })
+@WebServlet(name = "LoginController", urlPatterns = {"/login"})
 public class LoginController extends HttpServlet {
 
     @Override
@@ -50,6 +50,8 @@ public class LoginController extends HttpServlet {
             logDAO.insertLog(log);
             if (user.getRoleID() == 0) {
                 response.sendRedirect("admin");
+            } else if (user.getRoleID() == 1) {
+                response.sendRedirect("staff_dashboard");
             } else {
                 response.sendRedirect("category");
             }

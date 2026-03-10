@@ -145,4 +145,113 @@ public class StockInDAO extends DBContext {
 
         return list;
     }
+
+    public boolean deleteStockIn(int id) {
+        String deleteDetailsSql = "DELETE FROM StockInDetails WHERE StockInID = ?";
+        String deleteStockInSql = "DELETE FROM StockIn WHERE StockInID = ?";
+
+        try {
+            connection.setAutoCommit(false);
+
+            PreparedStatement psDetail = connection.prepareStatement(deleteDetailsSql);
+            psDetail.setInt(1, id);
+            psDetail.executeUpdate();
+
+            PreparedStatement psStockIn = connection.prepareStatement(deleteStockInSql);
+            psStockIn.setInt(1, id);
+
+            int rows = psStockIn.executeUpdate();
+
+            connection.commit();
+            connection.setAutoCommit(true);
+
+            return rows > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            try {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        return false;
+    }
+
+    public StockIn getStockInById(int id) {
+        String sql = "SELECT "
+                + "s.StockInID, "
+                + "s.Date, "
+                + "s.Note, "
+                + "s.Status, "
+                + "s.TotalAmount, "
+                + "sup.Name AS SupplierName, "
+                + "u.FullName, "
+                + "d.ProductID, "
+                + "p.Name AS ProductName, "
+                + "d.Quantity, "
+                + "d.UnitCost "
+                + "FROM StockIn s "
+                + "JOIN StockInDetails d ON s.StockInID = d.StockInID "
+                + "JOIN Products p ON d.ProductID = p.ProductID "
+                + "JOIN Suppliers sup ON s.SupplierID = sup.SupplierID "
+                + "JOIN [User] u ON s.CreatedBy = u.UserID "
+                + "WHERE s.StockInID = ?";
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+
+            StockIn stock = null;
+
+            while (rs.next()) {
+                if (stock == null) {
+                    stock = new StockIn();
+                    stock.setStockInId(rs.getInt("StockInID"));
+                    stock.setDate(rs.getTimestamp("Date"));
+                    stock.setNote(rs.getString("Note"));
+                    stock.setStatus(rs.getString("Status"));
+                    stock.setTotalAmount(rs.getDouble("TotalAmount"));
+                    stock.setSupplierName(rs.getString("SupplierName"));
+                    stock.setStaffName(rs.getString("FullName"));
+                    stock.setDetails(new ArrayList<>());
+                }
+
+                StockInDetail detail = new StockInDetail();
+                detail.setProductId(rs.getInt("ProductID"));
+                detail.setProductName(rs.getString("ProductName"));
+                detail.setQuantity(rs.getInt("Quantity"));
+                detail.setUnitCost(rs.getDouble("UnitCost"));
+
+                stock.getDetails().add(detail);
+            }
+
+            return stock;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public boolean updateStockIn(StockIn s) {
+        String sql = "UPDATE StockIn SET status = ?, note = ? WHERE stockInId = ?";
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, s.getStatus());
+            ps.setString(2, s.getNote());
+            ps.setInt(3, s.getStockInId());
+
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
 }
