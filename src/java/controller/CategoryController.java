@@ -21,7 +21,7 @@ public class CategoryController extends HttpServlet {
 
         try {
             // Always get list of categories for the sidebar/menu
-            List<Category> categories = dao.getAllCategories();
+            List<Category> categories = dao.getCategoryTree();
             request.setAttribute("categories", categories);
 
             String categoryIdRaw = request.getParameter("categoryId");
