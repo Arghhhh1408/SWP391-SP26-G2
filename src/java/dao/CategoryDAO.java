@@ -36,12 +36,12 @@ public class CategoryDAO extends DBContext {
         }
 
         // Dynamic sorting
-        String orderBy = "CategoryName ASC"; // Default
-        if (sortBy != null) {
+        String orderBy = "(CASE WHEN ParentID IS NULL THEN 0 ELSE 1 END) ASC, CategoryName ASC"; // Default
+        if (sortBy != null && !sortBy.trim().isEmpty()) {
             if (sortBy.equals("name_desc")) {
-                orderBy = "CategoryName DESC";
+                orderBy = "(CASE WHEN ParentID IS NULL THEN 0 ELSE 1 END) ASC, CategoryName DESC";
             } else if (sortBy.equals("id_asc")) {
-                orderBy = "CategoryID ASC";
+                orderBy = "(CASE WHEN ParentID IS NULL THEN 0 ELSE 1 END) ASC, CategoryID ASC";
             }
         }
         sql.append(" ORDER BY ").append(orderBy);

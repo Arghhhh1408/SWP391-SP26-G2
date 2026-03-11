@@ -38,9 +38,11 @@
                                         <option value="0" ${selectedParentId==0 ? 'selected' : '' }>-- Chỉ hiện danh mục
                                             gốc --</option>
                                         <c:forEach items="${allCategoriesList}" var="pc">
-                                            <option value="${pc.id}" ${selectedParentId==pc.id ? 'selected' : '' }>
-                                                ${pc.name}
-                                            </option>
+                                            <c:if test="${empty pc.parentId || pc.parentId == 0}">
+                                                <option value="${pc.id}" ${selectedParentId==pc.id ? 'selected' : '' }>
+                                                    ${pc.name}
+                                                </option>
+                                            </c:if>
                                         </c:forEach>
                                     </select>
                                 </div>
