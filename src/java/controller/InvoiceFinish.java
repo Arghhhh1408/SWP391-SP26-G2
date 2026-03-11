@@ -97,11 +97,10 @@ public class InvoiceFinish extends HttpServlet {
 
         model.User user = (model.User) session.getAttribute("acc");
         int userId = user.getUserID();
-        String createdBy = user.getUsername();
 
-        // Lấy thông tin khách: ưu tiên request, nếu rỗng thì lấy từ session (Checkout đã set)
         String customerName = request.getParameter("customerName");
         String customerPhone = request.getParameter("customerPhone");
+
         if (customerName == null) {
             customerName = (String) session.getAttribute("customerName");
         }
@@ -114,6 +113,7 @@ public class InvoiceFinish extends HttpServlet {
         if (customerPhone == null) {
             customerPhone = "";
         }
+
         customerName = customerName.trim();
         customerPhone = customerPhone.trim();
 
@@ -128,44 +128,81 @@ public class InvoiceFinish extends HttpServlet {
         try {
             conn.setAutoCommit(false);
 
-            // 1) TRỪ KHO (chặn âm)
+            // 1) Trừ kho
             ProductDAO productDAO = new ProductDAO();
             for (CartItem it : items) {
                 int pid = it.getProductId();
-                int qty = it.getQty(); // đảm bảo CartItem có getQty()
+                int qty = it.getQty();
 
                 boolean ok = productDAO.decreaseStock(conn, pid, qty);
                 if (!ok) {
                     conn.rollback();
-                    response.sendRedirect(request.getContextPath() + "/pos?err=not_enough_stock");
+
+                    response.setContentType("text/html;charset=UTF-8");
+                    response.getWriter().write(
+                            "<!DOCTYPE html>"
+                            + "<html>"
+                            + "<head><meta charset='UTF-8'><title>Lỗi</title></head>"
+                            + "<body>"
+                            + "<script>"
+                            + "alert('Số lượng tồn kho không đủ.');"
+                            + "if (window.opener && !window.opener.closed) {"
+                            + "  window.opener.location.href = '" + request.getContextPath() + "/cart?err=not_enough_stock';"
+                            + "  window.close();"
+                            + "} else {"
+                            + "  window.location.href = '" + request.getContextPath() + "/cart?err=not_enough_stock';"
+                            + "}"
+                            + "</script>"
+                            + "</body>"
+                            + "</html>"
+                    );
                     return;
                 }
             }
 
-            // 2) CUSTOMER ID
+            // 2) Lấy / tạo customer
             dao.CustomerDAO customerDAO = new dao.CustomerDAO();
             customerDAO.connection = conn;
 
-            int customerId = (customerName.isEmpty() && customerPhone.isEmpty())
-                    ? customerDAO.getWalkInCustomerId()
-                    : customerDAO.getOrCreateCustomerId(customerName, customerPhone);
+            int customerId;
+            if (customerName.isEmpty() && customerPhone.isEmpty()) {
+                customerId = customerDAO.getWalkInCustomerId();
+            } else {
+                customerId = customerDAO.getOrCreateCustomerId(customerName, customerPhone);
+            }
 
-            // 3) INSERT StockOut + Details (lịch sử)
+            // 3) Insert StockOut + StockOutDetails
             dao.StockOutDAO stockOutDAO = new dao.StockOutDAO(conn);
             String note = request.getParameter("note");
-            if (note == null) note = "";
+            if (note == null) {
+                note = "";
+            }
+
             int stockOutId = stockOutDAO.insertStockOut(customerId, userId, totalAmount, note);
             stockOutDAO.insertDetails(stockOutId, items);
 
             conn.commit();
 
-            // 4) XÓA GIỎ SAU COMMIT
+            // 4) Xóa giỏ sau commit
             session.removeAttribute("cart");
 
-            // (tuỳ) clear info khách
-            // session.removeAttribute("customerName");
-            // session.removeAttribute("customerPhone");
-            response.sendRedirect(request.getContextPath() + "/pos?success=1");
+            response.setContentType("text/html;charset=UTF-8");
+            response.getWriter().write(
+                    "<!DOCTYPE html>"
+                    + "<html>"
+                    + "<head><meta charset='UTF-8'><title>Hoàn tất</title></head>"
+                    + "<body>"
+                    + "<script>"
+                    + "if (window.opener && !window.opener.closed) {"
+                    + "  window.opener.location.href = '" + request.getContextPath() + "/pos?success=1';"
+                    + "  window.close();"
+                    + "} else {"
+                    + "  window.location.href = '" + request.getContextPath() + "/pos?success=1';"
+                    + "}"
+                    + "</script>"
+                    + "</body>"
+                    + "</html>"
+            );
             return;
 
         } catch (Exception e) {
@@ -173,8 +210,27 @@ public class InvoiceFinish extends HttpServlet {
                 conn.rollback();
             } catch (Exception ignored) {
             }
+
             e.printStackTrace();
-            response.sendRedirect(request.getContextPath() + "/pos?err=finish_failed");
+
+            response.setContentType("text/html;charset=UTF-8");
+            response.getWriter().write(
+                    "<!DOCTYPE html>"
+                    + "<html>"
+                    + "<head><meta charset='UTF-8'><title>Lỗi</title></head>"
+                    + "<body>"
+                    + "<script>"
+                    + "alert('Hoàn tất đơn thất bại.');"
+                    + "if (window.opener && !window.opener.closed) {"
+                    + "  window.opener.location.href = '" + request.getContextPath() + "/cart?err=finish_failed';"
+                    + "  window.close();"
+                    + "} else {"
+                    + "  window.location.href = '" + request.getContextPath() + "/cart?err=finish_failed';"
+                    + "}"
+                    + "</script>"
+                    + "</body>"
+                    + "</html>"
+            );
             return;
 
         } finally {

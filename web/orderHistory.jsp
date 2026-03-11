@@ -1,177 +1,305 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ page import="model.User" %>
+<%
+    User acc = (User) session.getAttribute("acc");
+%>
 
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8" />
-        <title>Lịch sử đơn hàng</title>
+<head>
+    <meta charset="UTF-8" />
+    <title>Lịch sử đơn hàng</title>
 
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 16px;
-                background: #fafafa;
-                color:#111;
-            }
-            .wrap {
-                max-width: 1100px;
-                margin: 0 auto;
-            }
+    <style>
+        *{
+            box-sizing:border-box;
+            margin:0;
+            padding:0;
+            font-family:Arial, sans-serif;
+        }
 
-            .card{
-                background:#fff;
-                border:1px solid #e6e6e6;
-                border-radius: 12px;
-                padding: 14px;
-                box-shadow: 0 1px 2px rgba(0,0,0,.04);
-            }
+        body{
+            background:#f4f6f9;
+            color:#111827;
+        }
 
-            .head{
-                display:flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 10px;
-                flex-wrap: wrap;
-                margin-bottom: 12px;
-            }
+        .layout{
+            display:flex;
+            min-height:100vh;
+        }
 
-            h2{
-                margin: 0;
-                font-size: 20px;
+        .sidebar{
+            width:240px;
+            background:#1f2d3d;
+            color:#fff;
+            display:flex;
+            flex-direction:column;
+        }
+
+        .logo{
+            padding:20px;
+            font-size:24px;
+            font-weight:bold;
+            background:#1a2533;
+            text-align:center;
+            letter-spacing:1px;
+        }
+
+        .user-box{
+            padding:18px;
+            border-bottom:1px solid rgba(255,255,255,0.08);
+            font-size:14px;
+            line-height:1.6;
+        }
+
+        .menu{
+            list-style:none;
+            padding:10px 0;
+            flex:1;
+        }
+
+        .menu li a{
+            display:block;
+            padding:14px 20px;
+            color:#fff;
+            text-decoration:none;
+            transition:0.2s;
+        }
+
+        .menu li a:hover,
+        .menu li a.active{
+            background:#2f4050;
+        }
+
+        .main{
+            flex:1;
+            display:flex;
+            flex-direction:column;
+        }
+
+        .topbar{
+            height:64px;
+            background:#fff;
+            border-bottom:1px solid #ddd;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:0 20px;
+        }
+
+        .topbar-title{
+            font-size:20px;
+            font-weight:bold;
+        }
+
+        .content{
+            padding:20px;
+        }
+
+        .card{
+            background:#fff;
+            border:1px solid #e6e6e6;
+            border-radius:12px;
+            padding:16px;
+            box-shadow:0 2px 8px rgba(0,0,0,.04);
+        }
+
+        .head{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-bottom:14px;
+        }
+
+        h2{
+            margin:0;
+            font-size:22px;
+        }
+
+        .filters{
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            align-items:end;
+            margin:10px 0 14px;
+        }
+
+        .field label{
+            display:block;
+            font-size:12px;
+            color:#444;
+            margin-bottom:4px;
+        }
+
+        .field input,
+        .field select{
+            padding:8px 10px;
+            border:1px solid #d0d7de;
+            border-radius:8px;
+            min-width:160px;
+            background:#fff;
+            font-size:14px;
+        }
+
+        .btn{
+            padding:8px 12px;
+            border-radius:10px;
+            border:1px solid #111;
+            background:#111;
+            color:#fff;
+            cursor:pointer;
+            font-size:13px;
+            height:38px;
+            text-decoration:none;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .btn.secondary{
+            background:#fff;
+            color:#111;
+            border-color:#bbb;
+        }
+
+        .table{
+            width:100%;
+            border-collapse:collapse;
+            background:#fff;
+            overflow:hidden;
+            border-radius:12px;
+        }
+
+        .table th,
+        .table td{
+            border-top:1px solid #eee;
+            padding:10px;
+            text-align:left;
+            vertical-align:top;
+            font-size:13px;
+        }
+
+        .table th{
+            background:#f6f8fa;
+            border-top:none;
+            font-size:12px;
+            color:#333;
+            text-transform:uppercase;
+            letter-spacing:.02em;
+        }
+
+        .table tr:hover{
+            background:#f9fafb;
+        }
+
+        .money{
+            white-space:nowrap;
+            font-variant-numeric:tabular-nums;
+            font-weight:700;
+        }
+
+        .muted{
+            color:#666;
+            font-size:12px;
+        }
+
+        .link{
+            text-decoration:none;
+            border-bottom:1px dotted #111;
+            color:#111;
+            padding:2px 0;
+            font-size:13px;
+        }
+
+        .empty{
+            padding:14px;
+            border:1px dashed #cbd5e1;
+            border-radius:12px;
+            background:#f8fafc;
+            color:#334155;
+        }
+
+        @media (max-width: 900px){
+            .sidebar{
+                width:200px;
             }
 
             .filters{
-                display:flex;
-                gap: 10px;
-                flex-wrap: wrap;
-                align-items: end;
-                margin: 10px 0 12px;
+                flex-direction:column;
+                align-items:stretch;
             }
-            .field label{
+
+            .field input,
+            .field select{
+                min-width:100%;
+            }
+        }
+
+        @media print{
+            .sidebar,
+            .topbar,
+            .filters{
+                display:none !important;
+            }
+
+            body{
+                background:#fff;
+            }
+
+            .layout{
                 display:block;
-                font-size: 12px;
-                color:#444;
-                margin-bottom: 4px;
-            }
-            .field input, .field select{
-                padding: 8px;
-                border:1px solid #d0d7de;
-                border-radius: 8px;
-                min-width: 180px;
-                background:#fff;
-                font-size: 14px;
             }
 
-            .btn{
-                padding: 8px 12px;
-                border-radius: 10px;
-                border:1px solid #111;
-                background:#111;
-                color:#fff;
-                cursor:pointer;
-                font-size: 13px;
-                height: 36px;
-            }
-            .btn.secondary{
-                background:#fff;
-                color:#111;
-                border-color:#bbb;
-                text-decoration:none;
-                display:inline-flex;
-                align-items:center;
-                justify-content:center;
+            .content{
+                padding:0;
             }
 
-            .table{
-                width:100%;
-                border-collapse: collapse;
-                background:#fff;
-                overflow:hidden;
-                border-radius: 12px;
+            .card{
+                border:none;
+                box-shadow:none;
+                padding:0;
             }
+        }
+    </style>
+</head>
 
-            .table th, .table td{
-                border-top:1px solid #eee;
-                padding: 10px 10px;
-                text-align:left;
-                vertical-align: top;
-                font-size: 13px;
-            }
-            .table th{
-                background:#f6f8fa;
-                border-top:none;
-                font-size: 12px;
-                color:#333;
-                text-transform: uppercase;
-                letter-spacing: .02em;
-            }
+<body>
+<div class="layout">
 
-            .table tr:hover{
-                background:#f9fafb;
-            }
+    <aside class="sidebar">
+        <div class="logo">S.I.M</div>
 
-            .money{
-                white-space: nowrap;
-                font-variant-numeric: tabular-nums;
-                font-weight: 700;
-            }
-            .muted{
-                color:#666;
-                font-size: 12px;
-            }
+        <div class="user-box">
+            Xin chào: <b><%= acc != null ? acc.getUsername() : "" %></b>
+        </div>
 
-            .link{
-                text-decoration:none;
-                border-bottom: 1px dotted #111;
-                color:#111;
-                padding: 2px 0;
-                font-size: 13px;
-            }
+        <ul class="menu">
+            <li><a href="${pageContext.request.contextPath}/dashboard">Trang chủ</a></li>
+            <li><a href="${pageContext.request.contextPath}/products">Sản phẩm</a></li>
+            <li><a href="${pageContext.request.contextPath}/pos">Bán hàng</a></li>
+            <li><a href="${pageContext.request.contextPath}/cart">Giỏ hàng</a></li>
+            <li><a class="active" href="${pageContext.request.contextPath}/orders">Lịch sử đơn hàng</a></li>
+            <li><a href="${pageContext.request.contextPath}/logout">Đăng xuất</a></li>
+        </ul>
+    </aside>
 
-            .empty{
-                padding: 14px;
-                border: 1px dashed #cbd5e1;
-                border-radius: 12px;
-                background: #f8fafc;
-                color:#334155;
-            }
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-title">Lịch sử đơn hàng</div>
+        </div>
 
-            @media print{
-                .filters, .toplinks {
-                    display:none;
-                }
-                body{
-                    background:#fff;
-                }
-                .card{
-                    border:none;
-                    box-shadow:none;
-                    padding:0;
-                }
-            }
-        </style>
-    </head>
-
-    <body>
-        <div class="wrap">
+        <div class="content">
             <div class="card">
 
-                <div class="head">
-                    <h2>Lịch sử đơn hàng</h2>
-                    <div class="toplinks">
-                        <a class="link" href="${pageContext.request.contextPath}/pos">← Quay lại POS</a>
-                    </div>
-                </div>
-
                 <c:choose>
-
                     <c:when test="${empty orders}">
                         <div class="empty">Chưa có đơn hàng nào.</div>
                     </c:when>
 
                     <c:otherwise>
-
                         <form method="get" action="${pageContext.request.contextPath}/orders" class="filters">
                             <div class="field">
                                 <label>Lọc</label>
@@ -189,8 +317,13 @@
                                     <option value="new" ${sort == 'new' ? 'selected' : ''}>Mới nhất</option>
                                     <option value="old" ${sort == 'old' ? 'selected' : ''}>Cũ nhất</option>
                                 </select>
-                                <input name="keyword" placeholder="Mã đơn hoặc SĐT"
-                                       value="${param.keyword}" style="padding:6px; margin-left:10px;">
+                            </div>
+
+                            <div class="field">
+                                <label>Tìm kiếm</label>
+                                <input name="keyword"
+                                       placeholder="Mã đơn hoặc SĐT"
+                                       value="${param.keyword}">
                             </div>
 
                             <button class="btn" type="submit">Áp dụng</button>
@@ -219,17 +352,19 @@
                                     <td>${o.createdByName}</td>
                                     <td>${o.note}</td>
                                     <td>
-                                        <a href="${pageContext.request.contextPath}/orderdetail?id=${o.stockOutId}">Xem</a>
+                                        <a class="link" href="${pageContext.request.contextPath}/orderdetail?id=${o.stockOutId}">
+                                            Xem
+                                        </a>
                                     </td>
                                 </tr>
                             </c:forEach>
                         </table>
-
                     </c:otherwise>
-
                 </c:choose>
 
             </div>
         </div>
-    </body>
+    </main>
+</div>
+</body>
 </html>

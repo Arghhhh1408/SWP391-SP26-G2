@@ -52,7 +52,7 @@ public class LoginController extends HttpServlet {
                 response.sendRedirect("admin");
             }
             if(user.getRoleID() == 3){
-                response.sendRedirect("pos");
+                response.sendRedirect("dashboard");
 
             }else {
                 response.sendRedirect("category");

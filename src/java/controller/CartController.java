@@ -63,7 +63,7 @@ public class CartController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        request.getRequestDispatcher("/cart.jsp").forward(request, response);
     }
 
     /**
@@ -75,6 +75,7 @@ public class CartController extends HttpServlet {
      * @throws IOException if an I/O error occurs
      */
     @Override
+    
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -100,30 +101,44 @@ public class CartController extends HttpServlet {
 
         CartItem item = cart.get(productId);
 
-        // keyword để quay lại đúng trang pos
         String keyword = request.getParameter("keyword");
         if (keyword == null) {
             keyword = "";
         }
-        String backUrl = request.getContextPath() + "/pos?keyword=" + java.net.URLEncoder.encode(keyword, "UTF-8");
 
-        // tồn kho hiện tại của sản phẩm (bạn đổi tên field/method theo Product của bạn)
-        int stock = pdao.getStockById(productId); // nếu Product không có getStock() thì bạn thêm DAO getStockById()
-        if (action == null) {
-            action = "add";
+        String from = request.getParameter("from");
+        if (from == null) {
+            from = "pos";
         }
+
+        String backUrl;
+        if ("cart".equalsIgnoreCase(from)) {
+            backUrl = request.getContextPath() + "/cart";
+        } else {
+            backUrl = request.getContextPath() + "/pos?keyword=" + java.net.URLEncoder.encode(keyword, "UTF-8");
+        }
+
+        int stock = pdao.getStockById(productId);
+
         switch (action) {
             case "add":
             case "inc": {
                 int newQty = (item == null) ? 1 : item.getQty() + 1;
 
                 if (newQty > stock) {
-                    // redirect để pos.jsp hiện popup
-                    String url = request.getContextPath()
-                            + "/pos?err=not_enough_stock"
-                            + "&sku=" + java.net.URLEncoder.encode(p.getSku(), "UTF-8")
-                            + "&stock=" + stock
-                            + "&keyword=" + java.net.URLEncoder.encode(keyword, "UTF-8");
+                    String url;
+                    if ("cart".equalsIgnoreCase(from)) {
+                        url = request.getContextPath()
+                                + "/cart?err=not_enough_stock"
+                                + "&sku=" + java.net.URLEncoder.encode(p.getSku(), "UTF-8")
+                                + "&stock=" + stock;
+                    } else {
+                        url = request.getContextPath()
+                                + "/pos?err=not_enough_stock"
+                                + "&sku=" + java.net.URLEncoder.encode(p.getSku(), "UTF-8")
+                                + "&stock=" + stock
+                                + "&keyword=" + java.net.URLEncoder.encode(keyword, "UTF-8");
+                    }
                     response.sendRedirect(url);
                     return;
                 }
@@ -161,24 +176,35 @@ public class CartController extends HttpServlet {
             }
 
             case "set": {
-                // (optional) nếu sau này bạn cho nhập số lượng trực tiếp
                 int qty = 1;
                 try {
                     qty = Integer.parseInt(request.getParameter("qty"));
                 } catch (Exception ignored) {
                 }
+
                 if (qty <= 0) {
                     cart.remove(productId);
                     break;
                 }
+
                 if (qty > stock) {
-                    String url = request.getContextPath()
-                            + "/pos?err=not_enough_stock&sku=" + java.net.URLEncoder.encode(p.getSku(), "UTF-8")
-                            + "&stock=" + stock
-                            + "&keyword=" + java.net.URLEncoder.encode(keyword, "UTF-8");
+                    String url;
+                    if ("cart".equalsIgnoreCase(from)) {
+                        url = request.getContextPath()
+                                + "/cart?err=not_enough_stock"
+                                + "&sku=" + java.net.URLEncoder.encode(p.getSku(), "UTF-8")
+                                + "&stock=" + stock;
+                    } else {
+                        url = request.getContextPath()
+                                + "/pos?err=not_enough_stock"
+                                + "&sku=" + java.net.URLEncoder.encode(p.getSku(), "UTF-8")
+                                + "&stock=" + stock
+                                + "&keyword=" + java.net.URLEncoder.encode(keyword, "UTF-8");
+                    }
                     response.sendRedirect(url);
                     return;
                 }
+
                 if (item == null) {
                     item = new CartItem();
                     item.setProductId(productId);
