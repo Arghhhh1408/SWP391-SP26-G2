@@ -16,8 +16,7 @@ public class Product {
     private int categoryId;
     private Timestamp createDate;
     private Timestamp updateDate;
-
-
+    
     public Product() {
     }
 
