@@ -8,15 +8,31 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import model.Category;
 import model.Product;
+import model.User;
 
 @WebServlet(name = "ProductCRUDController", urlPatterns = { "/addProduct", "/editProduct", "/deleteProduct" })
 public class ProductCRUDController extends HttpServlet {
 
+    private boolean ensureStaffOrManager(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        User u = session == null ? null : (User) session.getAttribute("acc");
+        if (u == null || (u.getRoleID() != 1 && u.getRoleID() != 2)) {
+            response.sendRedirect("login");
+            return false;
+        }
+        return true;
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!ensureStaffOrManager(request, response)) {
+            return;
+        }
+
         String action = request.getServletPath();
         CategoryDAO dao = new CategoryDAO();
         try {
@@ -38,17 +54,21 @@ public class ProductCRUDController extends HttpServlet {
             } else if (action.equals("/deleteProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 dao.deleteProduct(id);
-                response.sendRedirect("category");
+                response.sendRedirect(getAfterCrudRedirect(request));
             }
         } catch (Exception e) {
             e.printStackTrace();
-            response.sendRedirect("category");
+            response.sendRedirect(getAfterCrudRedirect(request));
         }
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!ensureStaffOrManager(request, response)) {
+            return;
+        }
+
         String action = request.getServletPath();
         CategoryDAO dao = new CategoryDAO();
 
@@ -149,11 +169,20 @@ public class ProductCRUDController extends HttpServlet {
                 p.setId(Integer.parseInt(idStr));
                 dao.updateProduct(p);
             }
-            response.sendRedirect("category");
+            response.sendRedirect(getAfterCrudRedirect(request));
 
         } catch (Exception e) {
             e.printStackTrace();
             response.sendRedirect("category");
         }
+    }
+
+    private String getAfterCrudRedirect(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        User u = session == null ? null : (User) session.getAttribute("acc");
+        if (u != null && u.getRoleID() == 1) {
+            return "staff_dashboard?tab=products";
+        }
+        return "category";
     }
 }
