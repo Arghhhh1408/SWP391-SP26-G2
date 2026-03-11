@@ -14,10 +14,10 @@
   <url>http://www.example.com</url>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.7</maven.compiler.source>
-    <maven.compiler.target>1.7</maven.compiler.target>
-  </properties>
+  <maven.compiler.source>17</maven.compiler.source>
+  <maven.compiler.target>17</maven.compiler.target>
+  <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+</properties>
 
   <dependencies>
     <dependency>
@@ -26,9 +26,31 @@
       <version>4.11</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.microsoft.sqlserver</groupId>
+      <artifactId>mssql-jdbc</artifactId>
+      <version>12.10.0.jre11</version>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <version>6.0.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.web</groupId>
+      <artifactId>jakarta.servlet.jsp.jstl</artifactId>
+      <version>3.0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.servlet.jsp.jstl</groupId>
+      <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
+      <version>3.0.0</version>
+    </dependency>
   </dependencies>
 
   <build>
+    <sourceDirectory>src/java</sourceDirectory>
     <finalName>swp391-sp26-g2</finalName>
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
@@ -52,6 +74,10 @@
         <plugin>
           <artifactId>maven-war-plugin</artifactId>
           <version>3.2.2</version>
+          <configuration>
+            <warSourceDirectory>web</warSourceDirectory>
+            <webXml>web/WEB-INF/web.xml</webXml>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-install-plugin</artifactId>

@@ -29,5 +29,15 @@ public class DBContext {
             System.out.println("Error closing connection: " + e.getMessage());
         }
     }
+
+    public static void main(String[] args) {
+        DBContext db = new DBContext();
+        if (db.connection != null) {
+            System.out.println("Connection established successfully.");
+            db.closeConnection();
+        } else {
+            System.out.println("Failed to establish connection.");
+        }
+    }
     
 }
