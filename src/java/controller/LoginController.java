@@ -51,7 +51,7 @@ public class LoginController extends HttpServlet {
             if (user.getRoleID() == 0) {
                 response.sendRedirect("admin");
             }
-            if(user.getRoleID() == 3){
+            else if(user.getRoleID() == 3){
                 response.sendRedirect("dashboard");
 
             }else {
