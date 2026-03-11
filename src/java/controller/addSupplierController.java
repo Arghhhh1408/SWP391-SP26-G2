@@ -45,12 +45,25 @@ public class addSupplierController extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 1) {
-            response.sendRedirect("login");
-            return;
-        }
         String action = request.getParameter("action");
         String idStr = request.getParameter("id");
+        if (u == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+        if ("delete".equals(action) && u.getRoleID() != 1) {
+            request.setAttribute("message", "Bạn không có quyền xóa nhà cung cấp.");
+            request.getRequestDispatcher("supplierList").forward(request, response);
+            return;
+        }
+
+        if (("add".equals(action) || "edit".equals(action))
+                && u.getRoleID() != 1 && u.getRoleID() != 2) {
+            request.setAttribute("message", "Bạn không có quyền thực hiện chức năng này.");
+            request.getRequestDispatcher("supplierList").forward(request, response);
+            return;
+        }
+
         if ("delete".equals(action) && idStr != null) {
             try {
                 int id = Integer.parseInt(idStr);
@@ -59,7 +72,7 @@ public class addSupplierController extends HttpServlet {
                 session.setAttribute("status", "success");
                 SystemLogDAO logDao = new SystemLogDAO();
                 SystemLog log = new SystemLog();
-                int userID = (u != null) ? u.getUserID() : 1;
+                int userID = (u != null) ? u.getUserID() : 2;
                 log.setUserID(userID);
                 log.setAction("DELETE_SUPPLIER");
                 log.setTargetObject("Supplier ID: " + id);
@@ -113,8 +126,9 @@ public class addSupplierController extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 1) {  // Sửa điều kiện check warehouse staff
-            response.sendRedirect("login");
+        if (u == null || u.getRoleID() != 2) {  // Sửa điều kiện check manager
+            request.setAttribute("message", "Chỉ Warehouse Staff hoặc Quản lý mới được tạo phiếu nhập.");
+            request.getRequestDispatcher("stockinList").forward(request, response);
             return;
         }
         String action = request.getParameter("action");
@@ -151,7 +165,7 @@ public class addSupplierController extends HttpServlet {
                     status = "success";
                     SystemLogDAO logDao = new SystemLogDAO();
                     SystemLog log = new SystemLog();
-                    int userID = (u != null) ? u.getUserID() : 1;
+                    int userID = (u != null) ? u.getUserID() : 2;
                     log.setUserID(userID);
                     log.setAction("CREATE_SUPPLIER");
                     log.setTargetObject("New Supplier: " + name);
@@ -214,7 +228,7 @@ public class addSupplierController extends HttpServlet {
                         status = "success";
                         SystemLogDAO logDAO = new SystemLogDAO();
                         SystemLog log = new SystemLog();
-                        int userID = (u != null) ? u.getUserID() : 1;
+                        int userID = (u != null) ? u.getUserID() : 2;
                         log.setUserID(userID);
                         log.setAction("UPDATE_SUPPLIER");
                         log.setTargetObject("Supplier ID: " + id);

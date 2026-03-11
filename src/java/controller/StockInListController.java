@@ -61,12 +61,64 @@ public class StockInListController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        String action = request.getParameter("action");
         StockInDAO dao = new StockInDAO();
-        List<StockIn> list = dao.getAllStockIn();
 
-        request.setAttribute("stockList", list);
-        request.getRequestDispatcher("stockinList.jsp")
-                .forward(request, response);
+        if (action == null) {
+            List<StockIn> list = dao.getAllStockIn();
+            request.setAttribute("stockList", list);
+            request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+            return;
+        }
+
+        switch (action) {
+            case "edit":
+                try {
+                int id = Integer.parseInt(request.getParameter("id"));
+                StockIn stockIn = dao.getStockInById(id);
+
+                if (stockIn != null) {
+                    request.setAttribute("stockIn", stockIn);
+                    request.getRequestDispatcher("editStockIn.jsp").forward(request, response);
+                } else {
+                    request.setAttribute("message", "Không tìm thấy phiếu nhập");
+                    List<StockIn> list = dao.getAllStockIn();
+                    request.setAttribute("stockList", list);
+                    request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+                }
+            } catch (Exception e) {
+                request.setAttribute("message", "Dữ liệu không hợp lệ");
+                List<StockIn> list = dao.getAllStockIn();
+                request.setAttribute("stockList", list);
+                request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+            }
+            break;
+
+            case "delete":
+                try {
+                int id = Integer.parseInt(request.getParameter("id"));
+                boolean deleted = dao.deleteStockIn(id);
+
+                if (deleted) {
+                    request.setAttribute("message", "Xóa phiếu nhập thành công");
+                } else {
+                    request.setAttribute("message", "Xóa phiếu nhập thất bại");
+                }
+            } catch (Exception e) {
+                request.setAttribute("message", "Dữ liệu không hợp lệ");
+            }
+
+            List<StockIn> list = dao.getAllStockIn();
+            request.setAttribute("stockList", list);
+            request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+            break;
+
+            default:
+                List<StockIn> defaultList = dao.getAllStockIn();
+                request.setAttribute("stockList", defaultList);
+                request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+                break;
+        }
     }
 
     /**
@@ -80,7 +132,39 @@ public class StockInListController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+
+        request.setCharacterEncoding("UTF-8");
+
+        String action = request.getParameter("action");
+        StockInDAO dao = new StockInDAO();
+
+        if ("update".equals(action)) {
+            try {
+                int stockInId = Integer.parseInt(request.getParameter("stockInId"));
+                String status = request.getParameter("status");
+                String note = request.getParameter("note");
+
+                StockIn s = new StockIn();
+                s.setStockInId(stockInId);
+                s.setStatus(status);
+                s.setNote(note);
+
+                boolean updated = dao.updateStockIn(s);
+
+                if (updated) {
+                    request.setAttribute("message", "Cập nhật phiếu nhập thành công");
+                } else {
+                    request.setAttribute("message", "Cập nhật phiếu nhập thất bại");
+                }
+
+            } catch (Exception e) {
+                request.setAttribute("message", "Dữ liệu cập nhật không hợp lệ");
+            }
+        }
+
+        List<StockIn> list = dao.getAllStockIn();
+        request.setAttribute("stockList", list);
+        request.getRequestDispatcher("stockinList.jsp").forward(request, response);
     }
 
     /**

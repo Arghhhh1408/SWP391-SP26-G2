@@ -4,19 +4,25 @@
  */
 package controller;
 
-import dao.RoleDAO;
+import dao.SystemLogDAO;
 import dao.UserDAO;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.util.List;
-import model.Role;
+import model.SystemLog;
 import model.User;
+import utils.DBContext;
 
 /**
  *
@@ -41,8 +47,49 @@ public class AdminController extends HttpServlet {
             session.removeAttribute("notification");
         }
 
-        request.getRequestDispatcher("admin.jsp").forward(request, response);
+        // --- Dashboard data ---
+        UserDAO userDAO = new UserDAO();
+        List<User> allUsers = userDAO.getAllUsers();
+        int totalAccounts = (allUsers != null) ? allUsers.size() : 0;
+        request.setAttribute("totalAccounts", totalAccounts);
 
+        // Role distribution: map roleName -> count
+        Map<String, Integer> roleDistribution = new LinkedHashMap<>();
+        if (allUsers != null) {
+            for (User user : allUsers) {
+                String roleName = getRoleName(user.getRoleID());
+                roleDistribution.merge(roleName, 1, Integer::sum);
+            }
+        }
+        request.setAttribute("roleDistribution", roleDistribution);
+
+        // Recent system logs (top 5)
+        SystemLogDAO logDAO = new SystemLogDAO();
+        List<SystemLog> allLogs = logDAO.getLogs();
+        List<SystemLog> recentLogs = new ArrayList<>();
+        if (allLogs != null) {
+            for (int i = 0; i < Math.min(5, allLogs.size()); i++) {
+                recentLogs.add(allLogs.get(i));
+            }
+        }
+        request.setAttribute("recentLogs", recentLogs);
+
+        request.getRequestDispatcher("admin.jsp").forward(request, response);
+    }
+
+    private String getRoleName(int roleID) {
+        switch (roleID) {
+            case 0:
+                return "Administrator";
+            case 1:
+                return "Manager";
+            case 2:
+                return "Salesperson";
+            case 3:
+                return "Warehouse Staff";
+            default:
+                return "Unknown";
+        }
     }
 
     @Override

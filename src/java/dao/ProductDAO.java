@@ -33,6 +33,48 @@ public class ProductDAO extends DBContext {
         }
         return list;
     }
+    
+    
+    public Product getBySku(String sku) {
+        String sql = """
+            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
+            FROM dbo.Products
+            WHERE Status = 'Active' AND SKU = ?
+        """;
+
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, sku == null ? "" : sku.trim());
+            ResultSet rs = stm.executeQuery();
+            if (rs.next()) {
+                return map(rs);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public List<Product> searchByName(String keyword) {
+        List<Product> list = new ArrayList<>();
+        String sql = """
+            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
+            FROM dbo.Products
+            WHERE Status = 'Active' AND Name LIKE ?
+        """;
+
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            String k = "%" + (keyword == null ? "" : keyword.trim()) + "%";
+            stm.setString(1, k);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                list.add(map(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 
     // Lấy product theo ID (add vào cart)
     public Product getById(int id) {
