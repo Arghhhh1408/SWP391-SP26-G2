@@ -1,5 +1,6 @@
 package controller;
 
+import dao.CategoryDAO;
 import dao.ReturnDAO;
 import dao.WarrantyClaimDAO;
 import java.io.IOException;
@@ -25,16 +26,39 @@ public class ManagerController extends HttpServlet {
 
         String tab = safeTrim(request.getParameter("tab"));
         if (tab == null || tab.isEmpty()) {
-            tab = "warranty";
+            tab = "overview";
         }
         request.setAttribute("tab", tab);
 
         if ("returns".equals(tab)) {
             ReturnDAO dao = new ReturnDAO();
             request.setAttribute("returns", dao.listAll());
-        } else {
+        } else if ("warranty".equals(tab)) {
             WarrantyClaimDAO dao = new WarrantyClaimDAO();
             request.setAttribute("claims", dao.listAll());
+        } else {
+            // Dashboard Overview / Default
+            WarrantyClaimDAO wDao = new WarrantyClaimDAO();
+            ReturnDAO rDao = new ReturnDAO();
+            CategoryDAO cDao = new CategoryDAO();
+            
+            var claims = wDao.listAll();
+            var returns = rDao.listAll();
+            
+            request.setAttribute("totalClaims", claims.size());
+            request.setAttribute("pendingClaims", claims.stream().filter(c -> "NEW".equals(c.getStatus().name())).count());
+            
+            request.setAttribute("totalReturns", returns.size());
+            request.setAttribute("pendingReturns", returns.stream().filter(r -> "NEW".equals(r.getStatus().name())).count());
+            
+            request.setAttribute("recentClaims", claims.size() > 5 ? claims.subList(0, 5) : claims);
+            
+            // Load categories for the Add Product form
+            try {
+                request.setAttribute("categories", cDao.getAllCategories());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         request.getRequestDispatcher("manager_dashboard.jsp").forward(request, response);
