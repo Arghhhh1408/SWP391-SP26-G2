@@ -29,9 +29,7 @@
             border-radius: 6px;
         }
 
-        .center{
-            text-align:center;
-        }
+        .center{ text-align:center; }
 
         .store-name{
             font-size: 14px;
@@ -67,21 +65,12 @@
             gap: 8px;
         }
 
-        .kv .k{
-            color:#333;
-        }
+        .kv .k{ color:#333; }
+        .kv .v{ text-align:right; }
 
-        .kv .v{
-            text-align:right;
-        }
+        .items{ margin-top: 2px; }
 
-        .items{
-            margin-top: 2px;
-        }
-
-        .item{
-            margin: 6px 0;
-        }
+        .item{ margin: 6px 0; }
 
         .item-name{
             font-weight: 700;
@@ -136,11 +125,6 @@
             font-size: 12px;
         }
 
-        .btn.secondary{
-            background:#fff;
-            color:#111;
-        }
-
         .link-btn{
             border: 1px solid #111;
             background:#fff;
@@ -188,18 +172,18 @@
             <div class="kv">
                 <div class="k">Ngày</div>
                 <div class="v">
-                    <fmt:formatDate value="<%= new java.util.Date() %>" pattern="dd/MM/yyyy HH:mm:ss"/>
+                    <fmt:formatDate value="${now}" pattern="dd/MM/yyyy HH:mm:ss"/>
                 </div>
             </div>
 
             <div class="kv">
                 <div class="k">Khách hàng</div>
-                <div class="v">${sessionScope.customerName}</div>
+                <div class="v">${empty sessionScope.customerName ? 'Khách lẻ' : sessionScope.customerName}</div>
             </div>
 
             <div class="kv">
                 <div class="k">SĐT</div>
-                <div class="v">${sessionScope.customerPhone}</div>
+                <div class="v">${empty sessionScope.customerPhone ? '-' : sessionScope.customerPhone}</div>
             </div>
         </div>
 
@@ -210,8 +194,15 @@
                 <div class="item">
                     <div class="item-name">${it.name}</div>
                     <div class="row muted">
-                        <span>${it.qty} x <span class="money">${it.price}</span></span>
-                        <span class="money">${it.lineTotal}</span>
+                        <span>
+                            ${it.qty} x
+                            <span class="money">
+                                <fmt:formatNumber value="${it.price}" type="number" groupingUsed="true"/>
+                            </span>
+                        </span>
+                        <span class="money">
+                            <fmt:formatNumber value="${it.lineTotal}" type="number" groupingUsed="true"/>
+                        </span>
                     </div>
                 </div>
             </c:forEach>
@@ -221,7 +212,9 @@
 
         <div class="total">
             <span>TỔNG TIỀN</span>
-            <span class="money">${lastTotal}</span>
+            <span class="money">
+                <fmt:formatNumber value="${lastTotal}" type="number" groupingUsed="true"/> đ
+            </span>
         </div>
 
         <div class="line"></div>
@@ -234,7 +227,7 @@
 
     <div class="no-print">
         <button class="btn" type="button" onclick="window.print()">In hóa đơn</button>
-        <button class="btn" type="button" onclick="submitFinish()">Hoàn tất</button>
+        <button class="btn" type="button" onclick="submitFinish()">Hoàn tất và lưu đơn</button>
         <button class="link-btn" type="button" onclick="backToPos()">Quay lại POS</button>
         <button class="link-btn" type="button" onclick="window.close()">Đóng</button>
     </div>

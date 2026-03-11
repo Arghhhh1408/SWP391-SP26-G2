@@ -150,6 +150,7 @@
                     <li><a href="${pageContext.request.contextPath}/products">Sản phẩm</a></li>
                     <li><a href="${pageContext.request.contextPath}/pos">Bán hàng</a></li>
                     <li><a href="${pageContext.request.contextPath}/orders">Lịch sử đơn hàng</a></li>
+                    <li><a href="${pageContext.request.contextPath}/customers">Khách hàng</a></li>
                     <li><a href="${pageContext.request.contextPath}/logout">Đăng xuất</a></li>
                 </ul>
             </aside>
