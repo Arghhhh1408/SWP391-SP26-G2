@@ -214,7 +214,6 @@
             <br>
 
             <button type="submit">Tạo phiếu nhập</button>
-            <button type="reset">Làm lại</button>
         </form>
 
     </body>
