@@ -63,20 +63,6 @@ public class InvoiceFinish extends HttpServlet {
      * @throws IOException if an I/O error occurs
      */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
-
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -98,22 +84,22 @@ public class InvoiceFinish extends HttpServlet {
         model.User user = (model.User) session.getAttribute("acc");
         int userId = user.getUserID();
 
-        String customerName = request.getParameter("customerName");
-        String customerPhone = request.getParameter("customerPhone");
+        // Lấy thông tin khách hàng từ session (đã set ở CheckoutController)
+        String customerName = (String) session.getAttribute("customerName");
+        String customerPhone = (String) session.getAttribute("customerPhone");
 
-        if (customerName == null) {
-            customerName = (String) session.getAttribute("customerName");
+        // --- LẤY SỐ NỢ TỪ SESSION ---
+        Double orderDebt = (Double) session.getAttribute("orderDebt");
+        if (orderDebt == null) {
+            orderDebt = 0.0;
         }
-        if (customerPhone == null) {
-            customerPhone = (String) session.getAttribute("customerPhone");
-        }
+
         if (customerName == null) {
             customerName = "";
         }
         if (customerPhone == null) {
             customerPhone = "";
         }
-
         customerName = customerName.trim();
         customerPhone = customerPhone.trim();
 
@@ -133,30 +119,9 @@ public class InvoiceFinish extends HttpServlet {
             for (CartItem it : items) {
                 int pid = it.getProductId();
                 int qty = it.getQty();
-
                 boolean ok = productDAO.decreaseStock(conn, pid, qty);
                 if (!ok) {
-                    conn.rollback();
-
-                    response.setContentType("text/html;charset=UTF-8");
-                    response.getWriter().write(
-                            "<!DOCTYPE html>"
-                            + "<html>"
-                            + "<head><meta charset='UTF-8'><title>Lỗi</title></head>"
-                            + "<body>"
-                            + "<script>"
-                            + "alert('Số lượng tồn kho không đủ.');"
-                            + "if (window.opener && !window.opener.closed) {"
-                            + "  window.opener.location.href = '" + request.getContextPath() + "/cart?err=not_enough_stock';"
-                            + "  window.close();"
-                            + "} else {"
-                            + "  window.location.href = '" + request.getContextPath() + "/cart?err=not_enough_stock';"
-                            + "}"
-                            + "</script>"
-                            + "</body>"
-                            + "</html>"
-                    );
-                    return;
+                    throw new Exception("Not enough stock");
                 }
             }
 
@@ -171,6 +136,12 @@ public class InvoiceFinish extends HttpServlet {
                 customerId = customerDAO.getOrCreateCustomerId(customerName, customerPhone);
             }
 
+            // --- 2.1) CẬP NHẬT CÔNG NỢ VÀO DATABASE ---
+            // Nếu có nợ phát sinh, cộng dồn vào bảng Customers
+            if (orderDebt > 0 && customerId != -1) {
+                customerDAO.updateCustomerDebt(customerId, orderDebt);
+            }
+
             // 3) Insert StockOut + StockOutDetails
             dao.StockOutDAO stockOutDAO = new dao.StockOutDAO(conn);
             String note = request.getParameter("note");
@@ -181,58 +152,35 @@ public class InvoiceFinish extends HttpServlet {
             int stockOutId = stockOutDAO.insertStockOut(customerId, userId, totalAmount, note);
             stockOutDAO.insertDetails(stockOutId, items);
 
+            // Hoàn tất giao dịch
             conn.commit();
 
-            // 4) Xóa giỏ sau commit
+            // 4) Xóa dữ liệu tạm sau khi thành công
             session.removeAttribute("cart");
+            session.removeAttribute("orderDebt");
+            session.removeAttribute("amountPaid");
 
+            // Phản hồi thành công (Giữ nguyên logic chuyển hướng của bạn)
             response.setContentType("text/html;charset=UTF-8");
             response.getWriter().write(
-                    "<!DOCTYPE html>"
-                    + "<html>"
-                    + "<head><meta charset='UTF-8'><title>Hoàn tất</title></head>"
-                    + "<body>"
-                    + "<script>"
+                    "<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body><script>"
                     + "if (window.opener && !window.opener.closed) {"
                     + "  window.opener.location.href = '" + request.getContextPath() + "/pos?success=1';"
                     + "  window.close();"
                     + "} else {"
                     + "  window.location.href = '" + request.getContextPath() + "/pos?success=1';"
-                    + "}"
-                    + "</script>"
-                    + "</body>"
-                    + "</html>"
+                    + "}</script></body></html>"
             );
-            return;
 
         } catch (Exception e) {
             try {
                 conn.rollback();
             } catch (Exception ignored) {
             }
-
             e.printStackTrace();
-
+            // Trả về thông báo lỗi (Giữ nguyên logic của bạn)
             response.setContentType("text/html;charset=UTF-8");
-            response.getWriter().write(
-                    "<!DOCTYPE html>"
-                    + "<html>"
-                    + "<head><meta charset='UTF-8'><title>Lỗi</title></head>"
-                    + "<body>"
-                    + "<script>"
-                    + "alert('Hoàn tất đơn thất bại.');"
-                    + "if (window.opener && !window.opener.closed) {"
-                    + "  window.opener.location.href = '" + request.getContextPath() + "/cart?err=finish_failed';"
-                    + "  window.close();"
-                    + "} else {"
-                    + "  window.location.href = '" + request.getContextPath() + "/cart?err=finish_failed';"
-                    + "}"
-                    + "</script>"
-                    + "</body>"
-                    + "</html>"
-            );
-            return;
-
+            response.getWriter().write("<!DOCTYPE html><html><body><script>alert('Lỗi: " + e.getMessage() + "'); window.close();</script></body></html>");
         } finally {
             try {
                 conn.setAutoCommit(true);

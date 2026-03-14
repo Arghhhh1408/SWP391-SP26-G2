@@ -7,6 +7,8 @@ public class Customer {
     private String phone;
     private String address;
     private String email;
+    // 1. THÊM TRƯỜNG NÀY
+    private double debt; 
 
     public int getCustomerId() {
         return customerId;
@@ -46,5 +48,14 @@ public class Customer {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    // 2. THÊM GETTER VÀ SETTER CHO DEBT
+    public double getDebt() {
+        return debt;
+    }
+
+    public void setDebt(double debt) {
+        this.debt = debt;
     }
 }

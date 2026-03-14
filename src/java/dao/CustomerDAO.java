@@ -1,7 +1,6 @@
 package dao;
 
 import utils.DBContext;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,11 +9,12 @@ import model.OrderHistory;
 
 public class CustomerDAO extends DBContext {
 
+    // 1. Cập nhật getAllCustomers để lấy thêm Debt
     public List<model.Customer> getAllCustomers(String keyword) {
         List<model.Customer> list = new ArrayList<>();
 
         String sql = """
-        SELECT CustomerID, Name, Phone, Address
+        SELECT CustomerID, Name, Phone, Address, Debt
         FROM dbo.Customers
         WHERE (? = '' OR Name LIKE ? OR Phone LIKE ?)
         ORDER BY CustomerID DESC
@@ -37,6 +37,7 @@ public class CustomerDAO extends DBContext {
                     c.setName(rs.getString("Name"));
                     c.setPhone(rs.getString("Phone"));
                     c.setAddress(rs.getString("Address"));
+                    c.setDebt(rs.getDouble("Debt")); // Lấy Debt
                     list.add(c);
                 }
             }
@@ -47,9 +48,10 @@ public class CustomerDAO extends DBContext {
         return list;
     }
 
+    // 2. Cập nhật getCustomerById để lấy thêm Debt
     public model.Customer getCustomerById(int customerId) {
         String sql = """
-        SELECT CustomerID, Name, Phone, Address
+        SELECT CustomerID, Name, Phone, Address, Debt
         FROM dbo.Customers
         WHERE CustomerID = ?
     """;
@@ -64,6 +66,7 @@ public class CustomerDAO extends DBContext {
                     c.setName(rs.getString("Name"));
                     c.setPhone(rs.getString("Phone"));
                     c.setAddress(rs.getString("Address"));
+                    c.setDebt(rs.getDouble("Debt")); // Lấy Debt
                     return c;
                 }
             }
@@ -72,6 +75,19 @@ public class CustomerDAO extends DBContext {
         }
 
         return null;
+    }
+
+    // 3. Hàm mới: Cập nhật công nợ (Dùng khi thanh toán nợ hoặc thu nợ)
+    public boolean updateCustomerDebt(int customerId, double amountChange) {
+        String sql = "UPDATE dbo.Customers SET Debt = Debt + ? WHERE CustomerID = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, amountChange);
+            ps.setInt(2, customerId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     // Lấy CustomerID của khách lẻ (Phone = 0000000000)
@@ -84,10 +100,9 @@ public class CustomerDAO extends DBContext {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return -1; // không có khách lẻ
+        return -1;
     }
 
-    // Lấy hoặc tạo khách theo SĐT / tên
     public int getOrCreateCustomerId(String name, String phone) throws SQLException {
         if (name == null) {
             name = "";
@@ -98,12 +113,10 @@ public class CustomerDAO extends DBContext {
         name = name.trim();
         phone = phone.trim();
 
-        // Không nhập gì -> khách lẻ
         if (name.isEmpty() && phone.isEmpty()) {
             return getWalkInCustomerId();
         }
 
-        // 1) Nếu có phone -> tìm theo phone
         if (!phone.isEmpty()) {
             String findSql = "SELECT CustomerID, Name FROM dbo.Customers WHERE Phone = ?";
             try (PreparedStatement ps = connection.prepareStatement(findSql)) {
@@ -111,8 +124,6 @@ public class CustomerDAO extends DBContext {
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         int id = rs.getInt("CustomerID");
-
-                        // (tuỳ chọn) cập nhật tên nếu người dùng nhập tên
                         if (!name.isEmpty()) {
                             String upSql = "UPDATE dbo.Customers SET Name = ? WHERE CustomerID = ?";
                             try (PreparedStatement ups = connection.prepareStatement(upSql)) {
@@ -127,11 +138,9 @@ public class CustomerDAO extends DBContext {
             }
         }
 
-        // 2) Chưa có -> insert mới + lấy ID (SQL Server)
-        String insSql
-                = "INSERT INTO dbo.Customers (Name, Phone) "
+        String insSql = "INSERT INTO dbo.Customers (Name, Phone, Debt) "
                 + "OUTPUT INSERTED.CustomerID "
-                + "VALUES (?, ?)";
+                + "VALUES (?, ?, 0)"; // Mặc định nợ = 0 khi tạo mới
 
         try (PreparedStatement ps = connection.prepareStatement(insSql)) {
             ps.setString(1, name.isEmpty() ? "Khách" : name);
@@ -143,22 +152,14 @@ public class CustomerDAO extends DBContext {
                 }
             }
         }
-
-        // fallback
         return getWalkInCustomerId();
     }
 
     public List<OrderHistory> getPurchaseHistoryByCustomer(int customerId) {
-
         List<OrderHistory> list = new ArrayList<>();
-
         String sql = """
-        SELECT so.StockOutID,
-               so.Date,
-               so.TotalAmount,
-               so.Note,
-               c.Name as CustomerName,
-               c.Phone as CustomerPhone,
+        SELECT so.StockOutID, so.Date, so.TotalAmount, so.Note,
+               c.Name as CustomerName, c.Phone as CustomerPhone,
                u.Username as CreatedByName
         FROM StockOut so
         LEFT JOIN Customers c ON c.CustomerID = so.CustomerID
@@ -166,17 +167,11 @@ public class CustomerDAO extends DBContext {
         WHERE so.CustomerID = ?
         ORDER BY so.Date DESC
     """;
-
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-
             ps.setInt(1, customerId);
-
             ResultSet rs = ps.executeQuery();
-
             while (rs.next()) {
-
                 OrderHistory o = new OrderHistory();
-
                 o.setStockOutId(rs.getInt("StockOutID"));
                 o.setDate(rs.getTimestamp("Date"));
                 o.setTotalAmount(rs.getDouble("TotalAmount"));
@@ -184,47 +179,36 @@ public class CustomerDAO extends DBContext {
                 o.setCustomerName(rs.getString("CustomerName"));
                 o.setCustomerPhone(rs.getString("CustomerPhone"));
                 o.setCreatedByName(rs.getString("CreatedByName"));
-
                 list.add(o);
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return list;
     }
+
     public Customer getCustomerByPhone(String phone) {
-
-    String sql = """
-        SELECT CustomerID, Name, Phone, Address, Email
-        FROM Customers
-        WHERE Phone = ?
-    """;
-
-    try (PreparedStatement ps = connection.prepareStatement(sql)) {
-
-        ps.setString(1, phone);
-
-        ResultSet rs = ps.executeQuery();
-
-        if (rs.next()) {
-
-            Customer c = new Customer();
-
-            c.setCustomerId(rs.getInt("CustomerID"));
-            c.setName(rs.getString("Name"));
-            c.setPhone(rs.getString("Phone"));
-            c.setAddress(rs.getString("Address"));
-            c.setEmail(rs.getString("Email"));
-
-            return c;
+        String sql = """
+            SELECT CustomerID, Name, Phone, Address, Email, Debt
+            FROM Customers
+            WHERE Phone = ?
+        """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, phone);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                Customer c = new Customer();
+                c.setCustomerId(rs.getInt("CustomerID"));
+                c.setName(rs.getString("Name"));
+                c.setPhone(rs.getString("Phone"));
+                c.setAddress(rs.getString("Address"));
+                c.setEmail(rs.getString("Email"));
+                c.setDebt(rs.getDouble("Debt")); // Lấy Debt
+                return c;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-    } catch (Exception e) {
-        e.printStackTrace();
+        return null;
     }
-
-    return null;
-}
 }

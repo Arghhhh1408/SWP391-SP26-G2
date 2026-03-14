@@ -1,150 +1,175 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ page import="model.User" %>
-<%
-    User acc = (User) session.getAttribute("acc");
-%>
+<% User acc = (User) session.getAttribute("acc"); %>
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <meta charset="UTF-8">
-        <title>Dashboard</title>
+        <title>Dashboard - S.I.M</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
-            *{
-                box-sizing:border-box;
-                margin:0;
-                padding:0;
-                font-family:Arial, sans-serif;
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+            body {
+                background: #f4f6f9;
+                color: #1f2937;
+            }
+            .layout {
+                display: flex;
+                min-height: 100vh;
             }
 
-            body{
-                background:#f4f6f9;
+            /* Sidebar */
+            .sidebar {
+                width: 240px;
+                background: #1f2d3d;
+                color: #fff;
+                display: flex;
+                flex-direction: column;
+                flex-shrink: 0;
+            }
+            .logo {
+                padding: 25px 20px;
+                font-size: 24px;
+                font-weight: bold;
+                background: #1a2533;
+                text-align: center;
+                color: #3b82f6;
+                letter-spacing: 2px;
+            }
+            .user-box {
+                padding: 18px;
+                border-bottom: 1px solid rgba(255,255,255,0.08);
+                font-size: 14px;
+                background: #263544;
+            }
+            .menu {
+                list-style: none;
+                padding: 10px 0;
+                flex: 1;
+            }
+            .menu li a {
+                display: block;
+                padding: 14px 20px;
+                color: #cbd5e1;
+                text-decoration: none;
+                transition: 0.3s;
+            }
+            .menu li a:hover, .menu li a.active {
+                background: #374151;
+                color: #fff;
+                border-left: 4px solid #3b82f6;
             }
 
-            .layout{
-                display:flex;
-                min-height:100vh;
+            .main {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+            .topbar {
+                height: 64px;
+                background: #fff;
+                border-bottom: 1px solid #e5e7eb;
+                display: flex;
+                align-items: center;
+                padding: 0 25px;
+            }
+            .content {
+                padding: 25px;
             }
 
-            .sidebar{
-                width:240px;
-                background:#1f2d3d;
-                color:#fff;
-                display:flex;
-                flex-direction:column;
+            /* Stats Cards */
+            .cards {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 20px;
+                margin-bottom: 25px;
+            }
+            .card {
+                background: #fff;
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                border: 1px solid #e5e7eb;
+            }
+            .card h3 {
+                font-size: 13px;
+                color: #6b7280;
+                margin-bottom: 10px;
+                text-transform: uppercase;
+                font-weight: 600;
+            }
+            .card p {
+                font-size: 22px;
+                font-weight: bold;
+                color: #111827;
             }
 
-            .logo{
-                padding:20px;
-                font-size:24px;
-                font-weight:bold;
-                background:#1a2533;
-                text-align:center;
+            /* Grid Layout for Charts & Tables */
+            .grid-container {
+                display: grid;
+                grid-template-columns: 1fr 1.5fr;
+                gap: 20px;
+                margin-top: 25px;
+            }
+            .chart-card, .table-card {
+                background: #fff;
+                border-radius: 12px;
+                padding: 25px;
+                border: 1px solid #e5e7eb;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            }
+            .section-title {
+                font-size: 16px;
+                font-weight: 700;
+                margin-bottom: 20px;
+                color: #1f2937;
+                display: flex;
+                align-items: center;
+                gap: 10px;
             }
 
-            .user-box{
-                padding:18px;
-                border-bottom:1px solid rgba(255,255,255,0.08);
-                font-size:14px;
+            /* Table Styles */
+            table {
+                width: 100%;
+                border-collapse: collapse;
             }
-
-            .menu{
-                list-style:none;
-                padding:10px 0;
+            th {
+                text-align: left;
+                font-size: 12px;
+                color: #94a3b8;
+                text-transform: uppercase;
+                padding-bottom: 10px;
+                border-bottom: 1px solid #f1f5f9;
             }
-
-            .menu li a{
-                display:block;
-                padding:14px 20px;
-                color:#fff;
-                text-decoration:none;
-                transition:0.2s;
+            td {
+                padding: 12px 0;
+                font-size: 14px;
+                border-bottom: 1px solid #f8fafc;
             }
-
-            .menu li a:hover,
-            .menu li a.active{
-                background:#2f4050;
+            .badge {
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: bold;
             }
-
-            .main{
-                flex:1;
-                display:flex;
-                flex-direction:column;
-            }
-
-            .topbar{
-                height:64px;
-                background:#fff;
-                border-bottom:1px solid #ddd;
-                display:flex;
-                align-items:center;
-                justify-content:space-between;
-                padding:0 20px;
-            }
-
-            .topbar-title{
-                font-size:20px;
-                font-weight:bold;
-            }
-
-            .topbar-user{
-                font-size:14px;
-                color:#333;
-            }
-
-            .content{
-                padding:20px;
-            }
-
-            .cards{
-                display:grid;
-                grid-template-columns:repeat(3, 1fr);
-                gap:16px;
-            }
-
-            .card{
-                background:#fff;
-                border-radius:12px;
-                padding:20px;
-                box-shadow:0 2px 8px rgba(0,0,0,0.06);
-            }
-
-            .card h3{
-                margin-bottom:10px;
-                font-size:16px;
-                color:#555;
-            }
-
-            .card p{
-                font-size:28px;
-                font-weight:bold;
-                color:#111;
-            }
-
-            .welcome{
-                margin-top:20px;
-                background:#fff;
-                border-radius:12px;
-                padding:20px;
-                box-shadow:0 2px 8px rgba(0,0,0,0.06);
-            }
-            .chart-card h3{
-                font-size:18px;
-                margin-bottom:12px;
+            .badge-danger {
+                background: #fee2e2;
+                color: #ef4444;
             }
         </style>
     </head>
-
     <body>
-
         <div class="layout">
             <aside class="sidebar">
                 <div class="logo">S.I.M</div>
-
-                <div class="user-box">
-                    Xin chào: <b><%= acc != null ? acc.getUsername() : "" %></b>
-                </div>
-
+                <div class="user-box">Xin chào: <b><%= acc != null ? acc.getUsername() : "" %></b></div>
                 <ul class="menu">
                     <li><a class="active" href="${pageContext.request.contextPath}/dashboard">Trang chủ</a></li>
                     <li><a href="${pageContext.request.contextPath}/products">Sản phẩm</a></li>
@@ -156,69 +181,88 @@
             </aside>
 
             <main class="main">
-                <div class="topbar">
-                    <div class="topbar-title">Dashboard</div>
-                    <div class="topbar-user">Nhân viên bán hàng</div>
-                </div>
-
+                <div class="topbar"><h2>Tổng quan kinh doanh</h2></div>
                 <div class="content">
+
                     <div class="cards">
-                        <div class="card">
+                        <div class="card" style="border-top: 4px solid #3b82f6;">
                             <h3>Doanh thu hôm nay</h3>
-                            <p>${revenueToday}</p>
+                            <p><fmt:formatNumber value="${revenueToday}" type="number"/> đ</p>
                         </div>
-
-                        <div class="card">
-                            <h3>Doanh thu tuần này</h3>
-                            <p>${revenueWeek}</p>
+                        <div class="card" style="border-top: 4px solid #10b981;">
+                            <h3>Doanh thu tuần</h3>
+                            <p><fmt:formatNumber value="${revenueWeek}" type="number"/> đ</p>
                         </div>
-
-                        <div class="card">
-                            <h3>Doanh thu tháng này</h3>
-                            <p>${revenueMonth}</p>
+                        <div class="card" style="border-top: 4px solid #f59e0b;">
+                            <h3>Doanh thu tháng</h3>
+                            <p><fmt:formatNumber value="${revenueMonth}" type="number"/> đ</p>
+                        </div>
+                        <div class="card" style="border-top: 4px solid #ef4444;">
+                            <h3>Sắp hết hàng</h3>
+                            <p style="color: #ef4444;">${lowStockCount != null ? lowStockCount : 0} mã</p>
                         </div>
                     </div>
 
-                    <div class="chart-card" style="margin-top:20px; background:#fff; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-                        <h3 style="margin-bottom:16px;">Biểu đồ tròn doanh thu</h3>
-                        <div style="max-width:420px;">
-                            <canvas id="revenuePieChart"></canvas>
+                    <div class="grid-container">
+                        <div class="chart-card">
+                            <h3 class="section-title">📊 Phân bổ doanh thu</h3>
+                            <div style="max-width:280px; margin: 0 auto;"><canvas id="revenuePieChart"></canvas></div>
+                        </div>
+
+                        <div class="table-card">
+                            <h3 class="section-title">⚠️ Cảnh báo tồn kho (Dưới 5 món)</h3>
+                            <c:choose>
+                                <c:when test="${empty lowStockProducts}">
+                                    <p style="color: #94a3b8; font-style: italic; text-align: center; padding: 40px 0;">Hiện tại không có hàng nào sắp hết.</p>
+                                </c:when>
+                                <c:otherwise>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Sản phẩm</th>
+                                                <th>Tồn kho</th>
+                                                <th>Trạng thái</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <c:forEach items="${lowStockProducts}" var="p">
+                                                <tr>
+                                                    <td>
+                                                        <b>${p.name}</b><br>
+                                                        <small style="color: #94a3b8;">SKU: ${p.sku}</small>
+                                                    </td>
+                                                    <td style="font-weight: bold; color: #ef4444;">${p.quantity}</td>
+                                                    <td><span class="badge badge-danger">CẦN NHẬP</span></td>
+                                                </tr>
+                                            </c:forEach>
+                                        </tbody>
+                                    </table>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
                 </div>
             </main>
         </div>
 
+        <script>
+            new Chart(document.getElementById('revenuePieChart'), {
+                type: 'doughnut', /* Chuyển sang doughnut nhìn hiện đại hơn pie */
+                data: {
+                    labels: ['Hôm nay', 'Tuần này', 'Tháng này'],
+                    datasets: [{
+                            data: [${revenueToday}, ${revenueWeek}, ${revenueMonth}],
+                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
+                            borderWidth: 0
+                        }]
+                },
+                options: {
+                    cutout: '70%',
+                    plugins: {
+                        legend: {position: 'bottom'}
+                    }
+                }
+            });
+        </script>
     </body>
 </html>
-<script>
-    const revenueToday = ${revenueToday};
-    const revenueWeek = ${revenueWeek};
-    const revenueMonth = ${revenueMonth};
-
-    const ctx = document.getElementById('revenuePieChart').getContext('2d');
-
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ['Hôm nay', 'Tuần này', 'Tháng này'],
-            datasets: [{
-                    data: [revenueToday, revenueWeek, revenueMonth],
-                    backgroundColor: [
-                        '#3b82f6',
-                        '#10b981',
-                        '#f59e0b'
-                    ],
-                    borderWidth: 1
-                }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
-</script>

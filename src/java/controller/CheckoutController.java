@@ -97,17 +97,35 @@ public class CheckoutController extends HttpServlet {
             totalAmount += it.getLineTotal();
         }
 
-        // snapshot để invoice.jsp hiển thị
+        // --- BẮT ĐẦU PHẦN SỬA CHO CÔNG NỢ ---
+        // 1. Lấy số tiền khách trả từ form bên pos.jsp
+        String amountPaidRaw = request.getParameter("amountPaid");
+        double amountPaid = totalAmount; // Mặc định là trả đủ nếu có lỗi xảy ra
+
+        try {
+            if (amountPaidRaw != null && !amountPaidRaw.isEmpty()) {
+                amountPaid = Double.parseDouble(amountPaidRaw);
+            }
+        } catch (NumberFormatException e) {
+            amountPaid = totalAmount;
+        }
+
+        // 2. Tính số tiền nợ phát sinh từ đơn này
+        double orderDebt = totalAmount - amountPaid;
+
+        // 3. Đẩy thông tin vào session để invoice.jsp hiển thị và InvoiceFinish xử lý lưu DB
         session.setAttribute("lastOrder", new java.util.HashMap<>(cart));
         session.setAttribute("lastTotal", totalAmount);
+        session.setAttribute("amountPaid", amountPaid);
+        session.setAttribute("orderDebt", orderDebt > 0 ? orderDebt : 0);
 
-        // (tuỳ) lưu info khách vào session để invoice + finish dùng
+        // --- KẾT THÚC PHẦN SỬA ---
         String customerName = request.getParameter("customerName");
         String customerPhone = request.getParameter("customerPhone");
         session.setAttribute("customerName", customerName == null ? "" : customerName.trim());
         session.setAttribute("customerPhone", customerPhone == null ? "" : customerPhone.trim());
 
-        // KHÔNG xóa cart, KHÔNG trừ kho, KHÔNG insert DB
+        // Chuyển sang trang hóa đơn để xem trước
         response.sendRedirect(request.getContextPath() + "/invoice.jsp");
     }
 
