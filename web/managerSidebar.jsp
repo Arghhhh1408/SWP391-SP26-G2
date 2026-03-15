@@ -244,6 +244,12 @@
                 <span class="nav-icon">⚙️</span> Control Panel
             </a>
         </c:if>
+
+        <div class="sidebar-section-title">Tài khoản</div>
+        <a href="${pageContext.request.contextPath}/personalProfile"
+            class="${currentPage == 'personalProfile' ? 'active' : ''}">
+            <span class="nav-icon">👤</span> Hồ sơ cá nhân
+        </a>
     </nav>
 
     <div class="sidebar-footer">
