@@ -15,7 +15,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import model.User;
 
-@WebServlet(name = "PersonalProfileController", urlPatterns = {"/personalProfile"})
+@WebServlet(name = "PersonalProfileController", urlPatterns = { "/personalProfile" })
 public class PersonalProfileController extends HttpServlet {
 
     @Override
@@ -25,15 +25,17 @@ public class PersonalProfileController extends HttpServlet {
         HttpSession session = request.getSession(false);
         User u = (session != null) ? (User) session.getAttribute("acc") : null;
 
-        // Only allow admin (roleID == 0)
-        if (u == null || u.getRoleID() != 0) {
+        // Allow any authenticated user
+        if (u == null) {
             response.sendRedirect("login");
             return;
         }
+        // Tell the JSP which sidebar to include
+        request.setAttribute("sidebarType", u.getRoleID() == 0 ? "admin" : "manager");
 
         // Flash messages: read from session then remove (PRG pattern)
         String successMsg = (String) session.getAttribute("profileSuccess");
-        String errorMsg   = (String) session.getAttribute("profileError");
+        String errorMsg = (String) session.getAttribute("profileError");
         if (successMsg != null) {
             request.setAttribute("success", successMsg);
             session.removeAttribute("profileSuccess");
@@ -53,7 +55,7 @@ public class PersonalProfileController extends HttpServlet {
         HttpSession session = request.getSession(false);
         User u = (session != null) ? (User) session.getAttribute("acc") : null;
 
-        if (u == null || u.getRoleID() != 0) {
+        if (u == null) {
             response.sendRedirect("login");
             return;
         }
@@ -61,11 +63,14 @@ public class PersonalProfileController extends HttpServlet {
         String action = request.getParameter("action");
         if ("update".equals(action)) {
             String fullName = request.getParameter("fullName");
-            if (fullName != null) fullName = fullName.trim();
+            if (fullName != null)
+                fullName = fullName.trim();
             String email = request.getParameter("email");
-            if (email != null) email = email.trim();
+            if (email != null)
+                email = email.trim();
             String phone = request.getParameter("phone");
-            if (phone != null) phone = phone.trim();
+            if (phone != null)
+                phone = phone.trim();
 
             UserDAO userDAO = new UserDAO();
 
