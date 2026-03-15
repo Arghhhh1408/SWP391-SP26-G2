@@ -164,6 +164,9 @@
                     <a href="systemlog" class="${currentPage == 'systemLog' ? 'active' : ''}">
                         <span class="nav-icon">&#128196;</span> Xem lịch sử hoạt động
                     </a>
+                    <a href="personalProfile" class="${currentPage == 'personalProfile' ? 'active' : ''}">
+                        <span class="nav-icon">&#128100;</span> Hồ sơ cá nhân
+                    </a>
                 </nav>
 
                 <div class="sidebar-footer">
