@@ -332,6 +332,9 @@
                             <a href="systemlog">
                                 <span class="icon">&#128196;</span> Xem lịch sử hoạt động
                             </a>
+                            <a href="personalProfile">
+                                <span class="icon">&#128100;</span> Hồ sơ cá nhân
+                            </a>
                         </nav>
 
                         <div class="sidebar-footer">
