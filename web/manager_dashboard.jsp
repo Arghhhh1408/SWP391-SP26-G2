@@ -515,9 +515,7 @@
                                                 ${c.status.name()}
                                             </span>
                                         </td>
-                                        <td style="color: var(--text-muted); font-size: 12px;">
-                                            <fmt:formatDate value="${c.updatedAtAsDate}" pattern="dd/MM/yyyy HH:mm" />
-                                        </td>
+                                        
                                     </tr>
                                 </c:forEach>
                             </tbody>

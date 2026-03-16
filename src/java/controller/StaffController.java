@@ -183,18 +183,22 @@ public class StaffController extends HttpServlet {
             return null;
         }
     }
-
     private String getActor(HttpServletRequest request) {
-        HttpSession session = request.getSession();
-        Object acc = session.getAttribute("acc");
-        if (acc instanceof User u) {
-            if (u.getUsername() != null && !u.getUsername().isBlank()) {
-                return u.getUsername();
-            }
-            return "user#" + u.getUserID();
+    HttpSession session = request.getSession();
+    Object acc = session.getAttribute("acc");
+
+    if (acc instanceof User) {
+        User u = (User) acc;
+        if (u.getUsername() != null && !u.getUsername().isBlank()) {
+            return u.getUsername();
         }
-        return "staff";
+        return "user#" + u.getUserID();
     }
+
+    return "unknown";
+}
+
+    
 
     private String safeTrim(String s) {
         return s == null ? null : s.trim();
