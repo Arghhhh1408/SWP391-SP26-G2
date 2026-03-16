@@ -31,7 +31,14 @@ public class PersonalProfileController extends HttpServlet {
             return;
         }
         // Tell the JSP which sidebar to include
-        request.setAttribute("sidebarType", u.getRoleID() == 0 ? "admin" : "manager");
+        String sidebarType;
+        switch (u.getRoleID()) {
+            case 0: sidebarType = "admin"; break;
+            case 1: sidebarType = "staff"; break;
+            case 3: sidebarType = "sales"; break;
+            default: sidebarType = "manager"; break;
+        }
+        request.setAttribute("sidebarType", sidebarType);
 
         // Flash messages: read from session then remove (PRG pattern)
         String successMsg = (String) session.getAttribute("profileSuccess");
