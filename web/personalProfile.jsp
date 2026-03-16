@@ -130,6 +130,12 @@
                             <c:when test="${sidebarType == 'admin'}">
                                 <jsp:include page="adminSidebar.jsp" />
                             </c:when>
+                            <c:when test="${sidebarType == 'staff'}">
+                                <jsp:include page="staffSidebar.jsp" />
+                            </c:when>
+                            <c:when test="${sidebarType == 'sales'}">
+                                <jsp:include page="saleSidebar.jsp" />
+                            </c:when>
                             <c:otherwise>
                                 <jsp:include page="managerSidebar.jsp" />
                             </c:otherwise>
@@ -176,10 +182,10 @@
                                                                     user.fullName : user.username}</h2>
                                                                 <span class="badge">
                                                                     <c:if test="${user.roleID == 0}">Admin</c:if>
-                                                                    <c:if test="${user.roleID == 1}">Manager</c:if>
-                                                                    <c:if test="${user.roleID == 2}">Salesperson</c:if>
-                                                                    <c:if test="${user.roleID == 3}">Warehouse Staff
+                                                                    <c:if test="${user.roleID == 1}">Warehouse Staff
                                                                     </c:if>
+                                                                    <c:if test="${user.roleID == 2}">Manager</c:if>
+                                                                    <c:if test="${user.roleID == 3}">Salesperson</c:if>
                                                                 </span>
                                                             </div>
                                                         </div>

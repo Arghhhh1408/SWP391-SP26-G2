@@ -6,214 +6,17 @@
         <head>
             <meta charset="UTF-8">
             <title>Warehouse Staff Dashboard</title>
-            <style>
-                * {
-                    box-sizing: border-box;
-                    margin: 0;
-                    padding: 0;
-                }
-
-                body {
-                    display: flex;
-                    min-height: 100vh;
-                    font-family: Arial, sans-serif;
-                    background: #f4f6f9;
-                }
-
-                .sidebar {
-                    width: 240px;
-                    background: #1a1a2e;
-                    color: #ccc;
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .sidebar-brand {
-                    padding: 20px 16px 12px;
-                    border-bottom: 1px solid #2e2e50;
-                }
-
-                .sidebar-brand h2 {
-                    color: #fff;
-                    font-size: 18px;
-                }
-
-                .sidebar-brand small {
-                    font-size: 11px;
-                    color: #888;
-                }
-
-                .sidebar-section-title {
-                    padding: 16px 16px 6px;
-                    font-size: 10px;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                    color: #555;
-                }
-
-                .sidebar nav a {
-                    display: block;
-                    padding: 10px 16px;
-                    color: #bbb;
-                    text-decoration: none;
-                    font-size: 14px;
-                }
-
-                .sidebar nav a:hover,
-                .sidebar nav a.active {
-                    background: #2e2e50;
-                    color: #fff;
-                }
-
-                .sidebar-footer {
-                    margin-top: auto;
-                    padding: 14px 16px;
-                    border-top: 1px solid #2e2e50;
-                    font-size: 12px;
-                    color: #555;
-                }
-
-                .sidebar-footer a {
-                    color: #e05252;
-                    text-decoration: none;
-                    font-size: 13px;
-                }
-
-                .main {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .topbar {
-                    background: #fff;
-                    padding: 14px 24px;
-                    border-bottom: 1px solid #e0e0e0;
-                    display: flex;
-                    justify-content: space-between;
-                }
-
-                .topbar h1 {
-                    font-size: 20px;
-                    color: #1a1a2e;
-                }
-
-                .topbar small {
-                    color: #888;
-                    font-size: 12px;
-                }
-
-                .content {
-                    padding: 24px;
-                }
-
-                .box {
-                    background: #fff;
-                    border: 1px solid #e0e0e0;
-                    border-radius: 8px;
-                    margin-bottom: 18px;
-                }
-
-                .box-header {
-                    padding: 14px 18px;
-                    border-bottom: 1px solid #e0e0e0;
-                }
-
-                .box-body {
-                    padding: 16px 18px;
-                    color: #333;
-                    line-height: 1.7;
-                }
-
-                .btn {
-                    border: none;
-                    border-radius: 6px;
-                    background: #38bdf8;
-                    color: #0c4a6e;
-                    padding: 7px 10px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    font-weight: 700;
-                }
-
-                .btn:hover {
-                    background: #0ea5e9;
-                    color: #fff;
-                }
-
-                .btn-reject {
-                    background: #fecaca;
-                    color: #7f1d1d;
-                }
-
-                .btn-reject:hover {
-                    background: #f87171;
-                    color: #fff;
-                }
-
-                .action-row {
-                    display: flex;
-                    gap: 6px;
-                }
-
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-
-                th,
-                td {
-                    border: 1px solid #e5e7eb;
-                    padding: 10px;
-                    text-align: left;
-                    font-size: 14px;
-                }
-
-                th {
-                    background: #f8fafc;
-                }
-
-                .tag-done {
-                    background: #d1e7dd;
-                    color: #0f5132;
-                    border: 1px solid #badbcc;
-                    border-radius: 12px;
-                    padding: 2px 8px;
-                    font-size: 12px;
-                }
-            </style>
         </head>
 
         <body>
-            <aside class="sidebar">
-                <div class="sidebar-brand">
-                    <h2>Warehouse Staff</h2>
-                    <small>Quản lý kho</small>
-                </div>
+            <%-- Set active page for sidebar highlight --%>
+            <c:set var="currentPage" value="staff_dashboard" scope="request" />
 
-                <nav>
-                    <div class="sidebar-sclassection-title">Menu Staff</div>
-                    <a href="staff_dashboard?tab=warranty" class="${tab == 'warranty' ? 'active' : ''}">Yêu cầu bảo
-                        hành</a>
-                    <a href="staff_dashboard?tab=returns" class="${tab == 'returns' ? 'active' : ''}">Yêu cầu trả
-                        hàng</a>
-                    <a href="staff_dashboard?tab=products" class="${tab == 'products' ? 'active' : ''}">Danh sách sản
-                        phẩm</a>
-                    <div class="sidebar-sclassection-title">Nhà cung cấp</div>
-                    <a href="supplierList">Danh sách nhà cung cấp</a>
-                    <div class="sidebar-sclassection-title">Nhập kho</div>
-                    <a href="stockinList">Danh sách phiếu nhập kho</a>
-                    <a href="createStockIn">Tạo phiếu nhập kho</a>
-                </nav>
+            <%-- Include the shared staff sidebar --%>
+            <jsp:include page="staffSidebar.jsp" />
 
-                <div class="sidebar-footer">
-                    <span>Trang thái: Online</span><br><br>
-                    <a href="logout">Đăng xuất</a>
-                </div>
-            </aside>
-
-            <div class="main">
-                <div class="topbar">
+            <div class="admin-main">
+                <div class="admin-topbar">
                     <div>
                         <h1>Trang quản lý Warehouse Staff</h1>
                         <small>Warehouse Staff > ${tab == 'returns' ? 'Yeu cau tra hang' : (tab == 'products' ? 'Danh
@@ -222,7 +25,7 @@
                     <div>Xin chao, <strong>${sessionScope.acc.fullName}</strong></div>
                 </div>
 
-                <div class="content">
+                <div class="admin-content">
                     <c:choose>
                         <c:when test="${tab == 'returns'}">
                             <div class="box">
