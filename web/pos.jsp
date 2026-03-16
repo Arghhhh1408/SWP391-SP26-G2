@@ -9,6 +9,7 @@
         <meta charset="UTF-8">
         <title>Bán hàng POS</title>
         <style>
+            /* --- GIỮ NGUYÊN CSS CŨ CỦA BẠN --- */
             * {
                 box-sizing: border-box;
                 margin: 0;
@@ -197,6 +198,44 @@
                 min-width: 20px;
                 text-align: center;
             }
+
+            /* --- THÊM CSS CHO MODAL TẠI ĐÂY --- */
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 9999;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                backdrop-filter: blur(2px);
+            }
+            .modal-content {
+                background: #fff;
+                margin: 2% auto;
+                padding: 10px;
+                border-radius: 12px;
+                width: 550px;
+                height: 90vh;
+                position: relative;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            .close-modal {
+                position: absolute;
+                right: 15px;
+                top: 10px;
+                font-size: 24px;
+                cursor: pointer;
+                color: #666;
+                z-index: 100;
+            }
+            iframe#invoiceFrame {
+                width: 100%;
+                height: 100%;
+                border: none;
+                border-radius: 8px;
+            }
         </style>
     </head>
     <body>
@@ -276,9 +315,7 @@
                                                                 <input type="hidden" name="from" value="pos">
                                                                 <button type="submit" class="qty-btn">-</button>
                                                             </form>
-
                                                             <span class="qty-number">${it.qty}</span>
-
                                                             <form method="post" action="${pageContext.request.contextPath}/cart" style="display:inline;">
                                                                 <input type="hidden" name="action" value="inc">
                                                                 <input type="hidden" name="productId" value="${it.productId}">
@@ -313,7 +350,8 @@
                                 <b style="color:#3b82f6"><fmt:formatNumber value="${grandTotal}" type="number"/> đ</b>
                             </p>
 
-                            <form method="post" action="${pageContext.request.contextPath}/checkout" onsubmit="window.open('', 'inv', 'width=550,height=800'); this.target = 'inv';">
+                            <form method="post" action="${pageContext.request.contextPath}/checkout" 
+                                  target="invoiceFrameName" onsubmit="document.getElementById('invoiceModal').style.display = 'block';">
                                 <div class="field"><label>Khách hàng</label><input name="customerName" id="customerName" placeholder="Tên khách hàng..."></div>
                                 <div class="field"><label>Số điện thoại</label><input name="customerPhone" id="customerPhone" placeholder="SĐT..."></div>
                                 <div class="field" style="background:#fffbeb; padding:12px; border-radius:10px; border: 1px solid #fef3c7;">
@@ -330,6 +368,14 @@
                 </div>
             </main>
         </div>
+
+        <div id="invoiceModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="location.reload();">&times;</span>
+                <iframe name="invoiceFrameName" id="invoiceFrame"></iframe>
+            </div>
+        </div>
+
         <script>
             const amountPaid = document.getElementById('amountPaid');
             const grandTotal = ${grandTotal != null ? grandTotal : 0};
@@ -346,7 +392,6 @@
                 };
             }
 
-            // AJAX Tìm khách hàng cũ theo SĐT khi nhập xong
             const phoneInput = document.getElementById('customerPhone');
             const nameInput = document.getElementById('customerName');
             if (phoneInput && nameInput) {
@@ -362,6 +407,13 @@
                     }
                 };
             }
+
+            window.onclick = function (event) {
+                if (event.target == document.getElementById('invoiceModal')) {
+                    location.reload();
+                }
+            }
+
             window.addEventListener("DOMContentLoaded", function () {
                 const params = new URLSearchParams(window.location.search);
                 const err = params.get("err");
@@ -369,10 +421,7 @@
                 const stock = params.get("stock");
 
                 if (err === "not_enough_stock") {
-                    // Thay vì dùng Modal phức tạp, bạn có thể dùng alert nhanh để test
-                    alert("❌ LỖI TỒN KHO: \nSản phẩm " + sku + " chỉ còn lại " + stock + " món trong kho. \nVui lòng điều chỉnh lại số lượng giỏ hàng!");
-
-                    // Xóa tham số lỗi trên URL sau khi đã báo để tránh reload bị hiện lại
+                    alert("❌ LỖI TỒN KHO: \nSản phẩm " + sku + " chỉ còn lại " + stock + " món trong kho.");
                     const newUrl = window.location.pathname + (params.get("keyword") ? "?keyword=" + params.get("keyword") : "");
                     window.history.replaceState({}, "", newUrl);
                 }
