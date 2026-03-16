@@ -21,66 +21,9 @@
             a {
                 text-decoration: none;
             }
-            .sidebar {
-                width: 326px;
-                background: #08142f;
-                color: #dbe6ff;
-                padding: 22px 18px;
-            }
-            .brand {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                padding: 12px;
-                background: rgba(255,255,255,0.05);
-                border-radius: 20px;
-                margin-bottom: 28px;
-            }
-            .brand-logo {
-                width: 48px;
-                height: 48px;
-                border-radius: 14px;
-                background: linear-gradient(180deg, #5ea1ff, #2b6ce6);
-                color: #fff;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 28px;
-                font-weight: 700;
-            }
-            .brand h2 {
-                color: #fff;
-                font-size: 18px;
-                margin-bottom: 4px;
-            }
-            .brand p {
-                color: #9fb0d0;
-                font-size: 13px;
-            }
-            .section-title {
-                margin: 18px 10px 10px;
-                font-size: 12px;
-                color: #7f8fb5;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-            .sidebar nav a, .submenu a {
-                display: block;
-                color: #dbe6ff;
-                padding: 13px 16px;
-                border-radius: 16px;
-                margin-bottom: 6px;
-                font-size: 15px;
-            }
-            .sidebar nav a.active, .sidebar nav a:hover, .submenu a:hover {
-                background: #193066;
-            }
-            .submenu {
-                padding-left: 18px;
-                border-left: 1px solid rgba(255,255,255,0.16);
-                margin: 8px 0 14px 16px;
-            }
+
             .main {
+                margin-left: 326px; /* Space for the fixed sidebar */
                 flex: 1;
                 padding: 26px;
             }
@@ -326,36 +269,7 @@
         </style>
     </head>
     <body>
-        <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-logo">SIM</div>
-                <div>
-                    <h2>Simple Inventory</h2>
-                    <p>Warehouse Staff Workspace</p>
-                </div>
-            </div>
-
-            <div class="section-title">Warehouse Staff</div>
-            <nav>
-                <a href="staff_dashboard?tab=dashboard" class="${tab == 'dashboard' ? 'active' : ''}">🏠 Dashboard</a>
-                <a href="#">📦 Stock Management</a>
-                <div class="submenu">
-                    <a href="createStockIn">Create Stock-In</a>
-                    <a href="stockinList">Stock-In History</a>
-                </div>
-                <a href="#">📋 Inventory</a>
-                <div class="submenu">
-                    <a href="staff_dashboard?tab=products">View Inventory</a>
-                    <a href="inventoryCheck">Inventory Check Item</a>
-                </div>
-                <a href="#">🚚 Supplier</a>
-                <div class="submenu">
-                    <a href="supplierList">Supplier List</a>
-                    <a href="staff_dashboard?tab=returns">Return Requests</a>
-                    <a href="staff_dashboard?tab=warranty">Warranty Claims</a>
-                </div>
-            </nav>
-        </aside>
+        <jsp:include page="staffSidebar.jsp" />
 
         <main class="main">
             <div class="page-header">

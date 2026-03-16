@@ -308,6 +308,82 @@
                                                         </ul>
                                             </form>
 
+                                            <%-- ===== Change Password Section ===== --%>
+                                            <div style="margin-top: 32px; border-top: 2px solid #f0f0f5; padding-top: 28px;">
+                                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                                        <div class="profile-info-icon">&#128274;</div>
+                                                        <h3 style="margin: 0; font-size: 18px; color: #1a1a2e;">Đổi mật khẩu</h3>
+                                                    </div>
+                                                    <button type="button" id="togglePasswordBtn" onclick="togglePasswordSection()"
+                                                        style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                                                        Đổi mật khẩu
+                                                    </button>
+                                                </div>
+
+                                                <%-- Password change notifications --%>
+                                                <c:if test="${not empty passwordSuccess}">
+                                                    <div style="background: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 6px; padding: 10px 16px; margin-bottom: 16px;">
+                                                        &#10004; ${passwordSuccess}
+                                                    </div>
+                                                </c:if>
+                                                <c:if test="${not empty passwordError}">
+                                                    <div style="background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 6px; padding: 10px 16px; margin-bottom: 16px;">
+                                                        &#10006; ${passwordError}
+                                                    </div>
+                                                </c:if>
+
+                                                <form action="personalProfile" method="POST" id="passwordForm" 
+                                                    style="display: none;" onsubmit="return validatePasswordForm()">
+                                                    <input type="hidden" name="action" value="changePassword" />
+
+                                                    <div style="margin-bottom: 16px;">
+                                                        <label style="display: block; font-size: 13px; color: #555; margin-bottom: 6px; font-weight: 500;">
+                                                            Mật khẩu hiện tại <span style="color: #dc3545;">*</span>
+                                                        </label>
+                                                        <input type="password" name="currentPassword" id="currentPassword" required
+                                                            style="width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: border-color 0.2s;"
+                                                            onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ccc'"
+                                                            placeholder="Nhập mật khẩu hiện tại" />
+                                                    </div>
+
+                                                    <div style="margin-bottom: 16px;">
+                                                        <label style="display: block; font-size: 13px; color: #555; margin-bottom: 6px; font-weight: 500;">
+                                                            Mật khẩu mới <span style="color: #dc3545;">*</span>
+                                                        </label>
+                                                        <input type="password" name="newPassword" id="newPassword" required
+                                                            style="width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: border-color 0.2s;"
+                                                            onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ccc'"
+                                                            placeholder="Nhập mật khẩu mới" />
+                                                    </div>
+
+                                                    <div style="margin-bottom: 20px;">
+                                                        <label style="display: block; font-size: 13px; color: #555; margin-bottom: 6px; font-weight: 500;">
+                                                            Xác nhận mật khẩu mới <span style="color: #dc3545;">*</span>
+                                                        </label>
+                                                        <input type="password" name="confirmPassword" id="confirmPassword" required
+                                                            style="width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: border-color 0.2s;"
+                                                            onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ccc'"
+                                                            placeholder="Nhập lại mật khẩu mới" />
+                                                    </div>
+
+                                                    <div id="passwordValidationError" 
+                                                        style="display: none; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 6px; padding: 10px 16px; margin-bottom: 16px;">
+                                                    </div>
+
+                                                    <div style="display: flex; gap: 10px;">
+                                                        <button type="submit"
+                                                            style="background: #28a745; color: white; border: none; padding: 10px 24px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                                                            Xác nhận đổi mật khẩu
+                                                        </button>
+                                                        <button type="button" onclick="togglePasswordSection()"
+                                                            style="background: #dc3545; color: white; border: none; padding: 10px 24px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                                                            Hủy
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+
                                             <script>
                                                 let isEditing = false;
                                                 function toggleEdit() {
@@ -331,11 +407,46 @@
                                                     }
                                                 }
 
+                                                // --- Change Password Section ---
+                                                let isPasswordOpen = false;
+                                                function togglePasswordSection() {
+                                                    isPasswordOpen = !isPasswordOpen;
+                                                    document.getElementById('passwordForm').style.display = isPasswordOpen ? 'block' : 'none';
+                                                    document.getElementById('togglePasswordBtn').style.display = isPasswordOpen ? 'none' : 'inline-block';
+                                                    if (!isPasswordOpen) {
+                                                        document.getElementById('passwordForm').reset();
+                                                        document.getElementById('passwordValidationError').style.display = 'none';
+                                                    }
+                                                }
+
+                                                function validatePasswordForm() {
+                                                    var newPass = document.getElementById('newPassword').value;
+                                                    var confirmPass = document.getElementById('confirmPassword').value;
+                                                    var errorDiv = document.getElementById('passwordValidationError');
+
+
+                                                    if (newPass !== confirmPass) {
+                                                        errorDiv.innerHTML = '&#10006; Mật khẩu xác nhận không khớp!';
+                                                        errorDiv.style.display = 'block';
+                                                        return false;
+                                                    }
+                                                    errorDiv.style.display = 'none';
+                                                    return true;
+                                                }
+
                                                 // If there was an error submitting, keep edit mode open
                                                 var hasError = "${not empty error}";
                                                 if (hasError === "true") {
                                                     window.onload = function () {
                                                         toggleEdit();
+                                                    };
+                                                }
+
+                                                // If there was a password error, keep password section open
+                                                var hasPasswordError = "${not empty passwordError}";
+                                                if (hasPasswordError === "true") {
+                                                    window.onload = function () {
+                                                        togglePasswordSection();
                                                     };
                                                 }
                                             </script>
