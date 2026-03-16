@@ -2,11 +2,13 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
  */
-
 package controller;
 
 import dao.CategoryDAO;
+import dao.LowStockDAO;
 import dao.ReturnDAO;
+import dao.StaffDashboardDAO;
+import dao.SystemLogDAO;
 import dao.WarrantyClaimDAO;
 import java.io.IOException;
 import java.util.List;
@@ -16,6 +18,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.text.NumberFormat;
+import java.util.Locale;
 import model.Product;
 import model.ReturnStatus;
 import model.User;
@@ -25,7 +29,7 @@ import model.WarrantyClaimStatus;
  *
  * @author dotha
  */
-@WebServlet(name="StaffController", urlPatterns={"/staff_dashboard"})
+@WebServlet(name = "StaffController", urlPatterns = {"/staff_dashboard"})
 public class StaffController extends HttpServlet {
 
     @Override
@@ -37,11 +41,13 @@ public class StaffController extends HttpServlet {
 
         String tab = safeTrim(request.getParameter("tab"));
         if (tab == null || tab.isEmpty()) {
-            tab = "warranty";
+            tab = "dashboard";
         }
         request.setAttribute("tab", tab);
 
-        if ("returns".equals(tab)) {
+        if ("dashboard".equals(tab)) {
+            loadDashboardData(request);
+        } else if ("returns".equals(tab)) {
             ReturnDAO dao = new ReturnDAO();
             request.setAttribute("returns", dao.listAll());
         } else if ("products".equals(tab)) {
@@ -82,17 +88,19 @@ public class StaffController extends HttpServlet {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 WarrantyClaimDAO dao = new WarrantyClaimDAO();
-                dao.updateStatus(id, WarrantyClaimStatus.COMPLETED, "Staff xác nhận đã bảo hành", getActor(request));
+                dao.updateStatus(id, WarrantyClaimStatus.COMPLETED,
+                        "Staff xác nhận đã bảo hành", getActor(request));
             }
             response.sendRedirect("staff_dashboard?tab=warranty");
             return;
         }
-        
+
         if ("rejectWarranty".equals(action)) {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 WarrantyClaimDAO dao = new WarrantyClaimDAO();
-                dao.updateStatus(id, WarrantyClaimStatus.REJECTED, "Staff từ chối yêu cầu bảo hành", getActor(request));
+                dao.updateStatus(id, WarrantyClaimStatus.REJECTED,
+                        "Staff từ chối yêu cầu bảo hành", getActor(request));
             }
             response.sendRedirect("staff_dashboard?tab=warranty");
             return;
@@ -102,23 +110,60 @@ public class StaffController extends HttpServlet {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 ReturnDAO dao = new ReturnDAO();
-                dao.updateStatus(id, ReturnStatus.COMPLETED, "Staff xác nhận đã trả hàng", getActor(request));
-            }
-            response.sendRedirect("staff_dashboard?tab=returns");
-            return;
-        }
-        
-        if ("rejectReturn".equals(action)) {
-            Integer id = tryParseInt(request.getParameter("id"));
-            if (id != null) {
-                ReturnDAO dao = new ReturnDAO();
-                dao.updateStatus(id, ReturnStatus.REJECTED, "Staff từ chối yêu cầu trả hàng", getActor(request));
+                dao.updateStatus(id, ReturnStatus.COMPLETED,
+                        "Staff xác nhận đã trả hàng", getActor(request));
             }
             response.sendRedirect("staff_dashboard?tab=returns");
             return;
         }
 
-        response.sendRedirect("staff_dashboard");
+        if ("toggleLowStockNotified".equals(action)) {
+            Integer alertId = tryParseInt(request.getParameter("alertId"));
+            boolean notified = Boolean.parseBoolean(request.getParameter("notified"));
+            if (alertId != null) {
+                LowStockDAO dao = new LowStockDAO();
+                dao.updateNotified(alertId, !notified);
+            }
+            response.sendRedirect("staff_dashboard?tab=dashboard");
+            return;
+        }
+
+        if ("rejectReturn".equals(action)) {
+            Integer id = tryParseInt(request.getParameter("id"));
+            if (id != null) {
+                ReturnDAO dao = new ReturnDAO();
+                dao.updateStatus(id, ReturnStatus.REJECTED,
+                        "Staff từ chối yêu cầu trả hàng", getActor(request));
+            }
+            response.sendRedirect("staff_dashboard?tab=returns");
+            return;
+        }
+
+        response.sendRedirect("staff_dashboard?tab=dashboard");
+    }
+
+    private void loadDashboardData(HttpServletRequest request) {
+        User user = (User) request.getSession().getAttribute("acc");
+        LowStockDAO lowStockDAO = new LowStockDAO();
+        StaffDashboardDAO dashboardDAO = new StaffDashboardDAO();
+        SystemLogDAO systemLogDAO = new SystemLogDAO();
+
+        int lowStockCount = lowStockDAO.countTriggeredAlerts();
+        request.setAttribute("triggeredCount", lowStockCount);
+        request.setAttribute("triggeredAlerts", lowStockDAO.getTriggeredAlerts());
+        request.setAttribute("dashboardWatchlist", dashboardDAO.getDashboardWatchlist());
+        request.setAttribute("pendingSupplierDebtCount", dashboardDAO.countPendingSupplierDebts());
+        request.setAttribute("pendingSupplierDebtAmount", formatCurrencyVi(dashboardDAO.getPendingSupplierDebtAmount()));
+        request.setAttribute("openRTVCount", dashboardDAO.countOpenRTVCases());
+        request.setAttribute("unreadNotificationCount",
+                user == null ? 0 : dashboardDAO.countUnreadNotifications(user.getUserID()));
+        request.setAttribute("recentLogs", systemLogDAO.getRecentLogs(5));
+    }
+
+    private String formatCurrencyVi(double amount) {
+        NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
+        formatter.setMaximumFractionDigits(0);
+        return formatter.format(amount) + " đ";
     }
 
     private boolean ensureStaff(HttpServletRequest request, HttpServletResponse response) throws IOException {

@@ -79,4 +79,28 @@ public class SystemLogDAO extends DBContext {
         }
         return list;
     }
+
+    public List<SystemLog> getRecentLogs(int limit) {
+        List<SystemLog> list = new ArrayList<>();
+        String sql = "SELECT TOP (?) * FROM [dbo].[SystemLog] ORDER BY LogDate DESC";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, limit);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                SystemLog log = new SystemLog();
+                log.setLogID(rs.getInt("LogID"));
+                log.setUserID(rs.getInt("UserID"));
+                log.setAction(rs.getString("Action"));
+                log.setTargetObject(rs.getString("TargetObject"));
+                log.setDescription(rs.getString("Description"));
+                log.setLogDate(rs.getTimestamp("LogDate"));
+                log.setIpAddress(rs.getString("IPAddress"));
+                list.add(log);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }

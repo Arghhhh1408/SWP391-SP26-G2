@@ -33,8 +33,7 @@ public class ProductDAO extends DBContext {
         }
         return list;
     }
-    
-    
+
     public Product getBySku(String sku) {
         String sql = """
             SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
@@ -54,6 +53,7 @@ public class ProductDAO extends DBContext {
         }
         return null;
     }
+
     public List<Product> searchByName(String keyword) {
         List<Product> list = new ArrayList<>();
         String sql = """
@@ -89,7 +89,9 @@ public class ProductDAO extends DBContext {
             stm.setInt(1, id);
 
             ResultSet rs = stm.executeQuery();
-            if (rs.next()) return map(rs);
+            if (rs.next()) {
+                return map(rs);
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -107,6 +109,19 @@ public class ProductDAO extends DBContext {
         p.setUnit(rs.getString("Unit"));
         p.setStatus(rs.getString("Status"));
         return p;
-        
+
+    }
+
+    public void increaseQuantity(int productId, int quantity) {
+        String sql = "UPDATE Products SET StockQuantity = StockQuantity + ? WHERE ProductID = ?";
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setInt(1, quantity);
+            ps.setInt(2, productId);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
