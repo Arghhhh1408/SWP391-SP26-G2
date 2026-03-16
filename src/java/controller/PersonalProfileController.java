@@ -6,6 +6,7 @@
 package controller;
 
 import dao.UserDAO;
+import utils.SecurityUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -50,6 +51,18 @@ public class PersonalProfileController extends HttpServlet {
         if (errorMsg != null) {
             request.setAttribute("error", errorMsg);
             session.removeAttribute("profileError");
+        }
+
+        // Password change flash messages
+        String pwSuccess = (String) session.getAttribute("passwordSuccess");
+        String pwError = (String) session.getAttribute("passwordError");
+        if (pwSuccess != null) {
+            request.setAttribute("passwordSuccess", pwSuccess);
+            session.removeAttribute("passwordSuccess");
+        }
+        if (pwError != null) {
+            request.setAttribute("passwordError", pwError);
+            session.removeAttribute("passwordError");
         }
 
         request.setAttribute("currentPage", "personalProfile");
@@ -107,6 +120,53 @@ public class PersonalProfileController extends HttpServlet {
                 session.setAttribute("profileSuccess", "Đã lưu chỉnh sửa");
             } else {
                 session.setAttribute("profileError", "Có lỗi xảy ra khi cập nhật hồ sơ!");
+            }
+        } else if ("changePassword".equals(action)) {
+            String currentPassword = request.getParameter("currentPassword");
+            String newPassword = request.getParameter("newPassword");
+            String confirmPassword = request.getParameter("confirmPassword");
+
+            // Validate inputs
+            if (currentPassword == null || currentPassword.trim().isEmpty()
+                    || newPassword == null || newPassword.trim().isEmpty()
+                    || confirmPassword == null || confirmPassword.trim().isEmpty()) {
+                session.setAttribute("passwordError", "Vui lòng điền đầy đủ thông tin!");
+                response.sendRedirect("personalProfile");
+                return;
+            }
+
+            // Verify current password
+            UserDAO userDAO = new UserDAO();
+            User dbUser = userDAO.searchUserByID(u.getUserID());
+            String currentHash = SecurityUtils.hashPassword(currentPassword);
+            if (dbUser == null || !dbUser.getPasswordHash().equals(currentHash)) {
+                session.setAttribute("passwordError", "Mật khẩu hiện tại không đúng!");
+                response.sendRedirect("personalProfile");
+                return;
+            }
+
+            // Validate new password length
+//            if (newPassword.length() < 6) {
+//                session.setAttribute("passwordError", "Mật khẩu mới phải có ít nhất 6 ký tự!");
+//                response.sendRedirect("personalProfile");
+//                return;
+//            }
+
+            // Check confirm match
+            if (!newPassword.equals(confirmPassword)) {
+                session.setAttribute("passwordError", "Mật khẩu xác nhận không khớp!");
+                response.sendRedirect("personalProfile");
+                return;
+            }
+
+            // Update password
+            String newHash = SecurityUtils.hashPassword(newPassword);
+            if (userDAO.resetPassword(u.getUserID(), newHash)) {
+                u.setPasswordHash(newHash);
+                session.setAttribute("acc", u);
+                session.setAttribute("passwordSuccess", "Đổi mật khẩu thành công!");
+            } else {
+                session.setAttribute("passwordError", "Có lỗi xảy ra khi đổi mật khẩu!");
             }
         }
 
