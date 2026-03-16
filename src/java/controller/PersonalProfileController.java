@@ -5,7 +5,9 @@
  */
 package controller;
 
+import dao.SystemLogDAO;
 import dao.UserDAO;
+import model.SystemLog;
 import utils.SecurityUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -115,6 +117,16 @@ public class PersonalProfileController extends HttpServlet {
             updatedUser.setCreateDate(u.getCreateDate());
 
             if (userDAO.updateUser(updatedUser)) {
+                // Log action
+                SystemLogDAO logDAO = new SystemLogDAO();
+                SystemLog log = new SystemLog();
+                log.setUserID(u.getUserID());
+                log.setAction("Update Profile");
+                log.setTargetObject("User: " + u.getUsername());
+                log.setDescription("User updated their personal profile.");
+                log.setIpAddress(request.getRemoteAddr());
+                logDAO.insertLog(log);
+                
                 // Update the session so the page shows fresh data immediately
                 session.setAttribute("acc", updatedUser);
                 session.setAttribute("profileSuccess", "Đã lưu chỉnh sửa");
@@ -162,6 +174,16 @@ public class PersonalProfileController extends HttpServlet {
             // Update password
             String newHash = SecurityUtils.hashPassword(newPassword);
             if (userDAO.resetPassword(u.getUserID(), newHash)) {
+                // Log action
+                SystemLogDAO logDAO = new SystemLogDAO();
+                SystemLog log = new SystemLog();
+                log.setUserID(u.getUserID());
+                log.setAction("Change Password");
+                log.setTargetObject("User: " + u.getUsername());
+                log.setDescription("User changed their password.");
+                log.setIpAddress(request.getRemoteAddr());
+                logDAO.insertLog(log);
+
                 u.setPasswordHash(newHash);
                 session.setAttribute("acc", u);
                 session.setAttribute("passwordSuccess", "Đổi mật khẩu thành công!");
