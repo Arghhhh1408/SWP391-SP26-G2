@@ -12,10 +12,13 @@
 
         <h2>TẠO PHIẾU NHẬP KHO</h2>
 
-        <a href="createStockIn?action=clear&redirect=1">
-            ← Quay lại danh sách phiếu nhập
-        </a>
-        
+        <c:if test="${sessionScope.acc.roleID == 1}">
+            <a href="staff_dashboard?action=clear&redirect=1">← Quay lại bảng điều khiển của nhân viên</a>
+        </c:if>
+        <c:if test="${sessionScope.acc.roleID == 2}">
+            <a href="category?action=clear&redirect=1">← Quay lại bảng điều khiển của quản lý</a>
+        </c:if>
+
         <br><br>
 
         <c:if test="${not empty message}">

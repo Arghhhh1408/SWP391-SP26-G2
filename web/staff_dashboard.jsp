@@ -346,6 +346,7 @@
                 <a href="#">📋 Inventory</a>
                 <div class="submenu">
                     <a href="staff_dashboard?tab=products">View Inventory</a>
+                    <a href="inventoryCheck">Inventory Check Item</a>
                 </div>
                 <a href="#">🚚 Supplier</a>
                 <div class="submenu">
