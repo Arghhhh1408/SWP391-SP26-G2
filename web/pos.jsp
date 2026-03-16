@@ -352,8 +352,8 @@
 
                             <form method="post" action="${pageContext.request.contextPath}/checkout" 
                                   target="invoiceFrameName" onsubmit="document.getElementById('invoiceModal').style.display = 'block';">
-                                <div class="field"><label>Khách hàng</label><input name="customerName" id="customerName" placeholder="Tên khách hàng..."></div>
                                 <div class="field"><label>Số điện thoại</label><input name="customerPhone" id="customerPhone" placeholder="SĐT..."></div>
+                                <div class="field"><label>Khách hàng</label><input name="customerName" id="customerName" placeholder="Tên khách hàng..."></div>
                                 <div class="field" style="background:#fffbeb; padding:12px; border-radius:10px; border: 1px solid #fef3c7;">
                                     <label style="color: #92400e;">Số tiền khách trả</label>
                                     <input type="number" name="amountPaid" id="amountPaid" value="${grandTotal}" step="1000" style="font-weight:bold; font-size:16px;">
