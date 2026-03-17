@@ -1,6 +1,7 @@
 package controller;
 
 import dao.CategoryDAO;
+import dao.ProductDAO;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -35,6 +36,7 @@ public class ProductCRUDController extends HttpServlet {
 
         String action = request.getServletPath();
         CategoryDAO dao = new CategoryDAO();
+        ProductDAO pDao = new ProductDAO();
         try {
             if (action.equals("/addProduct")) {
                 List<Category> categories = dao.getAllCategories();
@@ -42,7 +44,7 @@ public class ProductCRUDController extends HttpServlet {
                 request.getRequestDispatcher("productForm.jsp").forward(request, response);
             } else if (action.equals("/editProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                Product p = dao.getProductById(id);
+                Product p = pDao.getProductById(id);
                 if (p != null) {
                     List<Category> categories = dao.getAllCategories();
                     request.setAttribute("product", p);
@@ -53,7 +55,7 @@ public class ProductCRUDController extends HttpServlet {
                 }
             } else if (action.equals("/deleteProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                dao.deleteProduct(id);
+                pDao.deleteProduct(id);
                 response.sendRedirect(getAfterCrudRedirect(request));
             }
         } catch (Exception e) {
@@ -69,8 +71,8 @@ public class ProductCRUDController extends HttpServlet {
             return;
         }
 
-        String action = request.getServletPath();
         CategoryDAO dao = new CategoryDAO();
+        ProductDAO pDao = new ProductDAO();
 
         try {
             request.setCharacterEncoding("UTF-8");
@@ -156,7 +158,7 @@ public class ProductCRUDController extends HttpServlet {
 
             if (idStr == null || idStr.isEmpty()) {
                 // Check SKU exists
-                if (dao.isProductSkuExists(sku)) {
+                if (pDao.isProductSkuExists(sku)) {
                     request.setAttribute("error", "SKU already exists!");
                     List<Category> categories = dao.getAllCategories();
                     request.setAttribute("categories", categories);
@@ -164,10 +166,10 @@ public class ProductCRUDController extends HttpServlet {
                     request.getRequestDispatcher("productForm.jsp").forward(request, response);
                     return;
                 }
-                dao.addProduct(p);
+                pDao.addProduct(p);
             } else {
                 p.setId(Integer.parseInt(idStr));
-                dao.updateProduct(p);
+                pDao.updateProduct(p);
             }
             response.sendRedirect(getAfterCrudRedirect(request));
 

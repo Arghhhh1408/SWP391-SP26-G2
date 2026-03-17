@@ -1,6 +1,6 @@
 package controller;
 
-import dao.CategoryDAO;
+import dao.ProductDAO;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -33,8 +33,8 @@ public class ProductDetailController extends HttpServlet {
 
         try {
             int id = Integer.parseInt(request.getParameter("id"));
-            CategoryDAO dao = new CategoryDAO();
-            Product product = dao.getProductById(id);
+            ProductDAO pDao = new ProductDAO();
+            Product product = pDao.getProductById(id);
 
             if (product != null) {
                 // Get category name for display if needed, or just rely on ID
