@@ -5,6 +5,7 @@
 package controller;
 
 import dao.CategoryDAO;
+import dao.ProductDAO;
 import dao.LowStockDAO;
 import dao.ReturnDAO;
 import dao.StaffDashboardDAO;
@@ -53,13 +54,14 @@ public class StaffController extends HttpServlet {
         } else if ("products".equals(tab)) {
             try {
                 CategoryDAO dao = new CategoryDAO();
-                List<Product> products = dao.getAllProducts();
+                ProductDAO pDao = new ProductDAO();
+                List<Product> products = pDao.getAllProducts();
                 request.setAttribute("products", products);
 
                 String editIdRaw = safeTrim(request.getParameter("editId"));
                 Integer editId = tryParseInt(editIdRaw);
                 if (editId != null) {
-                    Product editProduct = dao.getProductById(editId);
+                    Product editProduct = pDao.getProductById(editId);
                     if (editProduct != null) {
                         request.setAttribute("editProduct", editProduct);
                     }

@@ -1,6 +1,6 @@
 package controller;
 
-import dao.CategoryDAO;
+import dao.ProductDAO;
 import dao.ReturnDAO;
 import dao.WarrantyClaimDAO;
 import java.io.IOException;
@@ -51,8 +51,8 @@ public class SalesController extends HttpServlet {
             request.setAttribute("returnCreated", returnCreated);
         } else if ("products".equals(tab)) {
             try {
-                CategoryDAO dao = new CategoryDAO();
-                List<Product> products = dao.getAllProducts();
+                ProductDAO pDao = new ProductDAO();
+                List<Product> products = pDao.getAllProducts();
                 request.setAttribute("salesProducts", products);
             } catch (Exception e) {
                 request.setAttribute("error", "Không thể tải danh sách sản phẩm.");
