@@ -296,7 +296,7 @@
                                                                                                     test="${not empty user.createDate}">
                                                                                                     <fmt:formatDate
                                                                                                         value="${user.createDate}"
-                                                                                                        pattern="dd/MM/yyyy HH:mm" />
+                                                                                                        pattern="dd/MM/yyyy" />
                                                                                                 </c:when>
                                                                                                 <c:otherwise>Không có dữ
                                                                                                     liệu</c:otherwise>
