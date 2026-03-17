@@ -84,7 +84,7 @@ public class CategoryController extends HttpServlet {
             request.setAttribute("products", products);
 
             // Pagination attributes
-            request.setAttribute("currentPage", page);
+            request.setAttribute("currentPaginationPage", page);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("totalProducts", totalProducts);
 

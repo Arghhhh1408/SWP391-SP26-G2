@@ -386,20 +386,22 @@
                                         </c:if>
                                     </c:url>
 
-                                    <c:if test="${currentPage > 1}">
-                                        <a href="${basePageUrl}&page=1" class="page-link">«</a>
-                                        <a href="${basePageUrl}&page=${currentPage - 1}" class="page-link">‹</a>
+                                    <c:set var="pageSep" value="${basePageUrl.contains('?') ? '&' : '?'}" />
+
+                                    <c:if test="${currentPaginationPage > 1}">
+                                        <a href="${basePageUrl}${pageSep}page=1" class="page-link">«</a>
+                                        <a href="${basePageUrl}${pageSep}page=${currentPaginationPage - 1}" class="page-link">‹</a>
                                     </c:if>
 
-                                    <c:forEach begin="${currentPage - 2 > 0 ? currentPage - 2 : 1}"
-                                        end="${currentPage + 2 < totalPages ? currentPage + 2 : totalPages}" var="i">
-                                        <a href="${basePageUrl}&page=${i}"
-                                            class="page-link ${i == currentPage ? 'active' : ''}">${i}</a>
+                                    <c:forEach begin="${currentPaginationPage - 2 > 0 ? currentPaginationPage - 2 : 1}"
+                                        end="${currentPaginationPage + 2 < totalPages ? currentPaginationPage + 2 : totalPages}" var="i">
+                                        <a href="${basePageUrl}${pageSep}page=${i}"
+                                            class="page-link ${i == currentPaginationPage ? 'active' : ''}">${i}</a>
                                     </c:forEach>
 
-                                    <c:if test="${currentPage < totalPages}">
-                                        <a href="${basePageUrl}&page=${currentPage + 1}" class="page-link">›</a>
-                                        <a href="${basePageUrl}&page=${totalPages}" class="page-link">»</a>
+                                    <c:if test="${currentPaginationPage < totalPages}">
+                                        <a href="${basePageUrl}${pageSep}page=${currentPaginationPage + 1}" class="page-link">›</a>
+                                        <a href="${basePageUrl}${pageSep}page=${totalPages}" class="page-link">»</a>
                                     </c:if>
                                 </div>
                             </c:if>
