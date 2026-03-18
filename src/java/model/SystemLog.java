@@ -87,7 +87,8 @@ public class SystemLog {
         this.ipAddress = ipAddress;
     }
 
-    private String name; // Transient field for display
+    private String name; // Transient field for Actor Name
+    private String productName; // Transient field for Product Name
 
     public String getName() {
         return name;
@@ -95,5 +96,13 @@ public class SystemLog {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
     }
 }

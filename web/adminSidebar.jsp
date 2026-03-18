@@ -1,6 +1,6 @@
 <%-- Shared Admin Sidebar Fragment --%>
     <%@page contentType="text/html" pageEncoding="UTF-8" %>
-        <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+        <%@taglib uri="jakarta.tags.core" prefix="c" %>
             <style>
                 /* ===== RESET & BASE ===== */
                 * {
@@ -163,6 +163,9 @@
                     <div class="sidebar-section-title">Hệ thống</div>
                     <a href="systemlog" class="${currentPage == 'systemLog' ? 'active' : ''}">
                         <span class="nav-icon">&#128196;</span> Xem lịch sử hoạt động
+                    </a>
+                    <a href="personalProfile" class="${currentPage == 'personalProfile' ? 'active' : ''}">
+                        <span class="nav-icon">&#128100;</span> Hồ sơ cá nhân
                     </a>
                 </nav>
 

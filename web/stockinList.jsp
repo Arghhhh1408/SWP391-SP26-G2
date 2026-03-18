@@ -5,8 +5,8 @@
 --%>
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
-<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
+<%@taglib prefix="c" uri="jakarta.tags.core"%>
+<%@taglib prefix="fmt" uri="jakarta.tags.fmt"%>
 
 <!DOCTYPE html>
 <html>
@@ -125,13 +125,13 @@
 
                                 <a href="stockinList?action=edit&id=${s.stockInId}">Sửa</a>
 
-                                |
-
-                                <a href="stockinList?action=delete&id=${s.stockInId}"
-                                   onclick="return confirm('Bạn có chắc muốn xóa không?');">
-                                    Xóa
-                                </a>
-
+                                <c:if test="${sessionScope.acc.roleID == 2}">
+                                    |
+                                    <a href="stockinList?action=delete&id=${s.stockInId}"
+                                       onclick="return confirm('Bạn có chắc muốn xóa không?');">
+                                        Xóa
+                                    </a>
+                                </c:if>
                             </td>
                         </tr>
                     </c:forEach>

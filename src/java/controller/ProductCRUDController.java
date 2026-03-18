@@ -1,6 +1,8 @@
 package controller;
 
 import dao.CategoryDAO;
+import dao.ProductDAO;
+import dao.SystemLogDAO;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -8,27 +10,45 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import model.Category;
 import model.Product;
+import model.SystemLog;
+import model.User;
 
 @WebServlet(name = "ProductCRUDController", urlPatterns = { "/addProduct", "/editProduct", "/deleteProduct" })
 public class ProductCRUDController extends HttpServlet {
 
+    private boolean ensureStaffOrManager(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        User u = session == null ? null : (User) session.getAttribute("acc");
+        if (u == null || (u.getRoleID() != 1 && u.getRoleID() != 2)) {
+            response.sendRedirect("login");
+            return false;
+        }
+        return true;
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!ensureStaffOrManager(request, response)) {
+            return;
+        }
+
         String action = request.getServletPath();
         CategoryDAO dao = new CategoryDAO();
+        ProductDAO pDao = new ProductDAO();
         try {
             if (action.equals("/addProduct")) {
-                List<Category> categories = dao.getAllCategories();
+                List<Category> categories = dao.getHierarchicalList();
                 request.setAttribute("categories", categories);
                 request.getRequestDispatcher("productForm.jsp").forward(request, response);
             } else if (action.equals("/editProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                Product p = dao.getProductById(id);
+                Product p = pDao.getProductById(id);
                 if (p != null) {
-                    List<Category> categories = dao.getAllCategories();
+                    List<Category> categories = dao.getHierarchicalList();
                     request.setAttribute("product", p);
                     request.setAttribute("categories", categories);
                     request.getRequestDispatcher("productForm.jsp").forward(request, response);
@@ -37,20 +57,24 @@ public class ProductCRUDController extends HttpServlet {
                 }
             } else if (action.equals("/deleteProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                dao.deleteProduct(id);
-                response.sendRedirect("category");
+                pDao.deleteProduct(id);
+                response.sendRedirect(getAfterCrudRedirect(request));
             }
         } catch (Exception e) {
             e.printStackTrace();
-            response.sendRedirect("category");
+            response.sendRedirect(getAfterCrudRedirect(request));
         }
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String action = request.getServletPath();
+        if (!ensureStaffOrManager(request, response)) {
+            return;
+        }
+
         CategoryDAO dao = new CategoryDAO();
+        ProductDAO pDao = new ProductDAO();
 
         try {
             request.setCharacterEncoding("UTF-8");
@@ -82,7 +106,7 @@ public class ProductCRUDController extends HttpServlet {
 
             } catch (NumberFormatException e) {
                 request.setAttribute("error", "Invalid number format for Cost, Price, or Quantity");
-                List<Category> categories = dao.getAllCategories();
+                List<Category> categories = dao.getHierarchicalList();
                 request.setAttribute("categories", categories);
 
                 Product pError = new Product();
@@ -102,7 +126,7 @@ public class ProductCRUDController extends HttpServlet {
 
             if (cost < 0 || price < 0 || quantity < 0) {
                 request.setAttribute("error", "Cost, Price, and Quantity must be non-negative!");
-                List<Category> categories = dao.getAllCategories();
+                List<Category> categories = dao.getHierarchicalList();
                 request.setAttribute("categories", categories);
 
                 Product pError = new Product();
@@ -136,24 +160,90 @@ public class ProductCRUDController extends HttpServlet {
 
             if (idStr == null || idStr.isEmpty()) {
                 // Check SKU exists
-                if (dao.isProductSkuExists(sku)) {
+                if (pDao.isProductSkuExists(sku)) {
                     request.setAttribute("error", "SKU already exists!");
-                    List<Category> categories = dao.getAllCategories();
+                    List<Category> categories = dao.getHierarchicalList();
                     request.setAttribute("categories", categories);
                     request.setAttribute("product", p);
                     request.getRequestDispatcher("productForm.jsp").forward(request, response);
                     return;
                 }
-                dao.addProduct(p);
+                int newId = pDao.addProduct(p);
+                logProductAction(request, "ADD_PRODUCT", "Thêm sản phẩm mới: " + p.getName() + " | SKU: " + p.getSku() + " | ID: " + newId);
             } else {
-                p.setId(Integer.parseInt(idStr));
-                dao.updateProduct(p);
+                int id = Integer.parseInt(idStr);
+                Product oldP = pDao.getProductById(id);
+                p.setId(id);
+                pDao.updateProduct(p);
+                logProductEdit(request, oldP, p);
             }
-            response.sendRedirect("category");
+            response.sendRedirect(getAfterCrudRedirect(request));
 
         } catch (Exception e) {
             e.printStackTrace();
             response.sendRedirect("category");
         }
+    }
+
+    private void logProductAction(HttpServletRequest request, String action, String description) {
+        try {
+            HttpSession session = request.getSession(false);
+            User u = (User) session.getAttribute("acc");
+            SystemLog log = new SystemLog();
+            log.setUserID(u != null ? u.getUserID() : 0);
+            log.setAction(action);
+            log.setTargetObject("Product");
+            log.setDescription(description);
+            log.setIpAddress(request.getRemoteAddr());
+            new SystemLogDAO().insertLog(log);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void logProductEdit(HttpServletRequest request, Product oldP, Product newP) {
+        if (oldP == null) return;
+        StringBuilder changes = new StringBuilder("Sửa sản phẩm: " + oldP.getName() + " (ID: " + oldP.getId() + ") | Thay đổi: ");
+        boolean changed = false;
+
+        if (!oldP.getName().equals(newP.getName())) {
+            changes.append("Name [").append(oldP.getName()).append(" -> ").append(newP.getName()).append("], ");
+            changed = true;
+        }
+        if (oldP.getPrice() != newP.getPrice()) {
+            changes.append("Price [").append(oldP.getPrice()).append(" -> ").append(newP.getPrice()).append("], ");
+            changed = true;
+        }
+        if (oldP.getCost() != newP.getCost()) {
+            changes.append("Cost [").append(oldP.getCost()).append(" -> ").append(newP.getCost()).append("], ");
+            changed = true;
+        }
+        if (oldP.getQuantity() != newP.getQuantity()) {
+            changes.append("Quantity [").append(oldP.getQuantity()).append(" -> ").append(newP.getQuantity()).append("], ");
+            changed = true;
+        }
+        if (!oldP.getStatus().equals(newP.getStatus())) {
+            changes.append("Status [").append(oldP.getStatus()).append(" -> ").append(newP.getStatus()).append("], ");
+            changed = true;
+        }
+        if (oldP.getCategoryId() != newP.getCategoryId()) {
+            changes.append("Category ID [").append(oldP.getCategoryId()).append(" -> ").append(newP.getCategoryId()).append("], ");
+            changed = true;
+        }
+
+        if (changed) {
+            String desc = changes.toString();
+            if (desc.endsWith(", ")) desc = desc.substring(0, desc.length() - 2);
+            logProductAction(request, "EDIT_PRODUCT", desc);
+        }
+    }
+
+    private String getAfterCrudRedirect(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        User u = session == null ? null : (User) session.getAttribute("acc");
+        if (u != null && u.getRoleID() == 1) {
+            return "staff_dashboard?tab=products";
+        }
+        return "category";
     }
 }

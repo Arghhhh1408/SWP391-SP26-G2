@@ -106,6 +106,50 @@ public class WarrantyClaimDAO extends DBContext {
         return list;
     }
 
+    public List<WarrantyClaim> listByCreator(String actor, String keyword) {
+        List<WarrantyClaim> list = new ArrayList<>();
+        if (actor == null || actor.isBlank()) {
+            return list;
+        }
+
+        StringBuilder sql = new StringBuilder("""
+            SELECT c.ClaimID, c.ClaimCode, c.SKU, c.ProductName, c.CustomerName, c.CustomerPhone, c.IssueDescription,
+                   c.Status, c.CreatedAt, c.UpdatedAt
+            FROM dbo.WarrantyClaims c
+            INNER JOIN dbo.WarrantyClaimEvents e ON c.ClaimID = e.ClaimID
+            WHERE e.Action = 'CREATE' AND e.Actor = ?
+        """);
+
+        String normalizedKeyword = keyword == null ? null : keyword.trim();
+        boolean hasKeyword = normalizedKeyword != null && !normalizedKeyword.isEmpty();
+        if (hasKeyword) {
+            sql.append("""
+                 AND (c.ClaimCode LIKE ? OR c.SKU LIKE ? OR c.CustomerName LIKE ? OR c.CustomerPhone LIKE ?)
+            """);
+        }
+        sql.append(" ORDER BY c.UpdatedAt DESC, c.ClaimID DESC");
+
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql.toString());
+            int idx = 1;
+            stm.setString(idx++, actor);
+            if (hasKeyword) {
+                String like = "%" + normalizedKeyword + "%";
+                stm.setString(idx++, like);
+                stm.setString(idx++, like);
+                stm.setString(idx++, like);
+                stm.setString(idx++, like);
+            }
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                list.add(mapClaim(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     public boolean updateStatus(int claimId, WarrantyClaimStatus newStatus, String note, String actor) {
         try {
             WarrantyClaim current = getById(claimId);

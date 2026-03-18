@@ -52,6 +52,10 @@ public class LoginController extends HttpServlet {
                 response.sendRedirect("admin");
             } else if (user.getRoleID() == 1) {
                 response.sendRedirect("staff_dashboard");
+            } else if (user.getRoleID() == 2) {
+                response.sendRedirect("manager_dashboard");
+            } else if (user.getRoleID() == 3) {
+                response.sendRedirect("sales_dashboard");
             } else {
                 response.sendRedirect("category");
             }

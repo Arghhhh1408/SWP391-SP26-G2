@@ -1,6 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
-<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
+<%@taglib prefix="c" uri="jakarta.tags.core"%>
+<%@taglib prefix="fmt" uri="jakarta.tags.fmt"%>
 
 <!DOCTYPE html>
 <html>
@@ -12,10 +12,13 @@
 
         <h2>TẠO PHIẾU NHẬP KHO</h2>
 
-        <a href="createStockIn?action=clear&redirect=1">
-            ← Quay lại danh sách phiếu nhập
-        </a>
-        
+        <c:if test="${sessionScope.acc.roleID == 1}">
+            <a href="staff_dashboard?action=clear&redirect=1">← Quay lại bảng điều khiển của nhân viên</a>
+        </c:if>
+        <c:if test="${sessionScope.acc.roleID == 2}">
+            <a href="category?action=clear&redirect=1">← Quay lại bảng điều khiển của quản lý</a>
+        </c:if>
+
         <br><br>
 
         <c:if test="${not empty message}">
@@ -214,7 +217,6 @@
             <br>
 
             <button type="submit">Tạo phiếu nhập</button>
-            <button type="reset">Làm lại</button>
         </form>
 
     </body>

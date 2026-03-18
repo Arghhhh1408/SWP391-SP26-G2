@@ -2,91 +2,206 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
  */
-
 package controller;
 
+import dao.CategoryDAO;
+import dao.ProductDAO;
+import dao.LowStockDAO;
+import dao.ReturnDAO;
+import dao.StaffDashboardDAO;
+import dao.SystemLogDAO;
+import dao.WarrantyClaimDAO;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.text.NumberFormat;
+import java.util.Locale;
+import model.Product;
+import model.ReturnStatus;
 import model.User;
+import model.WarrantyClaimStatus;
 
 /**
  *
  * @author dotha
  */
-@WebServlet(name="StaffController", urlPatterns={"/staff_dashboard"})
+@WebServlet(name = "StaffController", urlPatterns = {"/staff_dashboard"})
 public class StaffController extends HttpServlet {
-   
-    /** 
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-    throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet StaffController</title>");  
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet StaffController at " + request.getContextPath () + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
-        }
-    } 
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /** 
-     * Handles the HTTP <code>GET</code> method.
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
-    throws ServletException, IOException {
+            throws ServletException, IOException {
+        if (!ensureStaff(request, response)) {
+            return;
+        }
+
+        String tab = safeTrim(request.getParameter("tab"));
+        if (tab == null || tab.isEmpty()) {
+            tab = "dashboard";
+        }
+        request.setAttribute("tab", tab);
+
+        if ("dashboard".equals(tab)) {
+            loadDashboardData(request);
+        } else if ("returns".equals(tab)) {
+            ReturnDAO dao = new ReturnDAO();
+            request.setAttribute("returns", dao.listAll());
+        } else if ("products".equals(tab)) {
+            try {
+                CategoryDAO dao = new CategoryDAO();
+                ProductDAO pDao = new ProductDAO();
+                List<Product> products = pDao.getAllProducts();
+                request.setAttribute("products", products);
+
+                String editIdRaw = safeTrim(request.getParameter("editId"));
+                Integer editId = tryParseInt(editIdRaw);
+                if (editId != null) {
+                    Product editProduct = pDao.getProductById(editId);
+                    if (editProduct != null) {
+                        request.setAttribute("editProduct", editProduct);
+                    }
+                }
+                request.setAttribute("categories", dao.getHierarchicalList());
+            } catch (Exception e) {
+                request.setAttribute("error", "Khong the tai danh sach san pham.");
+            }
+        } else {
+            WarrantyClaimDAO dao = new WarrantyClaimDAO();
+            request.setAttribute("claims", dao.listAll());
+        }
+
+        request.getRequestDispatcher("staff_dashboard.jsp").forward(request, response);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (!ensureStaff(request, response)) {
+            return;
+        }
+
+        String action = safeTrim(request.getParameter("action"));
+        if ("completeWarranty".equals(action)) {
+            Integer id = tryParseInt(request.getParameter("id"));
+            if (id != null) {
+                WarrantyClaimDAO dao = new WarrantyClaimDAO();
+                dao.updateStatus(id, WarrantyClaimStatus.COMPLETED,
+                        "Staff xác nhận đã bảo hành", getActor(request));
+            }
+            response.sendRedirect("staff_dashboard?tab=warranty");
+            return;
+        }
+
+        if ("rejectWarranty".equals(action)) {
+            Integer id = tryParseInt(request.getParameter("id"));
+            if (id != null) {
+                WarrantyClaimDAO dao = new WarrantyClaimDAO();
+                dao.updateStatus(id, WarrantyClaimStatus.REJECTED,
+                        "Staff từ chối yêu cầu bảo hành", getActor(request));
+            }
+            response.sendRedirect("staff_dashboard?tab=warranty");
+            return;
+        }
+
+        if ("completeReturn".equals(action)) {
+            Integer id = tryParseInt(request.getParameter("id"));
+            if (id != null) {
+                ReturnDAO dao = new ReturnDAO();
+                dao.updateStatus(id, ReturnStatus.COMPLETED,
+                        "Staff xác nhận đã trả hàng", getActor(request));
+            }
+            response.sendRedirect("staff_dashboard?tab=returns");
+            return;
+        }
+
+        if ("toggleLowStockNotified".equals(action)) {
+            Integer alertId = tryParseInt(request.getParameter("alertId"));
+            boolean notified = Boolean.parseBoolean(request.getParameter("notified"));
+            if (alertId != null) {
+                LowStockDAO dao = new LowStockDAO();
+                dao.updateNotified(alertId, !notified);
+            }
+            response.sendRedirect("staff_dashboard?tab=dashboard");
+            return;
+        }
+
+        if ("rejectReturn".equals(action)) {
+            Integer id = tryParseInt(request.getParameter("id"));
+            if (id != null) {
+                ReturnDAO dao = new ReturnDAO();
+                dao.updateStatus(id, ReturnStatus.REJECTED,
+                        "Staff từ chối yêu cầu trả hàng", getActor(request));
+            }
+            response.sendRedirect("staff_dashboard?tab=returns");
+            return;
+        }
+
+        response.sendRedirect("staff_dashboard?tab=dashboard");
+    }
+
+    private void loadDashboardData(HttpServletRequest request) {
+        User user = (User) request.getSession().getAttribute("acc");
+        LowStockDAO lowStockDAO = new LowStockDAO();
+        StaffDashboardDAO dashboardDAO = new StaffDashboardDAO();
+        SystemLogDAO systemLogDAO = new SystemLogDAO();
+
+        int lowStockCount = lowStockDAO.countTriggeredAlerts();
+        request.setAttribute("triggeredCount", lowStockCount);
+        request.setAttribute("triggeredAlerts", lowStockDAO.getTriggeredAlerts());
+        request.setAttribute("dashboardWatchlist", dashboardDAO.getDashboardWatchlist());
+        request.setAttribute("pendingSupplierDebtCount", dashboardDAO.countPendingSupplierDebts());
+        request.setAttribute("pendingSupplierDebtAmount", formatCurrencyVi(dashboardDAO.getPendingSupplierDebtAmount()));
+        request.setAttribute("openRTVCount", dashboardDAO.countOpenRTVCases());
+        request.setAttribute("unreadNotificationCount",
+                user == null ? 0 : dashboardDAO.countUnreadNotifications(user.getUserID()));
+        request.setAttribute("recentLogs", systemLogDAO.getStaffDashboardLogs(5));
+    }
+
+    private String formatCurrencyVi(double amount) {
+        NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
+        formatter.setMaximumFractionDigits(0);
+        return formatter.format(amount) + " đ";
+    }
+
+    private boolean ensureStaff(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
         if (u == null || u.getRoleID() != 1) {
             response.sendRedirect("login");
-            return;
+            return false;
         }
-        
-        request.getRequestDispatcher("staff_dashboard.jsp").forward(request, response);
-    } 
-
-    /** 
-     * Handles the HTTP <code>POST</code> method.
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-    throws ServletException, IOException {
-        processRequest(request, response);
+        return true;
     }
 
-    /** 
-     * Returns a short description of the servlet.
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
+    private Integer tryParseInt(String s) {
+        try {
+            return Integer.parseInt(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
+    private String getActor(HttpServletRequest request) {
+        HttpSession session = request.getSession();
+        Object acc = session.getAttribute("acc");
+
+        if (acc instanceof User) {
+            User u = (User) acc;
+            if (u.getUsername() != null && !u.getUsername().isBlank()) {
+                return u.getUsername();
+            }
+            return "user#" + u.getUserID();
+        }
+
+        return "unknown";
+    }
+
+    private String safeTrim(String s) {
+        return s == null ? null : s.trim();
+    }
 }

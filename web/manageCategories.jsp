@@ -1,5 +1,5 @@
 <%@page contentType="text/html" pageEncoding="UTF-8" %>
-    <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+    <%@taglib prefix="c" uri="jakarta.tags.core" %>
         <!DOCTYPE html>
         <html>
 
@@ -22,6 +22,11 @@
                 </div>
 
                 <div class="admin-content">
+                    <c:if test="${not empty error}">
+                        <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #f5c6cb;">
+                            <strong>Lỗi:</strong> ${error}
+                        </div>
+                    </c:if>
 
                     <!-- Search & Filter Box -->
                     <div class="search-box"

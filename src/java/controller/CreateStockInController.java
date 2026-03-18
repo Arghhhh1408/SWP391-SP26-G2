@@ -312,6 +312,14 @@ public class CreateStockInController extends HttpServlet {
             boolean result = dao.insertStockInWithDetails(stockIn, details);
 
             if (result) {
+                // Nếu phiếu nhập đã thanh toán (Complete) thì cập nhật số lượng sản phẩm
+                if ("Complete".equals(stockIn.getStatus())) {
+                    ProductDAO productDAO = new ProductDAO();
+
+                    for (StockInDetail d : details) {
+                        productDAO.increaseQuantity(d.getProductId(), d.getQuantity());
+                    }
+                }
                 try {
                     SystemLogDAO logDAO = new SystemLogDAO();
                     SystemLog log = new SystemLog();

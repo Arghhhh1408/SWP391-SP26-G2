@@ -1,19 +1,19 @@
 <%@page contentType="text/html" pageEncoding="UTF-8" %>
-    <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+    <%@taglib prefix="c" uri="jakarta.tags.core" %>
         <!DOCTYPE html>
         <html>
 
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-            <title>${not empty product ? 'Sửa' : 'Thêm'} sản phẩm</title>
+            <title>${empty product ? 'Thêm sản phẩm' : 'Sửa sản phẩm'} – IMS Manager</title>
             <style>
-                .form-card {
+                .form-box {
                     background: #fff;
                     border: 1px solid #e0e0e0;
                     border-radius: 8px;
                     padding: 24px;
-                    max-width: 900px;
-                    margin: 20px auto;
+                    max-width: 800px;
+                    margin-top: 20px;
                 }
 
                 .form-grid {
@@ -32,21 +32,21 @@
 
                 .form-group label {
                     display: block;
-                    margin-bottom: 8px;
+                    font-size: 14px;
                     font-weight: 600;
                     color: #555;
-                    font-size: 14px;
+                    margin-bottom: 8px;
                 }
 
                 .form-control {
                     width: 100%;
-                    padding: 10px;
+                    padding: 10px 12px;
                     border: 1px solid #ddd;
                     border-radius: 4px;
                     font-size: 14px;
                     box-sizing: border-box;
                 }
-
+                
                 .form-control:focus {
                     border-color: #007bff;
                     outline: none;
@@ -54,94 +54,131 @@
                 }
 
                 textarea.form-control {
-                    height: 120px;
                     resize: vertical;
+                    min-height: 100px;
                 }
-
-                .btn-group {
+                
+                .action-row {
                     margin-top: 30px;
                     display: flex;
-                    gap: 12px;
                     justify-content: flex-end;
+                    gap: 10px;
                 }
             </style>
         </head>
 
         <body>
-            <h1>${empty product ? 'Add New Product' : 'Edit Product'}</h1>
-            <a href="products">Back to List</a>
-            <h3 style="color: red;">${error}</h3>
+            <c:set var="currentPage" value="productForm" scope="request" />
+            <jsp:include page="managerSidebar.jsp" />
 
-            <form action="${empty product ? 'addProduct' : 'editProduct'}" method="post">
-                <c:if test="${not empty product}">
-                    <input type="hidden" name="id" value="${product.id}">
-                </c:if>
-                <table>
-                    <tr>
-                        <td>Category:</td>
-                        <td>
-                            <select name="categoryId" required>
-                                <c:forEach items="${categories}" var="c">
-                                    <option value="${c.id}" ${product.categoryId==c.id ? 'selected' : '' }>${c.name}
-                                    </option>
-                                </c:forEach>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Name:</td>
-                        <td><input type="text" name="name" value="${product.name}" required></td>
-                    </tr>
-                    <tr>
-                        <td>SKU:</td>
-                        <td><input type="text" name="sku" value="${product.sku}" required></td>
-                    </tr>
-                    <tr>
-                        <td>Cost:</td>
-                        <td><input type="number" step="0.01" name="cost" value="${product.cost}" required></td>
-                    </tr>
-                    <tr>
-                        <td>Price:</td>
-                        <td><input type="number" step="0.01" name="price" value="${product.price}" required></td>
-                    </tr>
-                    <tr>
-                        <td>Quantity:</td>
-                        <td><input type="number" name="quantity" value="${product.quantity}" required></td>
-                    </tr>
-                    <tr>
-                        <td>Warranty Period (months):</td>
-                        <td><input type="number" name="warrantyPeriod" value="${product.warrantyPeriod}" min="0" required></td>
-                    </tr>
-                    <tr>
-                        <td>Unit:</td>
-                        <td><input type="text" name="unit" value="${product.unit}" required></td>
-                    </tr>
-                    <tr>
-                        <td>Status:</td>
-                        <td>
-                            <select name="status">
-                                <option value="Active" ${product.status !=null &&
-                                    product.status.trim().equalsIgnoreCase('Active') ? 'selected' : '' }>Active</option>
-                                <option value="Deactivated" ${product.status !=null &&
-                                    product.status.trim().equalsIgnoreCase('Deactivated') ? 'selected' : '' }>
-                                    Deactivated</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Image URL:</td>
-                        <td><input type="text" name="imageURL" value="${product.imageURL}" required></td>
-                    </tr>
-                    <tr>
-                        <td>Description:</td>
-                        <td><textarea name="description" rows="4" cols="50">${product.description}</textarea></td>
-                    </tr>
-                    <tr>
-                        <td colspan="2"><input type="submit"
-                                value="${empty product ? 'Add Product' : 'Update Product'}"></td>
-                    </tr>
-                </table>
-            </form>
+            <div class="admin-main">
+                <div class="admin-topbar">
+                    <div>
+                        <h1>${empty product ? 'Thêm sản phẩm mới' : 'Chỉnh sửa sản phẩm'}</h1>
+                        <small>Manager &rsaquo; Kho hàng &rsaquo; Danh sách sản phẩm &rsaquo; ${empty product ? 'Thêm mới' : 'Chỉnh sửa'}</small>
+                    </div>
+                    <div>Xin chào, <strong>${sessionScope.acc.fullName}</strong></div>
+                </div>
+
+                <div class="admin-content">
+                    <div style="margin-bottom: 20px;">
+                        <c:choose>
+                            <c:when test="${sessionScope.acc.roleID == 1}">
+                                <a href="staff_dashboard?tab=products" class="btn btn-outline">&larr; Quay lại danh sách</a>
+                            </c:when>
+                            <c:when test="${sessionScope.acc.roleID == 2}">
+                                <a href="category" class="btn btn-outline">&larr; Quay lại danh sách</a>
+                            </c:when>
+                            <c:otherwise>
+                                <a href="products" class="btn btn-outline">&larr; Quay lại danh sách</a>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+
+                    <div class="form-box">
+                        <c:if test="${not empty error}">
+                            <div style="color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 4px; margin-bottom: 20px;">
+                                ⚠️ ${error}
+                            </div>
+                        </c:if>
+
+                        <form action="${empty product ? 'addProduct' : 'editProduct'}" method="post">
+                            <c:if test="${not empty product}">
+                                <input type="hidden" name="id" value="${product.id}">
+                            </c:if>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Danh mục:</label>
+                                    <select name="categoryId" class="form-control" required>
+                                        <c:forEach items="${categories}" var="c">
+                                            <option value="${c.id}" ${product.categoryId==c.id ? 'selected' : '' }>${c.name}</option>
+                                        </c:forEach>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Trạng thái:</label>
+                                    <select name="status" class="form-control">
+                                        <option value="Active" ${product.status !=null && product.status.trim().equalsIgnoreCase('Active') ? 'selected' : '' }>Active</option>
+                                        <option value="Deactivated" ${product.status !=null && product.status.trim().equalsIgnoreCase('Deactivated') ? 'selected' : '' }>Deactivated</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label>Tên sản phẩm:</label>
+                                    <input type="text" name="name" class="form-control" value="${product.name}" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>SKU:</label>
+                                    <input type="text" name="sku" class="form-control" value="${product.sku}" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Đơn vị (VD: Cái, Hộp):</label>
+                                    <input type="text" name="unit" class="form-control" value="${product.unit}" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Giá nhập (Cost):</label>
+                                    <input type="number" step="0.01" name="cost" class="form-control" value="${product.cost}" min="0" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Giá bán (Price):</label>
+                                    <input type="number" step="0.01" name="price" class="form-control" value="${product.price}" min="0" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Số lượng:</label>
+                                    <input type="number" name="quantity" class="form-control" value="${product.quantity}" min="0" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Bảo hành (tháng):</label>
+                                    <input type="number" name="warrantyPeriod" class="form-control" value="${product.warrantyPeriod}" min="0" required>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label>Image URL:</label>
+                                    <input type="text" name="imageURL" class="form-control" value="${product.imageURL}" required>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label>Mô tả:</label>
+                                    <textarea name="description" class="form-control" rows="4">${product.description}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="action-row">
+                                <input type="submit" class="btn btn-primary" style="padding: 10px 24px;"
+                                    value="${empty product ? 'Lưu sản phẩm' : 'Cập nhật sản phẩm'}">
+                            </div>
+                        </form>
+                    </div>
+                </div><!-- /admin-content -->
+            </div><!-- /admin-main -->
         </body>
 
         </html>

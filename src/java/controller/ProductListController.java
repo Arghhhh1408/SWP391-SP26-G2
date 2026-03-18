@@ -1,6 +1,6 @@
 package controller;
 
-import dao.CategoryDAO;
+import dao.ProductDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -32,9 +32,9 @@ public class ProductListController extends HttpServlet {
             return;
         }
 
-        CategoryDAO dao = new CategoryDAO();
+        ProductDAO pDao = new ProductDAO();
         try {
-            List<Product> products = dao.getAllProducts();
+            List<Product> products = pDao.getAllProducts();
             request.setAttribute("products", products);
         } catch (Exception e) {
             e.printStackTrace();

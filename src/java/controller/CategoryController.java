@@ -1,6 +1,7 @@
 package controller;
 
 import dao.CategoryDAO;
+import dao.ProductDAO;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -18,6 +19,7 @@ public class CategoryController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         CategoryDAO dao = new CategoryDAO();
+        ProductDAO pDao = new ProductDAO();
 
         try {
             // Always get list of categories for the sidebar/menu
@@ -70,11 +72,11 @@ public class CategoryController extends HttpServlet {
             }
 
             // Get total count for pagination
-            int totalProducts = dao.countProducts(keyword, minPrice, maxPrice, categoryId);
+            int totalProducts = pDao.countProducts(keyword, minPrice, maxPrice, categoryId);
             int totalPages = (int) Math.ceil((double) totalProducts / pageSize);
 
             // Get paginated products
-            List<Product> products = dao.searchProductsPaginated(keyword, minPrice, maxPrice, categoryId, page,
+            List<Product> products = pDao.searchProductsPaginated(keyword, minPrice, maxPrice, categoryId, page,
                     pageSize);
 
             // Preserve search parameters in request
@@ -84,7 +86,7 @@ public class CategoryController extends HttpServlet {
             request.setAttribute("products", products);
 
             // Pagination attributes
-            request.setAttribute("currentPage", page);
+            request.setAttribute("currentPaginationPage", page);
             request.setAttribute("totalPages", totalPages);
             request.setAttribute("totalProducts", totalProducts);
 

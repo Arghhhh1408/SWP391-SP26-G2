@@ -35,6 +35,53 @@ public class ReturnDAO extends DBContext {
         return list;
     }
 
+    public List<ReturnRequest> listByCreator(String actor, String keyword) {
+        List<ReturnRequest> list = new ArrayList<>();
+        if (actor == null || actor.isBlank()) {
+            return list;
+        }
+
+        String normalizedKeyword = keyword == null ? null : keyword.trim();
+        boolean hasKeyword = normalizedKeyword != null && !normalizedKeyword.isEmpty();
+
+        StringBuilder sql = new StringBuilder("""
+            SELECT r.ReturnID, r.ReturnCode, r.SKU, r.ProductName, r.CustomerName, r.CustomerPhone,
+                   r.Reason, r.ConditionNote, r.Status,
+                   r.RefundAmount, r.RefundMethod, r.RefundReference, r.RefundedAt,
+                   r.CreatedAt, r.UpdatedAt
+            FROM dbo.ReturnRequests r
+            INNER JOIN dbo.ReturnEvents e ON r.ReturnID = e.ReturnID
+            WHERE e.Action = 'CREATE' AND e.Actor = ?
+        """);
+
+        if (hasKeyword) {
+            sql.append("""
+                 AND (r.ReturnCode LIKE ? OR r.SKU LIKE ? OR r.CustomerName LIKE ? OR r.CustomerPhone LIKE ?)
+            """);
+        }
+        sql.append(" ORDER BY r.UpdatedAt DESC, r.ReturnID DESC");
+
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql.toString());
+            int idx = 1;
+            stm.setString(idx++, actor);
+            if (hasKeyword) {
+                String like = "%" + normalizedKeyword + "%";
+                stm.setString(idx++, like);
+                stm.setString(idx++, like);
+                stm.setString(idx++, like);
+                stm.setString(idx++, like);
+            }
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                list.add(mapReturn(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     public ReturnRequest getById(int id) {
         ReturnRequest r = null;
         try {

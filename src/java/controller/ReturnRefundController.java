@@ -17,10 +17,10 @@ import model.User;
 @WebServlet(name = "ReturnRefundController", urlPatterns = {"/returns", "/return"})
 public class ReturnRefundController extends HttpServlet {
 
-    private boolean ensureAdmin(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private boolean ensureAuthorized(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 0) {
+        if (u == null || (u.getRoleID() != 0 && u.getRoleID() != 3)) {
             response.sendRedirect("login");
             return false;
         }
@@ -30,7 +30,7 @@ public class ReturnRefundController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!ensureAdmin(request, response)) {
+        if (!ensureAuthorized(request, response)) {
             return;
         }
 
@@ -47,7 +47,7 @@ public class ReturnRefundController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!ensureAdmin(request, response)) {
+        if (!ensureAuthorized(request, response)) {
             return;
         }
 
