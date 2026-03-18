@@ -131,6 +131,7 @@
                     <li><a href="pos">Bán hàng</a></li>
                     <li><a href="orders">Lịch sử đơn hàng</a></li>
                     <li><a href="customers">Khách hàng</a></li>
+                    <li><a href="account">Tài khoản</a></li>
                     <li><a href="logout">Đăng xuất</a></li>
                 </ul>
             </aside>
