@@ -82,11 +82,11 @@ public class AdminController extends HttpServlet {
             case 0:
                 return "Administrator";
             case 1:
-                return "Manager";
-            case 2:
-                return "Salesperson";
-            case 3:
                 return "Warehouse Staff";
+            case 2:
+                return "Manager";
+            case 3:
+                return "Salesperson";
             default:
                 return "Unknown";
         }
