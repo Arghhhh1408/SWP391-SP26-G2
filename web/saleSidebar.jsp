@@ -245,36 +245,44 @@
 
 <aside class="admin-sidebar">
     <div class="sidebar-brand">
-        <h2>&#128722; Sales Dashboard</h2>
-        <small>Salesperson</small>
+        <h2>S.I.M System</h2>
+        <small>Sales Management</small>
     </div>
 
+    <div class="sidebar-section-title">Menu Chính</div>
+
     <nav>
-        <div class="sidebar-section-title">Menu Salesperson</div>
-        <a href="sales_dashboard?tab=warranty-create" class="${currentPage == 'sales_dashboard' && tab == 'warranty-create' ? 'active' : ''}">
-            <span class="nav-icon">&#128736;</span> Tạo yêu cầu bảo hành
-        </a>
-        <a href="sales_dashboard?tab=return-create" class="${currentPage == 'sales_dashboard' && tab == 'return-create' ? 'active' : ''}">
-            <span class="nav-icon">&#128260;</span> Tạo yêu cầu trả hàng
-        </a>
-        <a href="sales_dashboard?tab=warranty-lookup" class="${currentPage == 'sales_dashboard' && tab == 'warranty-lookup' ? 'active' : ''}">
-            <span class="nav-icon">&#128269;</span> Tra cứu bảo hành
-        </a>
-        <a href="sales_dashboard?tab=return-lookup" class="${currentPage == 'sales_dashboard' && tab == 'return-lookup' ? 'active' : ''}">
-            <span class="nav-icon">&#128270;</span> Tra cứu trả hàng
-        </a>
-        <a href="sales_dashboard?tab=products" class="${currentPage == 'sales_dashboard' && tab == 'products' ? 'active' : ''}">
-            <span class="nav-icon">&#128230;</span> Xem tất cả sản phẩm
+        <%-- Trang chủ / Dashboard --%>
+        <a href="${pageContext.request.contextPath}/sales_dashboard" 
+           class="${currentPage == 'sales_dashboard' ? 'active' : ''}">
+            <span class="nav-icon">🏠</span> Trang chủ
         </a>
 
-        <div class="sidebar-section-title">Tài khoản</div>
-        <a href="personalProfile" class="${currentPage == 'personalProfile' ? 'active' : ''}">
-            <span class="nav-icon">&#128100;</span> Hồ sơ cá nhân
+        <%-- Sản phẩm --%>
+        <a href="${pageContext.request.contextPath}/sales_dashboard?tab=products"
+           class="${tab == 'products' ? 'active' : ''}">
+            <span class="nav-icon">📦</span> Sản phẩm
+        </a>
+
+        <%-- Bán hàng (POS) --%>
+        <a href="${pageContext.request.contextPath}/pos">
+            <span class="nav-icon">💰</span> Bán hàng
+        </a>
+
+        <div class="sidebar-section-title">Hỗ trợ & Khách hàng</div>
+
+        <a href="${pageContext.request.contextPath}/customers">
+            <span class="nav-icon">👥</span> Khách hàng
+        </a>
+
+        <a href="${pageContext.request.contextPath}/personalProfile">
+            <span class="nav-icon">👤</span> Hồ sơ cá nhân
         </a>
     </nav>
 
     <div class="sidebar-footer">
-        <span>&#9679; Trạng thái: Online</span><br><br>
-        <a href="logout">&#8592; Đăng xuất</a>
+        <a href="${pageContext.request.contextPath}/logout">
+            <span class="nav-icon">🚪</span> Đăng xuất
+        </a>
     </div>
 </aside>
