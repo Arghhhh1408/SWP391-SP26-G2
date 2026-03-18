@@ -166,4 +166,41 @@ public class CategoryDAO extends DBContext {
         }
         return false;
     }
+
+    public List<Category> getHierarchicalList() throws Exception {
+        List<Category> tree = getCategoryTree();
+        List<Category> result = new ArrayList<>();
+        flattenTree(tree, 0, result);
+        return result;
+    }
+
+    private void flattenTree(List<Category> tree, int level, List<Category> result) {
+        for (Category c : tree) {
+            StringBuilder name = new StringBuilder();
+            for (int i = 0; i < level; i++) {
+                name.append("\u00A0\u00A0");
+            }
+            if (level > 0) {
+                name.append("└─ ");
+            }
+            Category copy = new Category(c.getId(), name.toString() + c.getName(), c.getParentId());
+            result.add(copy);
+            if (c.getChildren() != null && !c.getChildren().isEmpty()) {
+                flattenTree(c.getChildren(), level + 1, result);
+            }
+        }
+    }
+
+    public boolean hasSubCategories(int parentId) {
+        String sql = "SELECT CategoryID FROM Categories WHERE ParentID = ?";
+        try {
+            PreparedStatement st = connection.prepareStatement(sql);
+            st.setInt(1, parentId);
+            ResultSet rs = st.executeQuery();
+            return rs.next();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

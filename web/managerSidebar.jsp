@@ -239,6 +239,13 @@
                         <span class="nav-icon">📥</span> Nhập kho
                     </a>
 
+                    <c:if test="${sessionScope.acc.roleID == 2}">
+                        <a href="${pageContext.request.contextPath}/productHistory"
+                            class="${currentPage == 'productHistory' ? 'active' : ''}">
+                            <span class="nav-icon">📋</span> Lịch sử sản phẩm
+                        </a>
+                    </c:if>
+
                     <c:if test="${sessionScope.acc.roleID == 0}">
                         <div class="sidebar-section-title">System</div>
                         <a href="${pageContext.request.contextPath}/admin">

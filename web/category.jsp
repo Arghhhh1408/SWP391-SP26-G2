@@ -145,6 +145,55 @@
                         font-weight: 600;
                     }
 
+                    /* Grandchild Menu Styling */
+                    .sub-menu-item {
+                        position: relative;
+                    }
+
+                    .grandchild-menu {
+                        position: absolute;
+                        top: 0;
+                        left: 100%;
+                        background: #fff;
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                        display: none;
+                        flex-direction: column;
+                        min-width: 180px;
+                        z-index: 101;
+                        padding: 8px 0;
+                        margin-left: 0;
+                    }
+
+                    .sub-menu-item:hover>.grandchild-menu {
+                        display: flex;
+                    }
+
+                    .grandchild-menu a {
+                        padding: 8px 16px;
+                        color: #444;
+                        font-weight: 400;
+                    }
+
+                    .grandchild-menu a:hover {
+                        background: #f8f9fa;
+                        color: #007bff;
+                    }
+                    
+                    .cat-pill a.has-children::after {
+                        content: '▾';
+                        margin-left: 5px;
+                        font-size: 10px;
+                    }
+
+                    .sub-menu-item a.has-children::after {
+                        content: '▸';
+                        float: right;
+                        margin-left: 10px;
+                        font-size: 10px;
+                    }
+
                     /* Product Table Styling */
                     .admin-table {
                         width: 100%;
@@ -226,6 +275,14 @@
                         color: #fff;
                         border-color: #0056b3;
                     }
+
+                    .stock-badge {
+                        font-weight: 600;
+                    }
+
+                    .stock-low {
+                        color: #dc3545;
+                    }
                 </style>
             </head>
 
@@ -285,14 +342,28 @@
                             </div>
                             <c:forEach items="${categories}" var="cat">
                                 <div class="cat-pill ${cat.id == param.categoryId ? 'active' : ''}">
-                                    <a href="category?categoryId=${cat.id}">${cat.name}</a>
+                                    <a href="category?categoryId=${cat.id}" class="${not empty cat.children ? 'has-children' : ''}">
+                                        ${cat.name}
+                                    </a>
                                     <c:if test="${not empty cat.children}">
                                         <div class="sub-menu">
                                             <c:forEach items="${cat.children}" var="child">
-                                                <a href="category?categoryId=${child.id}"
-                                                    class="${child.id == param.categoryId ? 'active' : ''}">
-                                                    ${child.name}
-                                                </a>
+                                                <div class="sub-menu-item">
+                                                    <a href="category?categoryId=${child.id}"
+                                                        class="${child.id == param.categoryId ? 'active' : ''} ${not empty child.children ? 'has-children' : ''}">
+                                                        ${child.name}
+                                                    </a>
+                                                    <c:if test="${not empty child.children}">
+                                                        <div class="grandchild-menu">
+                                                            <c:forEach items="${child.children}" var="gchild">
+                                                                <a href="category?categoryId=${gchild.id}"
+                                                                    class="${gchild.id == param.categoryId ? 'active' : ''}">
+                                                                    ${gchild.name}
+                                                                </a>
+                                                            </c:forEach>
+                                                        </div>
+                                                    </c:if>
+                                                </div>
                                             </c:forEach>
                                         </div>
                                     </c:if>
@@ -348,8 +419,7 @@
                                                     groupingUsed="true" />
                                             </td>
                                             <td>
-                                                <span
-                                                    style="font-weight: 600; ${p.quantity < 5 ? 'color: #dc3545;' : ''}">${p.quantity}</span>
+                                                <span class="stock-badge ${p.quantity < 5 ? 'stock-low' : ''}">${p.quantity}</span>
                                             </td>
                                             <td>
                                                 <span

@@ -172,10 +172,10 @@ public class ProductDAO extends DBContext {
         return list;
     }
 
-    public boolean addProduct(Product p) {
+    public int addProduct(Product p) {
         String sql = "INSERT INTO Products (Name, SKU, Cost, Price, StockQuantity, Unit, Description, ImageURL, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
         try {
-            PreparedStatement st = connection.prepareStatement(sql);
+            java.sql.PreparedStatement st = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
             st.setString(1, p.getName());
             st.setString(2, p.getSku());
             st.setDouble(3, p.getCost());
@@ -186,11 +186,18 @@ public class ProductDAO extends DBContext {
             st.setString(8, p.getImageURL());
             st.setString(9, p.getStatus());
             st.setInt(10, p.getCategoryId());
-            return st.executeUpdate() > 0;
+            
+            int affectedRows = st.executeUpdate();
+            if (affectedRows > 0) {
+                java.sql.ResultSet rs = st.getGeneratedKeys();
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return false;
+        return -1;
     }
 
     public boolean updateProduct(Product p) throws Exception {

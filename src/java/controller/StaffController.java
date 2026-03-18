@@ -66,7 +66,7 @@ public class StaffController extends HttpServlet {
                         request.setAttribute("editProduct", editProduct);
                     }
                 }
-                request.setAttribute("categories", dao.getAllCategories());
+                request.setAttribute("categories", dao.getHierarchicalList());
             } catch (Exception e) {
                 request.setAttribute("error", "Khong the tai danh sach san pham.");
             }

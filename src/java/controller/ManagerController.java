@@ -55,7 +55,7 @@ public class ManagerController extends HttpServlet {
             
             // Load categories for the Add Product form
             try {
-                request.setAttribute("categories", cDao.getAllCategories());
+                request.setAttribute("categories", cDao.getHierarchicalList());
             } catch (Exception e) {
                 e.printStackTrace();
             }
