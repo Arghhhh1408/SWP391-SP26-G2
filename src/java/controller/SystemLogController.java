@@ -15,7 +15,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.util.List;
+import model.User;
 
 /**
  *
@@ -27,6 +29,13 @@ public class SystemLogController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        User acc = (User) session.getAttribute("acc");
+        if (acc == null || acc.getRoleID() != 0) {
+            response.sendRedirect("login");
+            return;
+        }
+
         SystemLogDAO dao = new SystemLogDAO();
         UserDAO userDAO = new UserDAO();
 
