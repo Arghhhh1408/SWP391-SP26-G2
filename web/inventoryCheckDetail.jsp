@@ -95,6 +95,13 @@
             <div class="card">
                 <h2>Chi tiết kiểm kê</h2>
 
+                <c:if test="${sessionScope.acc.roleID == 1}">
+                    <a href="staff_dashboard">← Quay lại bảng điều khiển của nhân viên</a>
+                </c:if>
+                <c:if test="${sessionScope.acc.roleID == 2}">
+                    <a href="category">← Quay lại bảng điều khiển của quản lý</a>
+                </c:if>
+
                 <div class="row">
                     <div class="label">Tên sản phẩm</div>
                     <div class="value">${item.productName}</div>

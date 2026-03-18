@@ -144,16 +144,18 @@
                             <input type="number" name="physicalQuantity" min="0" value="${item.physicalQuantity}" required>
                         </div>
 
-                        <div class="form-row">
-                            <label>Trạng thái</label>
-                            <select name="status">
-                                <option value="Pending" ${item.status == 'Pending' ? 'selected' : ''}>Pending</option>
-                                <option value="Approved" ${item.status == 'Approved' ? 'selected' : ''}>Approved</option>
-                                <option value="Rejected" ${item.status == 'Rejected' ? 'selected' : ''}>Rejected</option>
-                            </select>
-                        </div>
-                    </div>
+                        <c:if test="${sessionScope.acc.roleID == 2}">
 
+                            <div class="form-row">
+                                <label>Trạng thái</label>
+                                <select name="status">
+                                    <option value="Pending" ${item.status == 'Pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="Approved" ${item.status == 'Approved' ? 'selected' : ''}>Approved</option>
+                                    <option value="Rejected" ${item.status == 'Rejected' ? 'selected' : ''}>Rejected</option>
+                                </select>
+                            </div>
+                        </div>
+                    </c:if>
                     <div class="actions">
                         <button type="submit" class="btn btn-save">Lưu cập nhật</button>
                         <a href="inventoryCheck" class="btn-back">← Quay lại</a>

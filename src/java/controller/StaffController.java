@@ -159,7 +159,7 @@ public class StaffController extends HttpServlet {
         request.setAttribute("openRTVCount", dashboardDAO.countOpenRTVCases());
         request.setAttribute("unreadNotificationCount",
                 user == null ? 0 : dashboardDAO.countUnreadNotifications(user.getUserID()));
-        request.setAttribute("recentLogs", systemLogDAO.getRecentLogs(5));
+        request.setAttribute("recentLogs", systemLogDAO.getStaffDashboardLogs(5));
     }
 
     private String formatCurrencyVi(double amount) {
@@ -185,22 +185,21 @@ public class StaffController extends HttpServlet {
             return null;
         }
     }
+
     private String getActor(HttpServletRequest request) {
-    HttpSession session = request.getSession();
-    Object acc = session.getAttribute("acc");
+        HttpSession session = request.getSession();
+        Object acc = session.getAttribute("acc");
 
-    if (acc instanceof User) {
-        User u = (User) acc;
-        if (u.getUsername() != null && !u.getUsername().isBlank()) {
-            return u.getUsername();
+        if (acc instanceof User) {
+            User u = (User) acc;
+            if (u.getUsername() != null && !u.getUsername().isBlank()) {
+                return u.getUsername();
+            }
+            return "user#" + u.getUserID();
         }
-        return "user#" + u.getUserID();
+
+        return "unknown";
     }
-
-    return "unknown";
-}
-
-    
 
     private String safeTrim(String s) {
         return s == null ? null : s.trim();

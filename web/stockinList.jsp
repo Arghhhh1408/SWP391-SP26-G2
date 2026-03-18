@@ -125,13 +125,13 @@
 
                                 <a href="stockinList?action=edit&id=${s.stockInId}">Sửa</a>
 
-                                |
-
-                                <a href="stockinList?action=delete&id=${s.stockInId}"
-                                   onclick="return confirm('Bạn có chắc muốn xóa không?');">
-                                    Xóa
-                                </a>
-
+                                <c:if test="${sessionScope.acc.roleID == 2}">
+                                    |
+                                    <a href="stockinList?action=delete&id=${s.stockInId}"
+                                       onclick="return confirm('Bạn có chắc muốn xóa không?');">
+                                        Xóa
+                                    </a>
+                                </c:if>
                             </td>
                         </tr>
                     </c:forEach>
