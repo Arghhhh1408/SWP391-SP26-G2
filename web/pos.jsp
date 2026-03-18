@@ -7,8 +7,9 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>S.I.M - Bán hàng POS</title>
+        <title>Bán hàng POS</title>
         <style>
+            /* --- GIỮ NGUYÊN CSS CŨ CỦA BẠN --- */
             * {
                 box-sizing: border-box;
                 margin: 0;
@@ -127,7 +128,6 @@
                 text-decoration: none;
                 display: inline-block;
                 transition: 0.2s;
-                text-align: center;
             }
             .btn-primary {
                 background: #3b82f6;
@@ -152,6 +152,22 @@
                 border-radius: 8px;
                 font-size: 15px;
             }
+            .cart-item-name {
+                font-weight: 600;
+                color: #111827;
+            }
+            .cart-item-info {
+                font-size: 12px;
+                color: #6b7280;
+            }
+            .remove-btn {
+                color: #ef4444;
+                background: none;
+                border: none;
+                font-size: 18px;
+                cursor: pointer;
+                font-weight: bold;
+            }
             .qty-group {
                 display: flex;
                 align-items: center;
@@ -169,19 +185,21 @@
                 align-items: center;
                 justify-content: center;
                 font-weight: bold;
-                text-decoration: none;
-                color: #333;
+                transition: 0.2s;
             }
-            .remove-btn {
-                color: #ef4444;
-                background: none;
-                border: none;
-                font-size: 20px;
-                cursor: pointer;
+            .qty-btn:hover {
+                background: #f3f4f6;
+                border-color: #3b82f6;
+                color: #3b82f6;
+            }
+            .qty-number {
                 font-weight: bold;
+                font-size: 14px;
+                min-width: 20px;
+                text-align: center;
             }
 
-            /* Modal Popup */
+            /* --- THÊM CSS CHO MODAL TẠI ĐÂY --- */
             .modal {
                 display: none;
                 position: fixed;
@@ -218,22 +236,6 @@
                 border: none;
                 border-radius: 8px;
             }
-
-            .hint-btn {
-                background: #fff;
-                border: 1px solid #3b82f6;
-                color: #3b82f6;
-                padding: 3px 10px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 13px;
-                font-weight: bold;
-                transition: 0.2s;
-            }
-            .hint-btn:hover {
-                background: #3b82f6;
-                color: #fff;
-            }
         </style>
     </head>
     <body>
@@ -242,36 +244,39 @@
                 <div class="logo">S.I.M</div>
                 <div class="user-box">Xin chào: <b><%= acc != null ? acc.getUsername() : "" %></b></div>
                 <ul class="menu">
-                    <li><a href="dashboard">Trang chủ</a></li>
-                    <li><a href="products">Sản phẩm</a></li>
-                    <li><a class="active" href="pos">Bán hàng</a></li>
+                    <li><a href="${pageContext.request.contextPath}/dashboard">Trang chủ</a></li>
+                    <li><a href="${pageContext.request.contextPath}/products">Sản phẩm</a></li>
+                    <li><a class="active" href="${pageContext.request.contextPath}/pos">Bán hàng</a></li>
                     <li><a href="${pageContext.request.contextPath}/orders">Lịch sử đơn hàng</a></li>
-                    <li><a href="customers">Khách hàng</a></li>
+                    <li><a href="${pageContext.request.contextPath}/customers">Khách hàng</a></li>
                     <li><a href="account">Tài khoản</a></li>
-                    <li><a href="logout">Đăng xuất</a></li>
+                    <li><a href="${pageContext.request.contextPath}/logout">Đăng xuất</a></li>
                 </ul>
             </aside>
-
             <main class="main">
                 <div class="topbar"><h2>Bán hàng POS</h2></div>
                 <div class="content">
                     <c:set var="cart" value="${sessionScope.cart}" />
-                    <c:set var="grandTotal" value="0" />
-
+                    <c:if test="${param.err == 'not_enough_stock'}">
+                        <div style="background: #fee2e2; border-left: 5px solid #ef4444; color: #b91c1c; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <strong>⚠ Lỗi số lượng:</strong> Sản phẩm <b>${param.sku}</b> hiện tại chỉ còn <b>${param.stock}</b> sản phẩm trong kho.
+                        </div>
+                    </c:if>
                     <div class="pos-grid">
                         <div class="card">
                             <h3>Danh mục Sản phẩm</h3>
                             <table>
-                                <thead><tr><th>Tên / Mã</th><th>Giá</th><th>Kho</th><th></th></tr></thead>
+                                <thead><tr><th>Tên sản phẩm</th><th>Đơn giá</th><th>Tồn kho</th><th></th></tr></thead>
                                 <tbody>
                                     <c:forEach items="${products}" var="p">
                                         <tr>
-                                            <td>${p.name} <br><small style="color:gray">${p.sku}</small></td>
+                                            <td>${p.name}</td>
                                             <td class="money"><fmt:formatNumber value="${p.price}" type="number"/> đ</td>
                                             <td>${p.quantity}</td>
                                             <td>
-                                                <form method="post" action="cart">
-                                                    <input type="hidden" name="action" value="add"><input type="hidden" name="productId" value="${p.id}">
+                                                <form method="post" action="${pageContext.request.contextPath}/cart">
+                                                    <input type="hidden" name="action" value="add">
+                                                    <input type="hidden" name="productId" value="${p.id}">
                                                     <button class="btn btn-primary" type="submit">Thêm</button>
                                                 </form>
                                             </td>
@@ -282,47 +287,82 @@
                         </div>
 
                         <div class="card">
-                            <h3>Giỏ hàng</h3>
+                            <h3>Giỏ hàng hiện tại</h3>
                             <c:choose>
                                 <c:when test="${empty cart}">
-                                    <div style="padding:30px; text-align:center; color:#999; border:1px dashed #ccc; border-radius:10px;">Giỏ hàng trống</div>
+                                    <div style="padding:20px; border:1px dashed #ccc; text-align:center; border-radius:10px; color:#666; margin-bottom: 20px;">
+                                        Giỏ hàng đang trống
+                                    </div>
                                 </c:when>
                                 <c:otherwise>
-                                    <table>
-                                        <c:forEach items="${cart.values()}" var="it">
+                                    <table style="margin-bottom: 20px;">
+                                        <thead>
                                             <tr>
-                                                <td><b>${it.name}</b>
-                                                    <div class="qty-group">
-                                                        <a href="cart?action=dec&productId=${it.productId}&from=pos" class="qty-btn">-</a>
-                                                        <span>${it.qty}</span>
-                                                        <a href="cart?action=inc&productId=${it.productId}&from=pos" class="qty-btn">+</a>
-                                                    </div>
-                                                </td>
-                                                <td class="money" style="text-align:right"><fmt:formatNumber value="${it.price * it.qty}" type="number"/> đ</td>
-                                                <td style="text-align:right"><a href="cart?action=remove&productId=${it.productId}&from=pos" class="remove-btn">&times;</a></td>
+                                                <th>Sản phẩm</th>
+                                                <th style="text-align: right;">Tiền</th>
+                                                <th></th>
                                             </tr>
-                                            <c:set var="grandTotal" value="${grandTotal + (it.price * it.qty)}" />
-                                        </c:forEach>
+                                        </thead>
+                                        <tbody>
+                                            <c:set var="grandTotal" value="0" />
+                                            <c:forEach items="${cart.values()}" var="it">
+                                                <tr>
+                                                    <td>
+                                                        <div class="cart-item-name">${it.name}</div>
+                                                        <div class="qty-group">
+                                                            <form method="post" action="${pageContext.request.contextPath}/cart" style="display:inline;">
+                                                                <input type="hidden" name="action" value="dec">
+                                                                <input type="hidden" name="productId" value="${it.productId}">
+                                                                <input type="hidden" name="from" value="pos">
+                                                                <button type="submit" class="qty-btn">-</button>
+                                                            </form>
+                                                            <span class="qty-number">${it.qty}</span>
+                                                            <form method="post" action="${pageContext.request.contextPath}/cart" style="display:inline;">
+                                                                <input type="hidden" name="action" value="inc">
+                                                                <input type="hidden" name="productId" value="${it.productId}">
+                                                                <input type="hidden" name="from" value="pos">
+                                                                <button type="submit" class="qty-btn">+</button>
+                                                            </form>
+                                                        </div>
+                                                    </td>
+                                                    <td class="money" style="text-align: right;">
+                                                        <fmt:formatNumber value="${it.lineTotal}" type="number"/>
+                                                    </td>
+                                                    <td style="text-align: right;">
+                                                        <form method="post" action="${pageContext.request.contextPath}/cart" style="display:inline;">
+                                                            <input type="hidden" name="action" value="remove">
+                                                            <input type="hidden" name="productId" value="${it.productId}">
+                                                            <input type="hidden" name="from" value="pos">
+                                                            <button type="submit" class="remove-btn">×</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                                <c:set var="grandTotal" value="${grandTotal + it.lineTotal}" />
+                                            </c:forEach>
+                                        </tbody>
                                     </table>
-                                    <div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px; display:flex; justify-content:space-between; font-size:20px;">
-                                        <span>Tổng cộng:</span><b style="color:#3b82f6"><fmt:formatNumber value="${grandTotal}" type="number"/> đ</b>
-                                    </div>
                                 </c:otherwise>
                             </c:choose>
 
-                            <form id="checkoutForm" method="post" action="checkout" target="invoiceFrameName" onsubmit="document.getElementById('invoiceModal').style.display = 'block';">
-                                <div class="field"><label>SĐT Khách hàng</label><input name="customerPhone" id="customerPhone" placeholder="0xxx..."></div>
-                                <div class="field"><label>Tên khách hàng</label><input name="customerName" id="customerName"></div>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 15px;">
 
-                                <div class="field" style="background:#fffbeb; padding:15px; border-radius:8px; border: 1px solid #fef3c7; margin-top: 15px;">
-                                    <label style="color: #92400e; font-weight: bold;">Khách thực tế đưa</label>
-                                    <input type="number" name="amountPaid" id="amountPaid" value="${grandTotal}" style="font-weight:bold; font-size:18px;">
+                            <p style="font-size: 18px; margin-bottom: 15px; display: flex; justify-content: space-between;">
+                                <span>Tổng cộng:</span>
+                                <b style="color:#3b82f6"><fmt:formatNumber value="${grandTotal}" type="number"/> đ</b>
+                            </p>
 
-                                    <div id="quickHints" style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;"></div>
-
-                                    <p id="paymentStatus" style="margin-top:10px; font-size:14px; font-weight: 600; min-height: 20px;"></p>
+                            <form method="post" action="${pageContext.request.contextPath}/checkout" 
+                                  target="invoiceFrameName" onsubmit="document.getElementById('invoiceModal').style.display = 'block';">
+                                <div class="field"><label>Số điện thoại</label><input name="customerPhone" id="customerPhone" placeholder="SĐT..."></div>
+                                <div class="field"><label>Khách hàng</label><input name="customerName" id="customerName" placeholder="Tên khách hàng..."></div>
+                                <div class="field" style="background:#fffbeb; padding:12px; border-radius:10px; border: 1px solid #fef3c7;">
+                                    <label style="color: #92400e;">Số tiền khách trả</label>
+                                    <input type="number" name="amountPaid" id="amountPaid" value="${grandTotal}" step="1000" style="font-weight:bold; font-size:16px;">
+                                    <p id="debtMsg" style="color:#dc2626; font-size:13px; margin-top:8px; display:none; font-weight: 600;">
+                                        ⚠ Khách nợ: <span id="debtVal">0</span> đ
+                                    </p>
                                 </div>
-                                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:15px; padding:15px; font-weight:bold;">XÁC NHẬN THANH TOÁN (F9)</button>
+                                <button class="btn btn-primary" style="width:100%; margin-top:20px; padding:15px; font-size: 16px; font-weight: bold; letter-spacing: 1px;">XÁC NHẬN THANH TOÁN</button>
                             </form>
                         </div>
                     </div>
@@ -337,100 +377,56 @@
             </div>
         </div>
 
-        <form id="barcodeForm" method="post" action="cart" style="display:none;">
-            <input type="hidden" name="action" value="addByBarcode"><input type="hidden" name="barcode" id="barcodeHiddenInput">
-        </form>
-
         <script>
-            const amountPaidInput = document.getElementById('amountPaid');
-            const quickHints = document.getElementById('quickHints');
-            const statusMsg = document.getElementById('paymentStatus');
-            const totalAmount = ${grandTotal != null ? grandTotal : 0};
+            const amountPaid = document.getElementById('amountPaid');
+            const grandTotal = ${grandTotal != null ? grandTotal : 0};
 
-            // 1. LOGIC TÍNH TIỀN THỐI & GỢI Ý HÀNG ĐƠN VỊ
-            if (amountPaidInput) {
-                amountPaidInput.oninput = function () {
-                    let val = this.value;
-                    let diff = val - totalAmount;
-                    let fmt = new Intl.NumberFormat('vi-VN');
-
-                    // Tạo gợi ý thông minh
-                    quickHints.innerHTML = "";
-                    if (val.length > 0 && val.length <= 4) {
-                        let base = parseInt(val);
-                        [1000, 10000, 100000, 1000000].forEach(unit => {
-                            let suggest = base * unit;
-                            if (suggest >= totalAmount / 10) {
-                                let btn = document.createElement("span");
-                                btn.className = "hint-btn";
-                                btn.innerText = fmt.format(suggest);
-                                btn.onclick = function () {
-                                    amountPaidInput.value = suggest;
-                                    amountPaidInput.oninput();
-                                };
-                                quickHints.appendChild(btn);
-                            }
-                        });
-                    }
-
-                    // Hiển thị trạng thái Thối/Nợ
-                    if (diff < 0) {
-                        statusMsg.style.color = "#dc2626";
-                        statusMsg.innerHTML = "⚠ Khách nợ: <b>" + fmt.format(Math.abs(diff)) + " đ</b>";
-                    } else if (diff > 0) {
-                        statusMsg.style.color = "#059669";
-                        statusMsg.innerHTML = "➡ Tiền thối lại: <b>" + fmt.format(diff) + " đ</b>";
+            if (amountPaid) {
+                amountPaid.oninput = function () {
+                    let debt = grandTotal - this.value;
+                    if (debt > 0) {
+                        document.getElementById('debtMsg').style.display = 'block';
+                        document.getElementById('debtVal').innerText = new Intl.NumberFormat('vi-VN').format(debt);
                     } else {
-                        statusMsg.style.color = "#3b82f6";
-                        statusMsg.innerHTML = "✓ Khách đưa đủ tiền.";
+                        document.getElementById('debtMsg').style.display = 'none';
                     }
-                };
-                amountPaidInput.oninput();
-                amountPaidInput.onclick = function () {
-                    this.select();
                 };
             }
 
-            // 2. XỬ LÝ MÁY QUÉT MÃ VẠCH (BARCODE) & PHÍM TẮT F9
-            let barcodeBuffer = "";
-            let lastKeyTime = Date.now();
-            window.addEventListener("keydown", function (e) {
-                const currentTime = Date.now();
-                if (currentTime - lastKeyTime > 50)
-                    barcodeBuffer = "";
-                lastKeyTime = currentTime;
-                if (e.key === "Enter") {
-                    if (barcodeBuffer.length >= 3) {
-                        e.preventDefault();
-                        document.getElementById('barcodeHiddenInput').value = barcodeBuffer;
-                        document.getElementById('barcodeForm').submit();
-                        barcodeBuffer = "";
+            const phoneInput = document.getElementById('customerPhone');
+            const nameInput = document.getElementById('customerName');
+            if (phoneInput && nameInput) {
+                phoneInput.onblur = function () {
+                    let phone = this.value.trim();
+                    if (phone.length >= 10) {
+                        fetch("${pageContext.request.contextPath}/customer-search?phone=" + encodeURIComponent(phone))
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.name)
+                                        nameInput.value = data.name;
+                                });
                     }
-                } else if (e.key.length === 1) {
-                    barcodeBuffer += e.key;
-                }
-                if (e.key === "F9") {
-                    e.preventDefault();
-                    document.getElementById('checkoutForm').submit();
-                }
-            });
+                };
+            }
 
-            // 3. AJAX TÌM KHÁCH THEO SĐT
-            document.getElementById('customerPhone')?.addEventListener('blur', function () {
-                if (this.value.trim().length >= 10) {
-                    fetch("customer-search?phone=" + encodeURIComponent(this.value.trim()))
-                            .then(r => r.json()).then(data => {
-                        if (data.name)
-                            document.getElementById('customerName').value = data.name;
-                    });
-                }
-            });
-
-            // 4. ĐÓNG MODAL
             window.onclick = function (event) {
-                if (event.target == document.getElementById('invoiceModal'))
+                if (event.target == document.getElementById('invoiceModal')) {
                     location.reload();
+                }
             }
+
+            window.addEventListener("DOMContentLoaded", function () {
+                const params = new URLSearchParams(window.location.search);
+                const err = params.get("err");
+                const sku = params.get("sku");
+                const stock = params.get("stock");
+
+                if (err === "not_enough_stock") {
+                    alert("❌ LỖI TỒN KHO: \nSản phẩm " + sku + " chỉ còn lại " + stock + " món trong kho.");
+                    const newUrl = window.location.pathname + (params.get("keyword") ? "?keyword=" + params.get("keyword") : "");
+                    window.history.replaceState({}, "", newUrl);
+                }
+            });
         </script>
     </body>
 </html>
