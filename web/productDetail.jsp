@@ -94,6 +94,45 @@
                         background: #f8d7da;
                         color: #721c24;
                     }
+
+                    .history-section {
+                        margin-top: 40px;
+                        border-top: 2px solid #eee;
+                        padding-top: 30px;
+                    }
+
+                    .history-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 15px;
+                        font-size: 13px;
+                    }
+
+                    .history-table th {
+                        text-align: left;
+                        padding: 12px;
+                        background: #f8f9fa;
+                        border-bottom: 2px solid #dee2e6;
+                        color: #495057;
+                    }
+
+                    .history-table td {
+                        padding: 12px;
+                        border-bottom: 1px solid #eee;
+                        vertical-align: top;
+                    }
+
+                    .action-badge {
+                        padding: 2px 8px;
+                        border-radius: 4px;
+                        font-weight: 600;
+                        font-size: 11px;
+                        text-transform: uppercase;
+                    }
+
+                    .action-add { background: #d4edda; color: #155724; }
+                    .action-edit { background: #fff3cd; color: #856404; }
+                    .action-stockin { background: #cce5ff; color: #004085; }
                 </style>
             </head>
 
@@ -199,6 +238,55 @@
                                 </div>
                             </div>
                         </div>
+
+                        <c:if test="${sessionScope.acc.roleID == 2}">
+                            <div class="detail-card history-section" style="display: block;">
+                                <h3 style="margin-bottom: 20px; color: #333; display: flex; align-items: center;">
+                                    <span style="margin-right: 10px;">📋</span> Lịch sử thay đổi sản phẩm
+                                </h3>
+                                
+                                <c:choose>
+                                    <c:when test="${not empty productHistory}">
+                                        <table class="history-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 180px;">Thời gian</th>
+                                                    <th style="width: 120px;">Hành động</th>
+                                                    <th style="width: 150px;">Người thực hiện</th>
+                                                    <th>Chi tiết thay đổi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach items="${productHistory}" var="h">
+                                                    <tr>
+                                                        <td style="color: #666;">
+                                                            <fmt:formatDate value="${h.logDate}" pattern="dd/MM/yyyy HH:mm:ss" />
+                                                        </td>
+                                                        <td>
+                                                            <span class="action-badge ${h.action == 'ADD_PRODUCT' ? 'action-add' : (h.action == 'EDIT_PRODUCT' ? 'action-edit' : 'action-stockin')}">
+                                                                ${h.action}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <strong>${h.name}</strong>
+                                                            <div style="font-size: 11px; color: #999;">IP: ${h.ipAddress}</div>
+                                                        </td>
+                                                        <td style="line-height: 1.5; color: #444;">
+                                                            ${h.description}
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div style="padding: 40px; text-align: center; color: #999; background: #fafafa; border-radius: 4px;">
+                                            Chưa có lịch sử ghi lại cho sản phẩm này.
+                                        </div>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </c:if>
                     </div><!-- /admin-content -->
                 </div><!-- /admin-main -->
             </body>

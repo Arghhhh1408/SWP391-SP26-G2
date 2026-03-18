@@ -22,6 +22,11 @@
                 </div>
 
                 <div class="admin-content">
+                    <c:if test="${not empty error}">
+                        <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #f5c6cb;">
+                            <strong>Lỗi:</strong> ${error}
+                        </div>
+                    </c:if>
 
                     <!-- Search & Filter Box -->
                     <div class="search-box"
@@ -38,11 +43,9 @@
                                         <option value="0" ${selectedParentId==0 ? 'selected' : '' }>-- Chỉ hiện danh mục
                                             gốc --</option>
                                         <c:forEach items="${allCategoriesList}" var="pc">
-                                            <c:if test="${empty pc.parentId || pc.parentId == 0}">
-                                                <option value="${pc.id}" ${selectedParentId==pc.id ? 'selected' : '' }>
-                                                    ${pc.name}
-                                                </option>
-                                            </c:if>
+                                            <option value="${pc.id}" ${selectedParentId==pc.id ? 'selected' : '' }>
+                                                ${pc.name}
+                                            </option>
                                         </c:forEach>
                                     </select>
                                 </div>

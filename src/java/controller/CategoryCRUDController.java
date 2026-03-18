@@ -1,6 +1,7 @@
 package controller;
 
 import dao.CategoryDAO;
+import dao.ProductDAO;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -22,7 +23,7 @@ public class CategoryCRUDController extends HttpServlet {
 
         try {
             // Always fetch categories for dropdowns in add/edit forms
-            List<Category> allCategories = dao.getAllCategories();
+            List<Category> allCategories = dao.getHierarchicalList();
             request.setAttribute("allCategoriesList", allCategories);
             request.setAttribute("categories", allCategories); // For compatibility with categoryForm.jsp
 
@@ -59,8 +60,28 @@ public class CategoryCRUDController extends HttpServlet {
                 request.getRequestDispatcher("categoryForm.jsp").forward(request, response);
             } else if (path.contains("deleteCategory")) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                dao.deleteCategory(id);
-                response.sendRedirect("manageCategories");
+                ProductDAO pDao = new ProductDAO();
+                
+                if (!pDao.getProductsByCategoryId(id).isEmpty()) {
+                    request.setAttribute("error", "Không thể xóa danh mục này vì vẫn còn sản phẩm thuộc danh mục!");
+                } else if (dao.hasSubCategories(id)) {
+                    request.setAttribute("error", "Không thể xóa danh mục này vì nó có danh mục con!");
+                } else {
+                    boolean success = dao.deleteCategory(id);
+                    if (!success) {
+                        request.setAttribute("error", "Lỗi hệ thống: Không thể xóa danh mục.");
+                    }
+                }
+                
+                // If there's an error, we need to re-populate attributes for manageCategories.jsp
+                if (request.getAttribute("error") != null) {
+                    List<Category> allCats = dao.getHierarchicalList();
+                    request.setAttribute("allCategoriesList", allCats);
+                    request.setAttribute("categories", dao.searchCategories(null, null));
+                    request.getRequestDispatcher("manageCategories.jsp").forward(request, response);
+                } else {
+                    response.sendRedirect("manageCategories");
+                }
             } else {
                 // Fallback for unexpected paths mapped to this servlet
                 response.sendRedirect("category");
