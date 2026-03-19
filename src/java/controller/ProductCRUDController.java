@@ -57,7 +57,11 @@ public class ProductCRUDController extends HttpServlet {
                 }
             } else if (action.equals("/deleteProduct")) {
                 int id = Integer.parseInt(request.getParameter("id"));
+                Product pToDelete = pDao.getProductById(id);
                 pDao.deleteProduct(id);
+                if (pToDelete != null) {
+                    logProductAction(request, "DELETE_PRODUCT", "Xóa sản phẩm: " + pToDelete.getName() + " | SKU: " + pToDelete.getSku() + " | ID: " + id);
+                }
                 response.sendRedirect(getAfterCrudRedirect(request));
             }
         } catch (Exception e) {
@@ -192,7 +196,13 @@ public class ProductCRUDController extends HttpServlet {
             SystemLog log = new SystemLog();
             log.setUserID(u != null ? u.getUserID() : 0);
             log.setAction(action);
-            log.setTargetObject("Product");
+            
+            String userName = "Unknown";
+            if (u != null) {
+                userName = u.getUsername();
+            }
+            log.setTargetObject("User: " + userName);
+            
             log.setDescription(description);
             log.setIpAddress(request.getRemoteAddr());
             new SystemLogDAO().insertLog(log);
