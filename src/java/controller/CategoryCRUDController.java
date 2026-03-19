@@ -2,6 +2,7 @@ package controller;
 
 import dao.CategoryDAO;
 import dao.ProductDAO;
+import dao.SystemLogDAO;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -9,7 +10,10 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import model.Category;
+import model.SystemLog;
+import model.User;
 
 @WebServlet(name = "CategoryCRUDController", urlPatterns = { "/addCategory", "/editCategory", "/deleteCategory",
         "/manageCategories" })
@@ -67,9 +71,12 @@ public class CategoryCRUDController extends HttpServlet {
                 } else if (dao.hasSubCategories(id)) {
                     request.setAttribute("error", "Không thể xóa danh mục này vì nó có danh mục con!");
                 } else {
+                    Category cToDelete = dao.getCategoryById(id);
                     boolean success = dao.deleteCategory(id);
                     if (!success) {
                         request.setAttribute("error", "Lỗi hệ thống: Không thể xóa danh mục.");
+                    } else if (cToDelete != null) {
+                        logCategoryAction(request, "DELETE_CATEGORY", "Xóa danh mục: " + cToDelete.getName() + " | ID: " + id);
                     }
                 }
                 
@@ -122,10 +129,13 @@ public class CategoryCRUDController extends HttpServlet {
                     return;
                 }
                 dao.addCategory(c);
+                logCategoryAction(request, "ADD_CATEGORY", "Thêm danh mục mới: " + name);
             } else if (path.contains("editCategory")) {
                 int id = Integer.parseInt(request.getParameter("id"));
+                Category oldC = dao.getCategoryById(id);
                 c.setId(id);
                 dao.updateCategory(c);
+                logCategoryEdit(request, oldC, c);
             }
             response.sendRedirect("manageCategories");
 
@@ -137,6 +147,49 @@ public class CategoryCRUDController extends HttpServlet {
             } catch (Exception ex) {
             }
             request.getRequestDispatcher("categoryForm.jsp").forward(request, response);
+        }
+    }
+
+    private void logCategoryAction(HttpServletRequest request, String action, String description) {
+        try {
+            HttpSession session = request.getSession(false);
+            User u = session != null ? (User) session.getAttribute("acc") : null;
+            SystemLog log = new SystemLog();
+            log.setUserID(u != null ? u.getUserID() : 0);
+            log.setAction(action);
+            
+            String userName = "Unknown";
+            if (u != null) {
+                userName = u.getUsername();
+            }
+            log.setTargetObject("User: " + userName);
+            
+            log.setDescription(description);
+            log.setIpAddress(request.getRemoteAddr());
+            new SystemLogDAO().insertLog(log);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void logCategoryEdit(HttpServletRequest request, Category oldC, Category newC) {
+        if (oldC == null) return;
+        StringBuilder changes = new StringBuilder("Sửa danh mục: " + oldC.getName() + " (ID: " + oldC.getId() + ") | Thay đổi: ");
+        boolean changed = false;
+
+        if (!oldC.getName().equals(newC.getName())) {
+            changes.append("Name [").append(oldC.getName()).append(" -> ").append(newC.getName()).append("], ");
+            changed = true;
+        }
+        if (oldC.getParentId() != newC.getParentId()) {
+            changes.append("Parent ID [").append(oldC.getParentId()).append(" -> ").append(newC.getParentId()).append("], ");
+            changed = true;
+        }
+
+        if (changed) {
+            String desc = changes.toString();
+            if (desc.endsWith(", ")) desc = desc.substring(0, desc.length() - 2);
+            logCategoryAction(request, "EDIT_CATEGORY", desc);
         }
     }
 }

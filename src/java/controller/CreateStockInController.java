@@ -328,7 +328,12 @@ public class CreateStockInController extends HttpServlet {
 
                     log.setUserID(userID);
                     log.setAction("CREATE_STOCKIN");
-                    log.setTargetObject("StockIn");
+                    
+                    String userName = "Unknown";
+                    if (user != null) {
+                        userName = user.getUsername();
+                    }
+                    log.setTargetObject("User: " + userName);
 
                     String description = "Tạo phiếu nhập | SupplierID: "
                             + stockIn.getSupplierId()
@@ -360,7 +365,12 @@ public class CreateStockInController extends HttpServlet {
 
                     log.setUserID(userID);
                     log.setAction("CREATE_STOCKIN");
-                    log.setTargetObject("StockIn");
+                    
+                    String userName = "Unknown";
+                    if (user != null) {
+                        userName = user.getUsername();
+                    }
+                    log.setTargetObject("User: " + userName);
 
                     String description = "Tạo phiếu nhập thất bại | SupplierID: "
                             + stockIn.getSupplierId()
