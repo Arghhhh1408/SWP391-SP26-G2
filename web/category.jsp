@@ -300,6 +300,12 @@
                     </div>
 
                     <div class="admin-content">
+                        <c:if test="${not empty sessionScope.error}">
+                            <div style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c2c2;">
+                                ${sessionScope.error}
+                                <c:remove var="error" scope="session"/>
+                            </div>
+                        </c:if>
 
                         <!-- Search & Filter Box -->
                         <div class="search-box">
@@ -371,7 +377,20 @@
                             </c:forEach>
                         </div>
 
-                        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <div id="bulkActions" style="display: none; gap: 10px; align-items: center; background: #f8fafc; padding: 5px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <span style="font-size: 13px; font-weight: 600; color: #64748b;">Hàng loạt:</span>
+                                <button type="button" onclick="submitBulkAction('softDelete')" class="btn btn-outline" style="background: #fef9c3; color: #854d0e; border-color: #fef08a; padding: 4px 8px; font-size: 12px;">Xóa mềm</button>
+                                <button type="button" onclick="submitBulkAction('hardDelete')" class="btn btn-outline" style="background: #fee2e2; color: #991b1b; border-color: #fecaca; padding: 4px 8px; font-size: 12px;">Xóa cứng</button>
+                            </div>
+                            
+                            <a href="exportProducts" class="btn btn-outline" style="background: #dcfce7; color: #166534; border-color: #bbf7d0;">Export Excel</a>
+                            
+                            <form action="importProducts" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px;">
+                                <input type="file" name="file" accept=".xlsx, .xls" style="font-size: 12px; width: 150px;" required>
+                                <button type="submit" class="btn btn-primary" style="padding: 5px 10px;">Import Excel</button>
+                            </form>
+                            
                             <a href="addProduct" class="btn btn-primary">+ Thêm sản phẩm mới</a>
                         </div>
 
@@ -391,50 +410,57 @@
                         </c:if>
 
                         <c:if test="${not empty products}">
-                            <table class="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Ảnh</th>
-                                        <th>Tên sản phẩm</th>
-                                        <th>Giá (VNĐ)</th>
-                                        <th>Số lượng</th>
-                                        <th>Trạng thái</th>
-                                        <th style="text-align: right;">Hành động</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <c:forEach items="${products}" var="p">
+                            <form id="bulkActionForm" action="bulkProductAction" method="post">
+                                <input type="hidden" name="action" id="bulkActionType" value="">
+                                <table class="admin-table">
+                                    <thead>
                                         <tr>
-                                            <td><small style="color: #999;">#${p.id}</small></td>
-                                            <td><img src="${p.imageURL}" class="product-img" alt="${p.name}"></td>
-                                            <td>
-                                                <a href="productDetail?id=${p.id}"
-                                                    style="text-decoration: none; color: #007bff; font-weight: 600;">
-                                                    ${p.name}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <fmt:formatNumber value="${p.price}" type="number"
-                                                    groupingUsed="true" />
-                                            </td>
-                                            <td>
-                                                <span class="stock-badge ${p.quantity < 5 ? 'stock-low' : ''}">${p.quantity}</span>
-                                            </td>
-                                            <td>
-                                                <span
-                                                    class="status-badge ${p.status == 'Active' ? 'status-active' : 'status-inactive'}">
-                                                    ${p.status}
-                                                </span>
-                                            </td>
-                                            <td style="text-align: right;">
-                                                <a href="productDetail?id=${p.id}" class="btn btn-outline"
-                                                    style="padding: 4px 10px;">Xem</a>
-                                                <a href="editProduct?id=${p.id}" class="btn btn-outline"
-                                                    style="padding: 4px 10px;">Sửa</a>
-                                            </td>
+                                            <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+                                            <th>ID</th>
+                                            <th>Ảnh</th>
+                                            <th>Tên sản phẩm</th>
+                                            <th>Giá (VNĐ)</th>
+                                            <th>Số lượng</th>
+                                            <th>Trạng thái</th>
+                                            <th style="text-align: right;">Hành động</th>
                                         </tr>
-                                    </c:forEach>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach items="${products}" var="p">
+                                            <tr>
+                                                <td><input type="checkbox" name="selectedProducts" value="${p.id}" onclick="updateBulkActionsVisibility()"></td>
+                                                <td><small style="color: #999;">#${p.id}</small></td>
+                                                <td><img src="${p.imageURL}" class="product-img" alt="${p.name}"></td>
+                                                <td>
+                                                    <a href="productDetail?id=${p.id}"
+                                                        style="text-decoration: none; color: #007bff; font-weight: 600;">
+                                                        ${p.name}
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <fmt:formatNumber value="${p.price}" type="number"
+                                                        groupingUsed="true" />
+                                                </td>
+                                                <td>
+                                                    <span class="stock-badge ${p.quantity < 5 ? 'stock-low' : ''}">${p.quantity}</span>
+                                                </td>
+                                                <td>
+                                                    <span
+                                                        class="status-badge ${p.status == 'Active' ? 'status-active' : 'status-inactive'}">
+                                                        ${p.status}
+                                                    </span>
+                                                </td>
+                                                <td style="text-align: right;">
+                                                    <a href="productDetail?id=${p.id}" class="btn btn-outline"
+                                                        style="padding: 4px 10px;">Xem</a>
+                                                    <a href="editProduct?id=${p.id}" class="btn btn-outline"
+                                                        style="padding: 4px 10px;">Sửa</a>
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </form>
                                 </tbody>
                             </table>
 
@@ -478,6 +504,55 @@
                         </c:if>
                     </div>
                 </div>
+                <script>
+                    function toggleSelectAll(source) {
+                        var checkboxes = document.getElementsByName('selectedProducts');
+                        for (var i = 0, n = checkboxes.length; i < n; i++) {
+                            checkboxes[i].checked = source.checked;
+                        }
+                        updateBulkActionsVisibility();
+                    }
+
+                    function updateBulkActionsVisibility() {
+                        var checkboxes = document.getElementsByName('selectedProducts');
+                        var bulkActions = document.getElementById('bulkActions');
+                        var anyChecked = false;
+                        for (var i = 0; i < checkboxes.length; i++) {
+                            if (checkboxes[i].checked) {
+                                anyChecked = true;
+                                break;
+                            }
+                        }
+                        if (bulkActions) {
+                            bulkActions.style.display = anyChecked ? 'flex' : 'none';
+                        }
+
+                        // Update Select All checkbox state
+                        var selectAll = document.getElementById('selectAll');
+                        if (selectAll) {
+                            var allChecked = true;
+                            if (checkboxes.length === 0) allChecked = false;
+                            for (var i = 0; i < checkboxes.length; i++) {
+                                if (!checkboxes[i].checked) {
+                                    allChecked = false;
+                                    break;
+                                }
+                            }
+                            selectAll.checked = allChecked;
+                        }
+                    }
+
+                    function submitBulkAction(action) {
+                        var confirmMsg = action === 'hardDelete' ?
+                            'Bạn có chắc chắn muốn XÓA VĨNH VIỄN các sản phẩm đã chọn không? Thao tác này không thể hoàn tác!' :
+                            'Bạn có muốn chuyển trạng thái các sản phẩm đã chọn thành Inactive không?';
+
+                        if (confirm(confirmMsg)) {
+                            document.getElementById('bulkActionType').value = action;
+                            document.getElementById('bulkActionForm').submit();
+                        }
+                    }
+                </script>
             </body>
 
             </html>

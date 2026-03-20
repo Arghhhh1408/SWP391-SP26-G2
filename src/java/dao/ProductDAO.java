@@ -172,30 +172,26 @@ public class ProductDAO extends DBContext {
         return list;
     }
 
-    public int addProduct(Product p) {
+    public int addProduct(Product p) throws Exception {
         String sql = "INSERT INTO Products (Name, SKU, Cost, Price, StockQuantity, Unit, Description, ImageURL, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
-        try {
-            java.sql.PreparedStatement st = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
-            st.setString(1, p.getName());
-            st.setString(2, p.getSku());
-            st.setDouble(3, p.getCost());
-            st.setDouble(4, p.getPrice());
-            st.setInt(5, p.getQuantity());
-            st.setString(6, p.getUnit());
-            st.setString(7, p.getDescription());
-            st.setString(8, p.getImageURL());
-            st.setString(9, p.getStatus());
-            st.setInt(10, p.getCategoryId());
-            
-            int affectedRows = st.executeUpdate();
-            if (affectedRows > 0) {
-                java.sql.ResultSet rs = st.getGeneratedKeys();
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
+        java.sql.PreparedStatement st = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
+        st.setString(1, p.getName());
+        st.setString(2, p.getSku());
+        st.setDouble(3, p.getCost());
+        st.setDouble(4, p.getPrice());
+        st.setInt(5, p.getQuantity());
+        st.setString(6, p.getUnit());
+        st.setString(7, p.getDescription());
+        st.setString(8, p.getImageURL());
+        st.setString(9, p.getStatus());
+        st.setInt(10, p.getCategoryId());
+        
+        int affectedRows = st.executeUpdate();
+        if (affectedRows > 0) {
+            java.sql.ResultSet rs = st.getGeneratedKeys();
+            if (rs.next()) {
+                return rs.getInt(1);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
         return -1;
     }
@@ -490,5 +486,47 @@ public class ProductDAO extends DBContext {
                     rs.getTimestamp("UpdatedDate")));
         }
         return list;
+    }
+
+    public boolean bulkSoftDelete(int[] ids) {
+        if (ids == null || ids.length == 0) return false;
+        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Inactive', UpdatedDate = GETDATE() WHERE ProductID IN (");
+        for (int i = 0; i < ids.length; i++) {
+            sql.append("?");
+            if (i < ids.length - 1) sql.append(",");
+        }
+        sql.append(")");
+        
+        try {
+            PreparedStatement st = connection.prepareStatement(sql.toString());
+            for (int i = 0; i < ids.length; i++) {
+                st.setInt(i + 1, ids[i]);
+            }
+            return st.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean bulkHardDelete(int[] ids) {
+        if (ids == null || ids.length == 0) return false;
+        StringBuilder sql = new StringBuilder("DELETE FROM Products WHERE ProductID IN (");
+        for (int i = 0; i < ids.length; i++) {
+            sql.append("?");
+            if (i < ids.length - 1) sql.append(",");
+        }
+        sql.append(")");
+        
+        try {
+            PreparedStatement st = connection.prepareStatement(sql.toString());
+            for (int i = 0; i < ids.length; i++) {
+                st.setInt(i + 1, ids[i]);
+            }
+            return st.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }
