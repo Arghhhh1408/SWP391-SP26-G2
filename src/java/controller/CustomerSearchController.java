@@ -5,21 +5,22 @@
 
 package controller;
 
-import dao.ProductDAO;
+import dao.CustomerDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
-import model.Product;
+import model.Customer;
 
 /**
  *
  * @author DELL
  */
-public class POSController extends HttpServlet {
+@WebServlet(name="CustomerSearchController", urlPatterns={"/customer-search"})
+public class CustomerSearchController extends HttpServlet {
    
     /** 
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
@@ -36,10 +37,10 @@ public class POSController extends HttpServlet {
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Servlet POSController</title>");  
+            out.println("<title>Servlet CustomerSearchController</title>");  
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Servlet POSController at " + request.getContextPath () + "</h1>");
+            out.println("<h1>Servlet CustomerSearchController at " + request.getContextPath () + "</h1>");
             out.println("</body>");
             out.println("</html>");
         }
@@ -56,13 +57,19 @@ public class POSController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
-        String keyword = request.getParameter("keyword");
-        if (keyword == null) keyword = "";
-        ProductDAO dao = new ProductDAO();
-        List<Product> products = dao.search(keyword);
+         String phone = request.getParameter("phone");
 
-        request.setAttribute("products", products);
-        request.getRequestDispatcher("sales_pos.jsp").forward(request, response);
+        CustomerDAO dao = new CustomerDAO();
+        Customer c = dao.getCustomerByPhone(phone);
+
+        response.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = response.getWriter();
+
+        if (c != null) {
+            out.print("{\"name\":\"" + c.getName() + "\"}");
+        } else {
+            out.print("{}");
+        }
     } 
 
     /** 

@@ -5,21 +5,25 @@
 
 package controller;
 
-import dao.ProductDAO;
+import dao.CustomerDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.util.List;
-import model.Product;
+import model.Customer;
+import model.OrderHistory;
 
 /**
  *
  * @author DELL
  */
-public class POSController extends HttpServlet {
+@WebServlet(name="CustomerDetailController", urlPatterns={"/customerDetail"})
+public class CustomerDetailController extends HttpServlet {
    
     /** 
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
@@ -36,10 +40,10 @@ public class POSController extends HttpServlet {
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Servlet POSController</title>");  
+            out.println("<title>Servlet CustomerDetailController</title>");  
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Servlet POSController at " + request.getContextPath () + "</h1>");
+            out.println("<h1>Servlet CustomerDetailController at " + request.getContextPath () + "</h1>");
             out.println("</body>");
             out.println("</html>");
         }
@@ -56,13 +60,28 @@ public class POSController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
-        String keyword = request.getParameter("keyword");
-        if (keyword == null) keyword = "";
-        ProductDAO dao = new ProductDAO();
-        List<Product> products = dao.search(keyword);
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("acc") == null) {
+            response.sendRedirect(request.getContextPath() + "/login");
+            return;
+        }
 
-        request.setAttribute("products", products);
-        request.getRequestDispatcher("sales_pos.jsp").forward(request, response);
+        String idRaw = request.getParameter("id");
+        if (idRaw == null) {
+            response.sendRedirect(request.getContextPath() + "/customers");
+            return;
+        }
+
+        int customerId = Integer.parseInt(idRaw);
+
+        CustomerDAO dao = new CustomerDAO();
+        Customer customer = dao.getCustomerById(customerId);
+        List<OrderHistory> orders = dao.getPurchaseHistoryByCustomer(customerId);
+
+        request.setAttribute("customer", customer);
+        request.setAttribute("orders", orders);
+
+        request.getRequestDispatcher("/customerDetail.jsp").forward(request, response);
     } 
 
     /** 
