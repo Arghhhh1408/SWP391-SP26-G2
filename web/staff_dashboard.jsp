@@ -53,7 +53,8 @@
                 margin-bottom: 22px;
             }
             .card, .panel {
-                background: #fff;
+                background: #f8fafc;
+                border-left: 4px solid #3b82f6;
                 border: 1px solid #dbe2ec;
                 border-radius: 24px;
                 box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
@@ -258,6 +259,21 @@
                 color: #64748b;
                 background: #f8fbff;
             }
+            .status-tag {
+                padding: 4px 10px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+            }
+            .status-active {
+                background: #dcfce7;
+                color: #166534;
+            }
+            .status-inactive {
+                background: #f1f5f9;
+                color: #64748b;
+            }
             @media (max-width: 1300px) {
                 .stats {
                     grid-template-columns: repeat(2, 1fr);
@@ -279,6 +295,12 @@
                 </div>
                 <div><a href="logout" class="btn">Đăng xuất</a></div>
             </div>
+            <c:if test="${not empty sessionScope.error}">
+                <div style="color: #ef3f33; padding: 15px; background: #fbe1e1; border-radius: 12px; margin-bottom: 20px; border: 1px solid #f5c2c2;">
+                    ${sessionScope.error}
+                    <c:remove var="error" scope="session"/>
+                </div>
+            </c:if>
 
             <c:choose>
                 <c:when test="${tab == 'dashboard'}">
@@ -488,30 +510,53 @@
 
                 <c:when test="${tab == 'products'}">
                     <section class="panel">
-                        <div class="panel-header">
+                        <div class="panel-header" style="display:flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div><h3>Danh sách sản phẩm</h3></div>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <div id="bulkActions" style="display: none; gap: 10px; align-items: center; background: #f8fafc; padding: 5px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <span style="font-size: 13px; font-weight: 600; color: #64748b;">Hành động hàng loạt:</span>
+                                    <button type="button" onclick="submitBulkAction('softDelete')" class="btn" style="background: #fef9c3; color: #854d0e; border-color: #fef08a; padding: 4px 8px; font-size: 12px;">Xóa mềm</button>
+                                    <button type="button" onclick="submitBulkAction('hardDelete')" class="btn" style="background: #fee2e2; color: #991b1b; border-color: #fecaca; padding: 4px 8px; font-size: 12px;">Xóa cứng</button>
+                                </div>
+                                
+                                <a href="exportProducts" class="btn" style="background: #dcfce7; color: #166534; border-color: #bbf7d0;">Export Excel</a>
+                                
+                                <form action="importProducts" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px;">
+                                    <input type="file" name="file" accept=".xlsx, .xls" style="font-size: 12px; width: 150px;" required>
+                                    <button type="submit" class="btn btn-light" style="padding: 5px 10px;">Import Excel</button>
+                                </form>
+                            </div>
                         </div>
                         <div class="panel-body" style="padding-top:0;">
-                            <table>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>SKU</th>
-                                    <th>Tên sản phẩm</th>
-                                    <th>Tồn kho</th>
-                                    <th>Đơn vị</th>
-                                    <th>Trạng thái</th>
-                                </tr>
-                                <c:forEach items="${products}" var="p">
+                            <form id="bulkActionForm" action="bulkProductAction" method="post">
+                                <input type="hidden" name="action" id="bulkActionType" value="">
+                                <table>
                                     <tr>
-                                        <td>${p.id}</td>
-                                        <td>${p.sku}</td>
-                                        <td>${p.name}</td>
-                                        <td>${p.quantity}</td>
-                                        <td>${p.unit}</td>
-                                        <td>${p.status}</td>
+                                        <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+                                        <th>ID</th>
+                                        <th>SKU</th>
+                                        <th>Tên sản phẩm</th>
+                                        <th>Tồn kho</th>
+                                        <th>Đơn vị</th>
+                                        <th>Trạng thái</th>
                                     </tr>
-                                </c:forEach>
-                            </table>
+                                    <c:forEach items="${products}" var="p">
+                                        <tr>
+                                            <td><input type="checkbox" name="selectedProducts" value="${p.id}" onclick="updateBulkActionsVisibility()"></td>
+                                            <td>${p.id}</td>
+                                            <td>${p.sku}</td>
+                                            <td>${p.name}</td>
+                                            <td>${p.quantity}</td>
+                                            <td>${p.unit}</td>
+                                            <td>
+                                                <span class="status-tag ${p.status == 'Active' ? 'status-active' : 'status-inactive'}">
+                                                    ${p.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </c:forEach>
+                                </table>
+                            </form>
                         </div>
                     </section>
                 </c:when>
@@ -560,5 +605,55 @@
                 </c:otherwise>
             </c:choose>
         </main>
+
+        <script>
+            function toggleSelectAll(source) {
+                var checkboxes = document.getElementsByName('selectedProducts');
+                for(var i=0, n=checkboxes.length;i<n;i++) {
+                    checkboxes[i].checked = source.checked;
+                }
+                updateBulkActionsVisibility();
+            }
+
+            function updateBulkActionsVisibility() {
+                var checkboxes = document.getElementsByName('selectedProducts');
+                var bulkActions = document.getElementById('bulkActions');
+                var anyChecked = false;
+                for(var i=0; i<checkboxes.length; i++) {
+                    if(checkboxes[i].checked) {
+                        anyChecked = true;
+                        break;
+                    }
+                }
+                if (bulkActions) {
+                    bulkActions.style.display = anyChecked ? 'flex' : 'none';
+                }
+                
+                // Update Select All checkbox state
+                var selectAll = document.getElementById('selectAll');
+                if (selectAll) {
+                    var allChecked = true;
+                    if (checkboxes.length === 0) allChecked = false;
+                    for(var i=0; i<checkboxes.length; i++) {
+                        if(!checkboxes[i].checked) {
+                            allChecked = false;
+                            break;
+                        }
+                    }
+                    selectAll.checked = allChecked;
+                }
+            }
+
+            function submitBulkAction(action) {
+                var confirmMsg = action === 'hardDelete' 
+                    ? 'Bạn có chắc chắn muốn XÓA VĨNH VIỄN các sản phẩm đã chọn không? Thao tác này không thể hoàn tác!' 
+                    : 'Bạn có muốn chuyển trạng thái các sản phẩm đã chọn thành Inactive không?';
+                
+                if (confirm(confirmMsg)) {
+                    document.getElementById('bulkActionType').value = action;
+                    document.getElementById('bulkActionForm').submit();
+                }
+            }
+        </script>
     </body>
 </html>

@@ -132,6 +132,17 @@ public class CategoryCRUDController extends HttpServlet {
                 logCategoryAction(request, "ADD_CATEGORY", "Thêm danh mục mới: " + name);
             } else if (path.contains("editCategory")) {
                 int id = Integer.parseInt(request.getParameter("id"));
+                if (dao.isCategoryExists(name, id)) {
+                    request.setAttribute("error", "Category name already exists!");
+                    // Re-populate data for the form
+                    Category category = dao.getCategoryById(id);
+                    request.setAttribute("category", category);
+                    List<Category> allCategories = dao.getHierarchicalList();
+                    request.setAttribute("allCategoriesList", allCategories);
+                    request.setAttribute("categories", allCategories);
+                    request.getRequestDispatcher("categoryForm.jsp").forward(request, response);
+                    return;
+                }
                 Category oldC = dao.getCategoryById(id);
                 c.setId(id);
                 dao.updateCategory(c);

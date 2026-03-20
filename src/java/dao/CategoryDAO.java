@@ -167,6 +167,20 @@ public class CategoryDAO extends DBContext {
         return false;
     }
 
+    public boolean isCategoryExists(String name, int excludeId) {
+        String sql = "SELECT CategoryID FROM Categories WHERE CategoryName = ? AND CategoryID != ?";
+        try {
+            PreparedStatement st = connection.prepareStatement(sql);
+            st.setString(1, name);
+            st.setInt(2, excludeId);
+            ResultSet rs = st.executeQuery();
+            return rs.next();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public List<Category> getHierarchicalList() throws Exception {
         List<Category> tree = getCategoryTree();
         List<Category> result = new ArrayList<>();
@@ -202,5 +216,21 @@ public class CategoryDAO extends DBContext {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public Integer getCategoryIdByName(String name) {
+        if (name == null || name.trim().isEmpty()) return null;
+        String sql = "SELECT CategoryID FROM Categories WHERE LTRIM(RTRIM(CategoryName)) = ?";
+        try {
+            PreparedStatement st = connection.prepareStatement(sql);
+            st.setString(1, name.trim());
+            ResultSet rs = st.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("CategoryID");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
