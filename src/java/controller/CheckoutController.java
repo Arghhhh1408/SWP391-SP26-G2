@@ -156,8 +156,8 @@ public class CheckoutController extends HttpServlet {
 
             // 3) INSERT StockOutDetails
             String insertDetailSql = """
-                INSERT INTO dbo.StockOutDetails (StockOutID, ProductID, Quantity, UnitPrice, SubTotal)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO dbo.StockOutDetails (StockOutID, ProductID, Quantity, UnitPrice)
+                VALUES (?, ?, ?, ?)
             """;
 
             try (PreparedStatement stm = con.prepareStatement(insertDetailSql)) {
@@ -166,7 +166,6 @@ public class CheckoutController extends HttpServlet {
                     stm.setInt(2, it.getProductId());
                     stm.setInt(3, it.getQty());
                     stm.setDouble(4, it.getPrice());
-                    stm.setDouble(5, it.getLineTotal());
                     stm.addBatch();
                 }
                 stm.executeBatch();
@@ -189,7 +188,8 @@ public class CheckoutController extends HttpServlet {
             session.removeAttribute("cart");
 
             // Redirect về pos hoặc sang trang hóa đơn / chi tiết đơn
-            response.sendRedirect("pos?success=1");
+            // Đổi từ "pos?success=1" thành:
+            response.sendRedirect("sales_dashboard?tab=pos&success=1");
 
         } catch (Exception e) {
             try { con.rollback(); } catch (Exception ignore) {}
