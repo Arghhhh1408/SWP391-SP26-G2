@@ -141,12 +141,14 @@ public class StockInListController extends HttpServlet {
         if ("update".equals(action)) {
             try {
                 int stockInId = Integer.parseInt(request.getParameter("stockInId"));
-                String status = request.getParameter("status");
+                String stockStatus = request.getParameter("stockStatus");
+                String paymentStatus = request.getParameter("paymentStatus");
                 String note = request.getParameter("note");
 
                 StockIn s = new StockIn();
                 s.setStockInId(stockInId);
-                s.setStatus(status);
+                s.setStockStatus(stockStatus);
+                s.setPaymentStatus(paymentStatus);
                 s.setNote(note);
 
                 boolean updated = dao.updateStockIn(s);

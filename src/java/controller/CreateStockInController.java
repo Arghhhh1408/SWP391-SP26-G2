@@ -58,7 +58,8 @@ public class CreateStockInController extends HttpServlet {
             Map<Integer, Product> cart,
             String supplierIdDraft,
             String noteDraft,
-            String paymentOptionDraft,
+            String stockStatusDraft,
+            String paymentStatusDraft,
             String keyword,
             String message) throws ServletException, IOException {
 
@@ -72,7 +73,8 @@ public class CreateStockInController extends HttpServlet {
 
         request.setAttribute("supplierIdDraft", supplierIdDraft);
         request.setAttribute("noteDraft", noteDraft);
-        request.setAttribute("paymentOptionDraft", paymentOptionDraft);
+        request.setAttribute("stockStatusDraft", stockStatusDraft);
+        request.setAttribute("paymentStatusDraft", paymentStatusDraft);
 
         request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
     }
@@ -114,24 +116,32 @@ public class CreateStockInController extends HttpServlet {
 
         ProductDAO pdao = new ProductDAO();
 
-        // Lấy dữ liệu draft từ request trước
         String supplierId = request.getParameter("supplierId");
         String note = request.getParameter("note");
-        String paymentOption = request.getParameter("paymentOption");
+        String stockStatus = request.getParameter("stockStatus");
+        String paymentStatus = request.getParameter("paymentStatus");
         String keyword = request.getParameter("keyword");
 
-        // Nếu request không có thì lấy từ session
         if (supplierId == null) {
             supplierId = (String) session.getAttribute("stockin_supplierId");
         }
         if (note == null) {
             note = (String) session.getAttribute("stockin_note");
         }
-        if (paymentOption == null) {
-            paymentOption = (String) session.getAttribute("stockin_paymentOption");
+        if (stockStatus == null) {
+            stockStatus = (String) session.getAttribute("stockin_stockStatus");
+        }
+        if (paymentStatus == null) {
+            paymentStatus = (String) session.getAttribute("stockin_paymentStatus");
         }
 
-        // Action xử lý
+        if (stockStatus == null || stockStatus.trim().isEmpty()) {
+            stockStatus = StockIn.STOCK_STATUS_PENDING;
+        }
+        if (paymentStatus == null || paymentStatus.trim().isEmpty()) {
+            paymentStatus = StockIn.PAYMENT_STATUS_UNPAID;
+        }
+
         String action = request.getParameter("action");
         String addPidRaw = request.getParameter("addPid");
         String removePidRaw = request.getParameter("removePid");
@@ -140,7 +150,8 @@ public class CreateStockInController extends HttpServlet {
             cart.clear();
             session.removeAttribute("stockin_supplierId");
             session.removeAttribute("stockin_note");
-            session.removeAttribute("stockin_paymentOption");
+            session.removeAttribute("stockin_stockStatus");
+            session.removeAttribute("stockin_paymentStatus");
 
             if ("1".equals(request.getParameter("redirect"))) {
                 response.sendRedirect("stockinList");
@@ -149,13 +160,15 @@ public class CreateStockInController extends HttpServlet {
 
             supplierId = null;
             note = null;
-            paymentOption = null;
+            stockStatus = StockIn.STOCK_STATUS_PENDING;
+            paymentStatus = StockIn.PAYMENT_STATUS_UNPAID;
             keyword = null;
+
         } else {
-            // Lưu draft vào session
             session.setAttribute("stockin_supplierId", supplierId);
             session.setAttribute("stockin_note", note);
-            session.setAttribute("stockin_paymentOption", paymentOption);
+            session.setAttribute("stockin_stockStatus", stockStatus);
+            session.setAttribute("stockin_paymentStatus", paymentStatus);
 
             if (addPidRaw != null && !addPidRaw.trim().isEmpty()) {
                 try {
@@ -177,15 +190,26 @@ public class CreateStockInController extends HttpServlet {
             }
         }
 
-        List<Product> productList = pdao.search(keyword);
+        String showAll = request.getParameter("showAll");
 
+        List<Product> productList;
+        if ("1".equals(showAll)) {
+            productList = pdao.search("");
+        } else if (keyword != null && !keyword.trim().isEmpty()) {
+            productList = pdao.search(keyword.trim());
+        } else {
+            productList = new ArrayList<>();
+        }
+
+        request.setAttribute("showAll", showAll);
         request.setAttribute("keyword", keyword);
         request.setAttribute("productList", productList);
         request.setAttribute("cart", cart);
 
         request.setAttribute("supplierIdDraft", supplierId);
         request.setAttribute("noteDraft", note);
-        request.setAttribute("paymentOptionDraft", paymentOption);
+        request.setAttribute("stockStatusDraft", stockStatus);
+        request.setAttribute("paymentStatusDraft", paymentStatus);
 
         request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
     }
@@ -223,22 +247,23 @@ public class CreateStockInController extends HttpServlet {
 
             String supplierRaw = request.getParameter("supplierId");
             String note = request.getParameter("note");
-            String paymentOption = request.getParameter("paymentOption");
+            String stockStatus = request.getParameter("stockStatus");
+            String paymentStatus = request.getParameter("paymentStatus");
             String keyword = request.getParameter("keyword");
 
-            // Lưu draft lại vào session để nếu lỗi thì form vẫn giữ dữ liệu
             session.setAttribute("stockin_supplierId", supplierRaw);
             session.setAttribute("stockin_note", note);
-            session.setAttribute("stockin_paymentOption", paymentOption);
+            session.setAttribute("stockin_stockStatus", stockStatus);
+            session.setAttribute("stockin_paymentStatus", paymentStatus);
 
             if (cart.isEmpty()) {
-                forwardToForm(request, response, cart, supplierRaw, note, paymentOption, keyword,
+                forwardToForm(request, response, cart, supplierRaw, note, stockStatus, paymentStatus, keyword,
                         "Vui lòng chọn ít nhất 1 sản phẩm!");
                 return;
             }
 
             if (supplierRaw == null || supplierRaw.trim().isEmpty()) {
-                forwardToForm(request, response, cart, supplierRaw, note, paymentOption, keyword,
+                forwardToForm(request, response, cart, supplierRaw, note, stockStatus, paymentStatus, keyword,
                         "Vui lòng nhập Supplier ID!");
                 return;
             }
@@ -247,8 +272,39 @@ public class CreateStockInController extends HttpServlet {
             try {
                 supplierId = Integer.parseInt(supplierRaw.trim());
             } catch (NumberFormatException e) {
-                forwardToForm(request, response, cart, supplierRaw, note, paymentOption, keyword,
+                forwardToForm(request, response, cart, supplierRaw, note, stockStatus, paymentStatus, keyword,
                         "Supplier ID không hợp lệ!");
+                return;
+            }
+
+            if (stockStatus == null || stockStatus.trim().isEmpty()) {
+                stockStatus = StockIn.STOCK_STATUS_PENDING;
+            }
+
+            if (paymentStatus == null || paymentStatus.trim().isEmpty()) {
+                paymentStatus = StockIn.PAYMENT_STATUS_UNPAID;
+            }
+
+            boolean validStockStatus
+                    = StockIn.STOCK_STATUS_PENDING.equals(stockStatus)
+                    || StockIn.STOCK_STATUS_COMPLETED.equals(stockStatus)
+                    || StockIn.STOCK_STATUS_CANCELLED.equals(stockStatus);
+
+            boolean validPaymentStatus
+                    = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
+                    || StockIn.PAYMENT_STATUS_PARTIAL.equals(paymentStatus)
+                    || StockIn.PAYMENT_STATUS_PAID.equals(paymentStatus)
+                    || StockIn.PAYMENT_STATUS_CANCELLED.equals(paymentStatus);
+
+            if (!validStockStatus) {
+                forwardToForm(request, response, cart, supplierRaw, note, stockStatus, paymentStatus, keyword,
+                        "Trạng thái nhập hàng không hợp lệ!");
+                return;
+            }
+
+            if (!validPaymentStatus) {
+                forwardToForm(request, response, cart, supplierRaw, note, stockStatus, paymentStatus, keyword,
+                        "Trạng thái thanh toán không hợp lệ!");
                 return;
             }
 
@@ -256,12 +312,8 @@ public class CreateStockInController extends HttpServlet {
             stockIn.setSupplierId(supplierId);
             stockIn.setCreatedBy(user.getUserID());
             stockIn.setNote(note);
-
-            if ("paid".equals(paymentOption)) {
-                stockIn.setStatus("Complete");
-            } else {
-                stockIn.setStatus("Pending");
-            }
+            stockIn.setStockStatus(stockStatus);
+            stockIn.setPaymentStatus(paymentStatus);
 
             List<StockInDetail> details = new ArrayList<>();
             double total = 0;
@@ -301,7 +353,7 @@ public class CreateStockInController extends HttpServlet {
             }
 
             if (details.isEmpty()) {
-                forwardToForm(request, response, cart, supplierRaw, note, paymentOption, keyword,
+                forwardToForm(request, response, cart, supplierRaw, note, stockStatus, paymentStatus, keyword,
                         "Vui lòng nhập số lượng và giá nhập hợp lệ!");
                 return;
             }
@@ -312,14 +364,13 @@ public class CreateStockInController extends HttpServlet {
             boolean result = dao.insertStockInWithDetails(stockIn, details);
 
             if (result) {
-                // Nếu phiếu nhập đã thanh toán (Complete) thì cập nhật số lượng sản phẩm
-                if ("Complete".equals(stockIn.getStatus())) {
+                if (StockIn.STOCK_STATUS_COMPLETED.equals(stockIn.getStockStatus())) {
                     ProductDAO productDAO = new ProductDAO();
-
                     for (StockInDetail d : details) {
                         productDAO.increaseQuantity(d.getProductId(), d.getQuantity());
                     }
                 }
+
                 try {
                     SystemLogDAO logDAO = new SystemLogDAO();
                     SystemLog log = new SystemLog();
@@ -328,18 +379,14 @@ public class CreateStockInController extends HttpServlet {
 
                     log.setUserID(userID);
                     log.setAction("CREATE_STOCKIN");
-                    
-                    String userName = "Unknown";
-                    if (user != null) {
-                        userName = user.getUsername();
-                    }
-                    log.setTargetObject("User: " + userName);
+                    log.setTargetObject("StockIn");
 
                     String description = "Tạo phiếu nhập | SupplierID: "
                             + stockIn.getSupplierId()
                             + " | Total: " + stockIn.getTotalAmount()
                             + " | Items: " + details.size()
-                            + " | Status: " + stockIn.getStatus();
+                            + " | StockStatus: " + stockIn.getStockStatus()
+                            + " | PaymentStatus: " + stockIn.getPaymentStatus();
 
                     log.setDescription(description);
                     log.setIpAddress(request.getRemoteAddr());
@@ -353,9 +400,11 @@ public class CreateStockInController extends HttpServlet {
                 cart.clear();
                 session.removeAttribute("stockin_supplierId");
                 session.removeAttribute("stockin_note");
-                session.removeAttribute("stockin_paymentOption");
+                session.removeAttribute("stockin_stockStatus");
+                session.removeAttribute("stockin_paymentStatus");
 
                 response.sendRedirect(request.getContextPath() + "/stockinList");
+
             } else {
                 try {
                     SystemLogDAO logDAO = new SystemLogDAO();
@@ -365,18 +414,14 @@ public class CreateStockInController extends HttpServlet {
 
                     log.setUserID(userID);
                     log.setAction("CREATE_STOCKIN");
-                    
-                    String userName = "Unknown";
-                    if (user != null) {
-                        userName = user.getUsername();
-                    }
-                    log.setTargetObject("User: " + userName);
+                    log.setTargetObject("StockIn");
 
                     String description = "Tạo phiếu nhập thất bại | SupplierID: "
                             + stockIn.getSupplierId()
                             + " | Total: " + stockIn.getTotalAmount()
                             + " | Items: " + details.size()
-                            + " | Status: " + stockIn.getStatus();
+                            + " | StockStatus: " + stockIn.getStockStatus()
+                            + " | PaymentStatus: " + stockIn.getPaymentStatus();
 
                     log.setDescription(description);
                     log.setIpAddress(request.getRemoteAddr());
@@ -387,7 +432,7 @@ public class CreateStockInController extends HttpServlet {
                     ex.printStackTrace();
                 }
 
-                forwardToForm(request, response, cart, supplierRaw, note, paymentOption, keyword,
+                forwardToForm(request, response, cart, supplierRaw, note, stockStatus, paymentStatus, keyword,
                         "Tạo phiếu nhập thất bại!");
             }
 

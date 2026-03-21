@@ -7,15 +7,16 @@ package model;
 import java.util.Date;
 import java.util.List;
 
-/**
- *
- * @author dotha
- */
 public class StockIn {
 
-    public static final String STATUS_COMPLETE = "Complete";
-    public static final String STATUS_PENDING = "Pending";
-    public static final String STATUS_CANCELLED = "Cancelled";
+    public static final String STOCK_STATUS_PENDING = "Pending";
+    public static final String STOCK_STATUS_COMPLETED = "Completed";
+    public static final String STOCK_STATUS_CANCELLED = "Cancelled";
+
+    public static final String PAYMENT_STATUS_UNPAID = "Unpaid";
+    public static final String PAYMENT_STATUS_PARTIAL = "Partial";
+    public static final String PAYMENT_STATUS_PAID = "Paid";
+    public static final String PAYMENT_STATUS_CANCELLED = "Cancelled";
 
     private int stockInId;
     private int supplierId;
@@ -25,7 +26,10 @@ public class StockIn {
     private String staffName;
     private Date date;
     private String note;
-    private String status;
+
+    private String stockStatus;
+    private String paymentStatus;
+
     private List<StockInDetail> details;
 
     public int getStockInId() {
@@ -92,12 +96,20 @@ public class StockIn {
         this.note = note;
     }
 
-    public String getStatus() {
-        return status;
+    public String getStockStatus() {
+        return stockStatus;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setStockStatus(String stockStatus) {
+        this.stockStatus = stockStatus;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
     }
 
     public List<StockInDetail> getDetails() {
@@ -127,11 +139,11 @@ public class StockIn {
         if (details == null) {
             return 0;
         }
+
         double total = 0;
         for (StockInDetail d : details) {
             total += d.getQuantity() * d.getUnitCost();
         }
         return total;
     }
-
 }
