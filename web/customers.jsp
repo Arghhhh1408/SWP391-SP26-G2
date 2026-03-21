@@ -7,8 +7,9 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Danh sách sản phẩm - S.I.M</title>
+        <title>Khách hàng - S.I.M</title>
         <style>
+            /* CSS đồng bộ y hệt các trang trên */
             * {
                 box-sizing: border-box;
                 margin: 0;
@@ -102,21 +103,14 @@
                 border-bottom: 1px solid #f3f4f6;
                 font-size: 14px;
             }
-            .btn {
-                padding: 8px 15px;
-                border-radius: 6px;
-                border: none;
-                cursor: pointer;
-                text-decoration: none;
-                font-size: 13px;
-                font-weight: 600;
-            }
-            .btn-info {
-                background: #3b82f6;
-                color: #fff;
-            }
-            .money {
+            .debt-red {
+                color: #dc2626;
                 font-weight: bold;
+            }
+            .link {
+                color: #3b82f6;
+                text-decoration: none;
+                font-weight: 600;
             }
         </style>
     </head>
@@ -126,47 +120,30 @@
                 <div class="logo">S.I.M</div>
                 <div class="user-box">Xin chào: <b><%= acc != null ? acc.getUsername() : "" %></b></div>
                 <ul class="menu">
-                    <li><a href="dashboard">Trang chủ</a></li>
-                    <li><a class="active" href="products">Sản phẩm</a></li>
-                    <li><a href="pos">Bán hàng</a></li>
-                    <li><a href="orders">Lịch sử đơn hàng</a></li>
-                    <li><a href="customers">Khách hàng</a></li>
+                    <li><a href="${pageContext.request.contextPath}/sales_dashboard">Trang chủ</a></li>
+                    <li><a href="${pageContext.request.contextPath}/products">Sản phẩm</a></li>
+                    <li><a href="${pageContext.request.contextPath}/pos">Bán hàng</a></li>
+                    <li><a href="${pageContext.request.contextPath}/orders">Lịch sử đơn hàng</a></li>
+                    <li><a class="active" href="${pageContext.request.contextPath}/customers">Khách hàng</a></li>
                     <li><a href="account">Tài khoản</a></li>
-                    <li><a href="logout">Đăng xuất</a></li>
+                    <li><a href="${pageContext.request.contextPath}/logout">Đăng xuất</a></li>
                 </ul>
             </aside>
             <main class="main">
-                <div class="topbar"><h2>Quản lý sản phẩm</h2></div>
+                <div class="topbar"><h2>Quản lý Khách hàng</h2></div>
                 <div class="content">
                     <div class="card">
-                        <div style="display:flex; justify-content: space-between; margin-bottom: 20px;">
-                            <form action="products" method="get" style="display:flex; gap:10px; flex:1;">
-                                <input type="text" name="keyword" value="${param.keyword}" placeholder="Tìm theo tên hoặc SKU..." style="padding:10px; border:1px solid #ddd; border-radius:8px; flex:0.5;">
-                                <button class="btn btn-info" type="submit">Tìm kiếm</button>
-                            </form>
-                        </div>
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>SKU</th>
-                                    <th>Tên sản phẩm</th>
-                                    <th>Giá bán</th>
-                                    <th>Tồn kho</th>
-                                    <th>Đơn vị</th>
-                                    <th>Thao tác</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>ID</th><th>Tên khách</th><th>SĐT</th><th>Địa chỉ</th><th>Nợ hiện tại</th><th>Hành động</th></tr></thead>
                             <tbody>
-                                <c:forEach items="${products}" var="p">
+                                <c:forEach items="${customers}" var="c">
                                     <tr>
-                                        <td><b>${p.sku}</b></td>
-                                        <td>${p.name}</td>
-                                        <td class="money"><fmt:formatNumber value="${p.price}" type="number"/> đ</td>
-                                        <td>${p.quantity}</td>
-                                        <td>${p.unit}</td>
-                                        <td>
-                                            <a href="productDetail?id=${p.id}" class="btn btn-info">Xem chi tiết</a>
-                                        </td>
+                                        <td>${c.customerId}</td>
+                                        <td><b>${c.name}</b></td>
+                                        <td>${c.phone}</td>
+                                        <td>${c.address}</td>
+                                        <td class="debt-red"><fmt:formatNumber value="${c.debt}" type="number"/> đ</td>
+                                        <td><a class="link" href="${pageContext.request.contextPath}/customerDetail?id=${c.customerId}">Xem chi tiết</a></td>
                                     </tr>
                                 </c:forEach>
                             </tbody>

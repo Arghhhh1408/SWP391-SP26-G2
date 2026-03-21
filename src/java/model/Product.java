@@ -3,6 +3,7 @@ package model;
 import java.sql.Timestamp;
 
 public class Product {
+
     private int id;
     private String name;
     private String sku;
@@ -17,7 +18,16 @@ public class Product {
     private int categoryId;
     private Timestamp createDate;
     private Timestamp updateDate;
-    
+    private String categoryName;
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
     public Product() {
     }
 

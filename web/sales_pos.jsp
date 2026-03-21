@@ -244,8 +244,8 @@
                 <div class="logo">S.I.M</div>
                 <div class="user-box">Xin chào: <b><%= acc != null ? acc.getUsername() : "" %></b></div>
                 <ul class="menu">
-                    <li><a href="${pageContext.request.contextPath}/dashboard">Trang chủ</a></li>
-                    <li><a href="${pageContext.request.contextPath}/products">Sản phẩm</a></li>
+                    <li><a  href="${pageContext.request.contextPath}/sales_dashboard">Trang chủ</a></li>
+                    <li><a href="${pageContext.request.contextPath}/sales-products">Sản phẩm</a></li>
                     <li><a class="active" href="${pageContext.request.contextPath}/pos">Bán hàng</a></li>
                     <li><a href="${pageContext.request.contextPath}/orders">Lịch sử đơn hàng</a></li>
                     <li><a href="${pageContext.request.contextPath}/customers">Khách hàng</a></li>
@@ -268,7 +268,7 @@
                             <table>
                                 <thead><tr><th>Tên sản phẩm</th><th>Đơn giá</th><th>Tồn kho</th><th></th></tr></thead>
                                 <tbody>
-                                    <c:forEach items="${products}" var="p">
+                                    <c:forEach items="${sale_productList}" var="p">
                                         <tr>
                                             <td>${p.name}</td>
                                             <td class="money"><fmt:formatNumber value="${p.price}" type="number"/> đ</td>
@@ -309,21 +309,30 @@
                                                 <tr>
                                                     <td>
                                                         <div class="cart-item-name">${it.name}</div>
-                                                        <div class="qty-group">
-                                                            <form method="post" action="${pageContext.request.contextPath}/cart" style="display:inline;">
-                                                                <input type="hidden" name="action" value="dec">
-                                                                <input type="hidden" name="productId" value="${it.productId}">
-                                                                <input type="hidden" name="from" value="pos">
-                                                                <button type="submit" class="qty-btn">-</button>
-                                                            </form>
-                                                            <span class="qty-number">${it.qty}</span>
-                                                            <form method="post" action="${pageContext.request.contextPath}/cart" style="display:inline;">
-                                                                <input type="hidden" name="action" value="inc">
-                                                                <input type="hidden" name="productId" value="${it.productId}">
-                                                                <input type="hidden" name="from" value="pos">
-                                                                <button type="submit" class="qty-btn">+</button>
-                                                            </form>
-                                                        </div>
+                                                        <div class="qty-group" style="display: flex; align-items: center; gap: 2px;">
+    <form method="post" action="${pageContext.request.contextPath}/cart" style="margin:0;">
+        <input type="hidden" name="action" value="dec">
+        <input type="hidden" name="productId" value="${it.productId}">
+        <input type="hidden" name="from" value="pos">
+        <button type="submit" class="qty-btn" style="border-radius: 4px 0 0 4px;">-</button>
+    </form>
+
+    <form method="post" action="${pageContext.request.contextPath}/cart" style="margin:0;">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="productId" value="${it.productId}">
+        <input type="hidden" name="from" value="pos">
+        <input type="number" name="qty" value="${it.qty}" min="1"
+               style="width: 45px; height: 26px; text-align: center; border: 1px solid #d1d5db; border-left: 0; border-right: 0; outline: none;"
+               onchange="this.form.submit()">
+    </form>
+
+    <form method="post" action="${pageContext.request.contextPath}/cart" style="margin:0;">
+        <input type="hidden" name="action" value="inc">
+        <input type="hidden" name="productId" value="${it.productId}">
+        <input type="hidden" name="from" value="pos">
+        <button type="submit" class="qty-btn" style="border-radius: 0 4px 4px 0;">+</button>
+    </form>
+</div>
                                                     </td>
                                                     <td class="money" style="text-align: right;">
                                                         <fmt:formatNumber value="${it.lineTotal}" type="number"/>

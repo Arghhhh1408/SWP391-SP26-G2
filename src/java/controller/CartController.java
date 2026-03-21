@@ -104,9 +104,11 @@ public class CartController extends HttpServlet {
                     item.setPrice(p.getPrice());
                     item.setUnit(p.getUnit());
                     item.setQty(1);
+                    item.setLineTotal(item.getPrice()); // Cập nhật thành tiền
                     cart.put(productId, item);
                 } else {
                     item.setQty(newQty);
+                    item.setLineTotal(item.getQty() * item.getPrice()); // Cập nhật thành tiền
                 }
                 break;
             }
@@ -118,6 +120,7 @@ public class CartController extends HttpServlet {
                         cart.remove(productId);
                     } else {
                         item.setQty(newQty);
+                        item.setLineTotal(item.getQty() * item.getPrice()); // Cập nhật thành tiền
                     }
                 }
                 break;
@@ -128,7 +131,7 @@ public class CartController extends HttpServlet {
                 break;
             }
 
-            case "set": {
+            case "update": { // Đổi từ "set" thành "update" để khớp với JSP
                 int qty = 1;
                 try {
                     qty = Integer.parseInt(request.getParameter("qty"));
@@ -168,6 +171,7 @@ public class CartController extends HttpServlet {
                     cart.put(productId, item);
                 }
                 item.setQty(qty);
+                item.setLineTotal(item.getQty() * item.getPrice()); // Cập nhật thành tiền
                 break;
             }
         }

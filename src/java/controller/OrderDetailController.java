@@ -83,7 +83,7 @@ public class OrderDetailController extends HttpServlet {
         request.setAttribute("orderHeader", dao.getOrderHeader(stockOutId));
         request.setAttribute("orderItems", dao.getOrderItems(stockOutId));
 
-        request.getRequestDispatcher("/orderDetail.jsp").forward(request, response);
+        request.getRequestDispatcher("/sales_orderHistoryDetail.jsp").forward(request, response);
 
     }
 

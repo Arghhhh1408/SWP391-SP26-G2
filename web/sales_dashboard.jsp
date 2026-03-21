@@ -171,9 +171,9 @@
                 <div class="logo">S.I.M</div>
                 <div class="user-box">Xin chào: <b><%= acc != null ? acc.getUsername() : "" %></b></div>
                 <ul class="menu">
-                    <li><a class="active" href="${pageContext.request.contextPath}/dashboard">Trang chủ</a></li>
-                    <li><a href="${pageContext.request.contextPath}/products">Sản phẩm</a></li>
-                    <li><a href="${pageContext.request.contextPath}/pos">Bán hàng</a></li>
+                    <li><a class="active"  href="${pageContext.request.contextPath}/sales_dashboard">Trang chủ</a></li>
+                    <li><a href="${pageContext.request.contextPath}/sales-products">Sản phẩm</a></li>
+                    <li><a  href="${pageContext.request.contextPath}/pos">Bán hàng</a></li>
                     <li><a href="${pageContext.request.contextPath}/orders">Lịch sử đơn hàng</a></li>
                     <li><a href="${pageContext.request.contextPath}/customers">Khách hàng</a></li>
                     <li><a href="account">Tài khoản</a></li>

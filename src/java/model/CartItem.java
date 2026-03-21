@@ -7,10 +7,15 @@ public class CartItem {
     private double price;
     private int qty;
     private String unit;
-
+    private double lineTotal;
+    
     public double getLineTotal() {
         return price * qty;
     }
+
+    public void setLineTotal(double lineTotal) {
+    this.lineTotal = lineTotal;
+}
 
     // getters/setters
     public int getProductId() { return productId; }

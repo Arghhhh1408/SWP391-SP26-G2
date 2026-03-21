@@ -39,26 +39,21 @@ public class StockOutDAO{
     }
 
     public void insertDetails(int stockOutId, Collection<CartItem> items) throws Exception {
-    // CHỈ CÓ 4 CỘT: StockOutID, ProductID, Quantity, UnitPrice
-    String sql = """
-    INSERT INTO dbo.StockOutDetails(StockOutID, ProductID, Quantity, UnitPrice)
-    VALUES(?, ?, ?, ?)
+        String sql = """
+        INSERT INTO dbo.StockOutDetails(StockOutID, ProductID, Quantity, UnitPrice)
+        VALUES(?, ?, ?, ?)
     """;
 
-    try (PreparedStatement ps = connection.prepareStatement(sql)) {
-        for (CartItem it : items) {
-            ps.setInt(1, stockOutId);         // ? số 1
-            ps.setInt(2, it.getProductId());   // ? số 2
-            ps.setInt(3, it.getQty());         // ? số 3
-            ps.setDouble(4, it.getPrice());     // ? số 4
-            
-            // TUYỆT ĐỐI KHÔNG có dòng ps.set... thứ 5 ở đây
-            
-            ps.addBatch();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (CartItem it : items) {
+                ps.setInt(1, stockOutId);
+                ps.setInt(2, it.getProductId());
+                ps.setInt(3, it.getQty());
+                ps.setDouble(4, it.getPrice());
+                ps.addBatch();
+            }
+            ps.executeBatch();
         }
-        ps.executeBatch();
     }
-
-}
 
 }

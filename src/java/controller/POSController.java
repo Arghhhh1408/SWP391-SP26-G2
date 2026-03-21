@@ -61,7 +61,7 @@ public class POSController extends HttpServlet {
         ProductDAO dao = new ProductDAO();
         List<Product> products = dao.search(keyword);
 
-        request.setAttribute("products", products);
+        request.setAttribute("sale_productList", products);
         request.getRequestDispatcher("sales_pos.jsp").forward(request, response);
     } 
 
