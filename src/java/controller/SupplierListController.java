@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import model.Supplier;
+import model.User;
 
 /**
  *
@@ -61,7 +62,22 @@ public class SupplierListController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        HttpSession session = request.getSession();
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("acc") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        User user = (User) session.getAttribute("acc");
+        if (user == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        if (user.getRoleID() != 1 && user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
 
         SupplierDAO supplierdao = new SupplierDAO();
         List<Supplier> supplierList = supplierdao.getAllSupllier();
