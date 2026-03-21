@@ -21,8 +21,8 @@ public class StockInDAO extends DBContext {
     public boolean insertStockInWithDetails(StockIn stockIn, List<StockInDetail> details) {
 
         String insertStockInSQL
-                = "INSERT INTO StockIn (SupplierID, TotalAmount, CreatedBy, Note, Status) "
-                + "VALUES (?, ?, ?, ?, ?)";
+                = "INSERT INTO StockIn (SupplierID, TotalAmount, CreatedBy, Note, StockStatus, PaymentStatus) "
+                + "VALUES (?, ?, ?, ?, ?, ?)";
 
         String insertDetailSQL
                 = "INSERT INTO StockInDetails (StockInID, ProductID, Quantity, UnitCost) "
@@ -40,7 +40,8 @@ public class StockInDAO extends DBContext {
             psStock.setDouble(2, stockIn.getTotalAmount());
             psStock.setInt(3, stockIn.getCreatedBy());
             psStock.setString(4, stockIn.getNote());
-            psStock.setString(5, stockIn.getStatus());
+            psStock.setString(5, stockIn.getStockStatus());
+            psStock.setString(6, stockIn.getPaymentStatus());
 
             psStock.executeUpdate();
 
@@ -91,7 +92,9 @@ public class StockInDAO extends DBContext {
                 + "s.StockInID, "
                 + "s.Date, "
                 + "s.Note, "
-                + "s.Status, "
+                + "s.StockStatus, "
+                + "s.PaymentStatus, "
+                + "s.TotalAmount, "
                 + "sup.Name AS SupplierName, "
                 + "u.FullName, "
                 + "d.ProductID, "
@@ -120,7 +123,9 @@ public class StockInDAO extends DBContext {
                     stock.setStockInId(id);
                     stock.setDate(rs.getTimestamp("Date"));
                     stock.setNote(rs.getString("Note"));
-                    stock.setStatus(rs.getString("Status"));
+                    stock.setStockStatus(rs.getString("StockStatus"));
+                    stock.setPaymentStatus(rs.getString("PaymentStatus"));
+                    stock.setTotalAmount(rs.getDouble("TotalAmount"));
                     stock.setSupplierName(rs.getString("SupplierName"));
                     stock.setStaffName(rs.getString("FullName"));
                     stock.setDetails(new ArrayList<>());
@@ -185,7 +190,8 @@ public class StockInDAO extends DBContext {
                 + "s.StockInID, "
                 + "s.Date, "
                 + "s.Note, "
-                + "s.Status, "
+                + "s.StockStatus, "
+                + "s.PaymentStatus, "
                 + "s.TotalAmount, "
                 + "sup.Name AS SupplierName, "
                 + "u.FullName, "
@@ -213,7 +219,8 @@ public class StockInDAO extends DBContext {
                     stock.setStockInId(rs.getInt("StockInID"));
                     stock.setDate(rs.getTimestamp("Date"));
                     stock.setNote(rs.getString("Note"));
-                    stock.setStatus(rs.getString("Status"));
+                    stock.setStockStatus(rs.getString("StockStatus"));
+                    stock.setPaymentStatus(rs.getString("PaymentStatus"));
                     stock.setTotalAmount(rs.getDouble("TotalAmount"));
                     stock.setSupplierName(rs.getString("SupplierName"));
                     stock.setStaffName(rs.getString("FullName"));
@@ -239,13 +246,14 @@ public class StockInDAO extends DBContext {
     }
 
     public boolean updateStockIn(StockIn s) {
-        String sql = "UPDATE StockIn SET status = ?, note = ? WHERE stockInId = ?";
+        String sql = "UPDATE StockIn SET StockStatus = ?, PaymentStatus = ?, Note = ? WHERE StockInID = ?";
 
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
-            ps.setString(1, s.getStatus());
-            ps.setString(2, s.getNote());
-            ps.setInt(3, s.getStockInId());
+            ps.setString(1, s.getStockStatus());
+            ps.setString(2, s.getPaymentStatus());
+            ps.setString(3, s.getNote());
+            ps.setInt(4, s.getStockInId());
 
             return ps.executeUpdate() > 0;
         } catch (Exception e) {

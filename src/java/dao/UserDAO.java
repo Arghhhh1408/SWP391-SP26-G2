@@ -26,9 +26,13 @@ public class UserDAO extends DBContext {
 
             ResultSet rs = stm.executeQuery();
             if (rs.next()) {
+                String dbUsername = rs.getString("Username");
+                if (!dbUsername.equals(username)) {
+                    return null;
+                }
                 User u = new User();
                 u.setUserID(rs.getInt("UserID"));
-                u.setUsername(rs.getString("Username"));
+                u.setUsername(dbUsername);
                 u.setFullName(rs.getString("FullName"));
                 u.setRoleID(rs.getInt("RoleID")); // Chú ý: Admin có thể là 0 hoặc 1 tùy DB của bạn
                 u.setEmail(rs.getString("Email"));

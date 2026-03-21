@@ -10,6 +10,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.sql.Date;
 import java.util.List;
 import model.InventoryCheckItem;
+import model.User;
 
 /**
  *
@@ -66,6 +68,23 @@ public class InventoryCheckController extends HttpServlet {
 
         request.setCharacterEncoding("UTF-8");
 
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("acc") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        User user = (User) session.getAttribute("acc");
+        if (user == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        if (user.getRoleID() != 1 && user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
         String mode = request.getParameter("mode");
         InventoryCheckDAO dao = new InventoryCheckDAO();
 
@@ -105,6 +124,22 @@ public class InventoryCheckController extends HttpServlet {
             throws ServletException, IOException {
 
         request.setCharacterEncoding("UTF-8");
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("acc") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        User user = (User) session.getAttribute("acc");
+        if (user == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        if (user.getRoleID() != 1 && user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
 
         String action = request.getParameter("action");
         String keyword = request.getParameter("keyword");
@@ -156,7 +191,14 @@ public class InventoryCheckController extends HttpServlet {
                 }
             }
         }
-
+        
+        if (("calculate".equals(action) || "save".equals(action))
+                && user.getRoleID() != 1 && user.getRoleID() != 2) {
+            request.setAttribute("message", "Bạn không có quyền thực hiện chức năng này.");
+            request.getRequestDispatcher("supplierList").forward(request, response);
+            return;
+        }
+        
         if ("calculate".equals(action)) {
             InventoryCheckDAO dao = new InventoryCheckDAO();
             List<InventoryCheckItem> checkedItems = dao.getLatestInventoryCountsByProduct();
@@ -215,7 +257,7 @@ public class InventoryCheckController extends HttpServlet {
             response.sendRedirect("inventoryCheck?keyword=" + encodedKeyword);
         }
     }
-    
+
     private void handleView(HttpServletRequest request, HttpServletResponse response, InventoryCheckDAO dao)
             throws ServletException, IOException {
 

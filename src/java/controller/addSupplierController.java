@@ -51,14 +51,14 @@ public class addSupplierController extends HttpServlet {
             response.sendRedirect("login.jsp");
             return;
         }
-        if ("delete".equals(action) && u.getRoleID() != 1) {
+        if ("delete".equals(action) && u.getRoleID() != 2) {
             request.setAttribute("message", "Bạn không có quyền xóa nhà cung cấp.");
             request.getRequestDispatcher("supplierList").forward(request, response);
             return;
         }
 
         if (("add".equals(action) || "edit".equals(action))
-                && u.getRoleID() != 1 && u.getRoleID() != 2) {
+                && u.getRoleID() != 2) {
             request.setAttribute("message", "Bạn không có quyền thực hiện chức năng này.");
             request.getRequestDispatcher("supplierList").forward(request, response);
             return;
@@ -124,13 +124,23 @@ public class addSupplierController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
-        HttpSession session = request.getSession();
-        User u = (User) session.getAttribute("acc");
-        if (u == null || u.getRoleID() != 2) {  // Sửa điều kiện check manager
-            request.setAttribute("message", "Chỉ Warehouse Staff hoặc Quản lý mới được tạo phiếu nhập.");
-            request.getRequestDispatcher("stockinList").forward(request, response);
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("acc") == null) {
+            response.sendRedirect("login.jsp");
             return;
         }
+
+        User user = (User) session.getAttribute("acc");
+        if (user == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        if (user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
         String action = request.getParameter("action");
         if (action == null) {
             action = "";
@@ -140,6 +150,10 @@ public class addSupplierController extends HttpServlet {
         try {
             switch (action) {
                 case "addSupplier": {
+                    if (user.getRoleID() != 2) {
+                        response.sendRedirect("login.jsp");
+                        break;
+                    }
                     String name = request.getParameter("supplierName");
                     String phone = request.getParameter("phone");
                     String address = request.getParameter("address");
@@ -165,7 +179,7 @@ public class addSupplierController extends HttpServlet {
                     status = "success";
                     SystemLogDAO logDao = new SystemLogDAO();
                     SystemLog log = new SystemLog();
-                    int userID = (u != null) ? u.getUserID() : 2;
+                    int userID = (user != null) ? user.getUserID() : 2;
                     log.setUserID(userID);
                     log.setAction("CREATE_SUPPLIER");
                     log.setTargetObject("New Supplier: " + name);
@@ -175,6 +189,10 @@ public class addSupplierController extends HttpServlet {
                     break;
                 }
                 case "updateSupplier": {
+                    if (user.getRoleID() != 2) {
+                        response.sendRedirect("login.jsp");
+                        break;
+                    }
                     int id = Integer.parseInt(request.getParameter("supplierID"));
                     String newName = request.getParameter("supplierName");
                     String newPhone = request.getParameter("phone");
@@ -228,7 +246,7 @@ public class addSupplierController extends HttpServlet {
                         status = "success";
                         SystemLogDAO logDAO = new SystemLogDAO();
                         SystemLog log = new SystemLog();
-                        int userID = (u != null) ? u.getUserID() : 2;
+                        int userID = (user != null) ? user.getUserID() : 2;
                         log.setUserID(userID);
                         log.setAction("UPDATE_SUPPLIER");
                         log.setTargetObject("Supplier ID: " + id);
