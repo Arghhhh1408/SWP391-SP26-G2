@@ -235,6 +235,15 @@
                         <jsp:include page="order_fragment.jsp" />
                     </c:when>
 
+                    <%-- 6. QUẢN LÝ KHÁCH HÀNG --%>
+                    <c:when test="${tab == 'customers'}">
+                        <jsp:include page="customer_list_fragment.jsp" />
+                    </c:when>
+
+                    <%-- 7. XEM TẤT CẢ SẢN PHẨM --%>
+                    <c:when test="${tab == 'products'}">
+                        <jsp:include page="products_list_fragment.jsp" />
+                    </c:when>
                     <%-- MẶC ĐỊNH LÀ DASHBOARD --%>
                     <c:otherwise>
                         <jsp:include page="sales_dashboardFragment.jsp" />

@@ -68,7 +68,7 @@ public class SalesController extends HttpServlet {
                 request.setAttribute("rq", rq);
                 request.setAttribute("returnClaims", rDao.listByCreator(getActor(request), rq));
             }
-            if ("orders".equals(tab)) {
+            else if ("orders".equals(tab)) {
                 String keyword = request.getParameter("orderSearch"); // Lấy từ ô input trong JSP
                 OrderHistoryDAO dao = new OrderHistoryDAO();
                 List<OrderHistory> list;
@@ -84,6 +84,16 @@ public class SalesController extends HttpServlet {
                 request.setAttribute("orders", list);
                 request.setAttribute("orderSearch", keyword); // Gửi lại keyword để hiện trên ô nhập
             }
+            else if ("customers".equals(tab)) {
+                String q = request.getParameter("orderSearch"); // Tận dụng ô search chung
+                dao.CustomerDAO customerDAO = new dao.CustomerDAO();
+
+                // Gọi hàm getAllCustomers(keyword) từ file DAO bạn vừa gửi
+                List<model.Customer> customerList = customerDAO.getAllCustomers(q);
+
+                request.setAttribute("customerList", customerList);
+            }
+            
 
         } catch (Exception e) {
             e.printStackTrace(); // Quan trọng: xem lỗi cụ thể ở Console nếu bị trắng trang
