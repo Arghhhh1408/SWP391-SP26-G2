@@ -25,7 +25,8 @@ public class SalesController extends HttpServlet {
         if (!ensureSales(request, response)) {
             return;
         }
-
+        ProductDAO pDao = new ProductDAO();
+        
         String tab = safeTrim(request.getParameter("tab"));
         if (tab == null || tab.isEmpty()) {
             tab = "dashboard";
@@ -51,7 +52,13 @@ public class SalesController extends HttpServlet {
             request.setAttribute("returnCreated", returnCreated);
         } else if ("products".equals(tab)) {
             try {
-                ProductDAO pDao = new ProductDAO();
+                List<Product> products = pDao.getAllProducts();
+                request.setAttribute("salesProducts", products);
+            } catch (Exception e) {
+                request.setAttribute("error", "Không thể tải danh sách sản phẩm.");
+            }
+        } else if ("pos".equals(tab)) {
+            try {
                 List<Product> products = pDao.getAllProducts();
                 request.setAttribute("salesProducts", products);
             } catch (Exception e) {
@@ -181,20 +188,21 @@ public class SalesController extends HttpServlet {
     }
 
     private String getActor(HttpServletRequest request) {
-    HttpSession session = request.getSession();
-    Object acc = session.getAttribute("acc");
+        HttpSession session = request.getSession();
+        Object acc = session.getAttribute("acc");
 
-    if (acc instanceof User) {
-        User u = (User) acc;
+        if (acc instanceof User) {
+            User u = (User) acc;
 
-        if (u.getUsername() != null && !u.getUsername().isBlank()) {
-            return u.getUsername();
+            if (u.getUsername() != null && !u.getUsername().isBlank()) {
+                return u.getUsername();
+            }
+            return "user#" + u.getUserID();
         }
-        return "user#" + u.getUserID();
+
+        return "unknown";
     }
 
-    return "unknown";
-}
     private String safeTrim(String s) {
         return s == null ? null : s.trim();
     }
