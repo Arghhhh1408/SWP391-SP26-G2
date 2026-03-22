@@ -6,33 +6,51 @@ import utils.DBContext;
 
 public class DashboardDAO extends DBContext {
 
+    // 1. Doanh thu ngày hôm nay
     public double getRevenueToday() {
-        String sql = """
-            SELECT ISNULL(SUM(TotalAmount), 0)
-            FROM dbo.StockOut
-            WHERE CAST([Date] AS DATE) = CAST(GETDATE() AS DATE)
-        """;
-        return getSingleRevenue(sql);
+        double total = 0;
+        // CAST(Date AS DATE) để bỏ qua phần giờ phút giây, so sánh chính xác ngày
+        String sql = "SELECT SUM(TotalAmount) FROM dbo.StockOut "
+                   + "WHERE CAST(Date AS DATE) = CAST(GETDATE() AS DATE) "
+                   + "AND Status = 'Completed'";
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) total = rs.getDouble(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return total;
     }
 
-    public double getRevenueThisWeek() {
-        String sql = """
-            SELECT ISNULL(SUM(TotalAmount), 0)
-            FROM dbo.StockOut
-            WHERE DATEPART(YEAR, [Date]) = DATEPART(YEAR, GETDATE())
-              AND DATEPART(WEEK, [Date]) = DATEPART(WEEK, GETDATE())
-        """;
-        return getSingleRevenue(sql);
+    // 2. Doanh thu tuần này (7 ngày gần nhất)
+    public double getRevenueWeek() {
+        double total = 0;
+        String sql = "SELECT SUM(TotalAmount) FROM dbo.StockOut "
+                   + "WHERE Date >= DATEADD(day, -7, GETDATE()) "
+                   + "AND Status = 'Completed'";
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) total = rs.getDouble(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return total;
     }
 
-    public double getRevenueThisMonth() {
-        String sql = """
-            SELECT ISNULL(SUM(TotalAmount), 0)
-            FROM dbo.StockOut
-            WHERE YEAR([Date]) = YEAR(GETDATE())
-              AND MONTH([Date]) = MONTH(GETDATE())
-        """;
-        return getSingleRevenue(sql);
+    // 3. Doanh thu tháng này
+    public double getRevenueMonth() {
+        double total = 0;
+        String sql = "SELECT SUM(TotalAmount) FROM dbo.StockOut "
+                   + "WHERE MONTH(Date) = MONTH(GETDATE()) "
+                   + "AND YEAR(Date) = YEAR(GETDATE()) "
+                   + "AND Status = 'Completed'";
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) total = rs.getDouble(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return total;
     }
 
     private double getSingleRevenue(String sql) {

@@ -13,57 +13,67 @@ import java.util.Map;
 import model.CartItem;
 import model.Product;
 
-@WebServlet(name="CartController", urlPatterns={"/cart"})
+@WebServlet(name = "CartController", urlPatterns = {"/cart"})
 public class CartController extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         HttpSession session = request.getSession();
         Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
-        if (cart == null) cart = new HashMap<>();
+        if (cart == null) {
+            cart = new HashMap<>();
+        }
 
-        // 1. Lấy thông tin từ Ajax gửi lên
         String pIdStr = request.getParameter("productId");
-        String action = request.getParameter("action"); // 'add' hoặc 'sub'
+        String action = request.getParameter("action");
 
         if (pIdStr != null) {
             int productId = Integer.parseInt(pIdStr);
-            CartItem item = cart.get(productId);
+            ProductDAO pdao = new ProductDAO();
+            Product p = pdao.getById(productId); // Lấy thông tin sản phẩm từ DB
 
-            if ("add".equals(action)) {
-                if (item == null) {
-                    // Thêm mới vào giỏ
-                    ProductDAO pdao = new ProductDAO();
-                    Product p = pdao.getById(productId);
-                    if (p != null) {
-                        item = new CartItem();
-                        item.setProductId(productId);
-                        item.setName(p.getName()); // Đảm bảo đúng tên thuộc tính trong CartItem
-                        item.setPrice(p.getPrice());
-                        item.setQty(1);
-                        cart.put(productId, item);
-                    }
-                } else {
-                    // Tăng số lượng
-                    item.setQty(item.getQty() + 1);
-                }
-            } 
-            else if ("sub".equals(action)) {
-                if (item != null) {
-                    if (item.getQty() > 1) {
-                        item.setQty(item.getQty() - 1);
+            if (p != null) {
+                CartItem item = cart.get(productId);
+
+                if ("add".equals(action)) {
+                    if (item == null) {
+                        // Nếu chưa có trong giỏ -> Thêm mới với số lượng là 1
+                        // Nhưng vẫn phải check kho xem còn hàng không
+                        if (p.getQuantity() > 0) {
+                            item = new CartItem();
+                            item.setProductId(productId);
+                            item.setName(p.getName());
+                            item.setPrice(p.getPrice());
+                            item.setQty(1);
+                            cart.put(productId, item);
+                        } else {
+                            request.setAttribute("error", "Sản phẩm đã hết hàng!");
+                        }
                     } else {
-                        cart.remove(productId);
+                        // Đã có trong giỏ -> Check xem tăng được nữa không
+                        if (item.getQty() + 1 <= p.getQuantity()) {
+                            item.setQty(item.getQty() + 1);
+                        } else {
+                            request.setAttribute("error", "Chỉ còn " + p.getQuantity() + " sản phẩm trong kho!");
+                        }
                     }
+                } else if ("sub".equals(action)) {
+                    if (item != null) {
+                        if (item.getQty() > 1) {
+                            item.setQty(item.getQty() - 1);
+                        } else {
+                            cart.remove(productId);
+                        }
+                    }
+                } else if ("remove".equals(action)) {
+                    cart.remove(productId);
                 }
             }
         }
 
         session.setAttribute("cart", cart);
-
-        // 2. PHẦN QUAN TRỌNG: Trả về file JSP con để Ajax đắp vào giao diện
         request.getRequestDispatcher("_cart_content.jsp").forward(request, response);
     }
 
