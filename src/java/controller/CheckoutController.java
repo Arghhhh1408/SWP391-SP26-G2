@@ -2,7 +2,6 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
  */
-
 package controller;
 
 import java.sql.Connection;
@@ -22,41 +21,43 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 
-
 /**
  *
  * @author DELL
  */
-@WebServlet(name="CheckoutController", urlPatterns={"/checkout"})
+@WebServlet(name = "CheckoutController", urlPatterns = {"/checkout"})
 public class CheckoutController extends HttpServlet {
-   
-    /** 
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
+
+    /**
+     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
+     * methods.
+     *
      * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-    throws ServletException, IOException {
+            throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
             /* TODO output your page here. You may use following sample code. */
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Servlet CheckoutController</title>");  
+            out.println("<title>Servlet CheckoutController</title>");
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Servlet CheckoutController at " + request.getContextPath () + "</h1>");
+            out.println("<h1>Servlet CheckoutController at " + request.getContextPath() + "</h1>");
             out.println("</body>");
             out.println("</html>");
         }
-    } 
+    }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /** 
+    /**
      * Handles the HTTP <code>GET</code> method.
+     *
      * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
@@ -64,15 +65,15 @@ public class CheckoutController extends HttpServlet {
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
-    throws ServletException, IOException {
-        
-        request.getRequestDispatcher("/checkout.jsp").forward(request, response);
-        
-    
-    } 
+            throws ServletException, IOException {
 
-    /** 
+        request.getRequestDispatcher("/checkout.jsp").forward(request, response);
+
+    }
+
+    /**
      * Handles the HTTP <code>POST</code> method.
+     *
      * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
@@ -80,134 +81,147 @@ public class CheckoutController extends HttpServlet {
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-    throws ServletException, IOException {
+            throws ServletException, IOException {
         HttpSession session = request.getSession();
         Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
+
+        // 0) Kiểm tra giỏ hàng
         if (cart == null || cart.isEmpty()) {
-            response.sendRedirect("pos");
+            response.sendRedirect("sales_dashboard?tab=pos");
             return;
         }
 
-        // createdBy: lấy từ session login (bạn đang set "acc" trong LoginController)
-        User acc = (User) session.getAttribute("acc");
-        int createdBy = (acc != null) ? acc.getUserID() : 1; // fallback tạm
+        // 1) Lấy thông tin người bán (CreatedBy)
+        model.User acc = (model.User) session.getAttribute("acc");
+        int createdBy = (acc != null) ? acc.getUserID() : 1;
 
-        // customerId có thể null
-        Integer customerId = null;
-        String customerRaw = request.getParameter("customerId");
-        if (customerRaw != null && !customerRaw.trim().isEmpty()) {
-            customerId = Integer.parseInt(customerRaw.trim());
+        // 2) Lấy dữ liệu từ Form POS (SĐT, Tên, Ghi chú, Tiền trả)
+        String phone = request.getParameter("phone");
+        String name = request.getParameter("customerName");
+        String note = request.getParameter("note");
+        if (note == null) {
+            note = "";
         }
 
-        String note = request.getParameter("note");
-        if (note == null) note = "";
+        String paidRaw = request.getParameter("amountPaid");
+        double amountPaid = (paidRaw != null && !paidRaw.isEmpty()) ? Double.parseDouble(paidRaw) : 0;
 
         double totalAmount = 0;
-        for (CartItem it : cart.values()) totalAmount += it.getLineTotal();
+        for (CartItem it : cart.values()) {
+            totalAmount += it.getLineTotal();
+        }
 
-        DBContext db = new DBContext();
+        // 3) Xử lý ID khách hàng (Dùng hàm tự động bạn đã viết trong CustomerDAO)
+        dao.CustomerDAO customerDAO = new dao.CustomerDAO();
+        int finalCustomerId;
+        try {
+            // Hàm này tự check: có SĐT thì lấy ID, chưa có thì tạo mới rồi lấy ID
+            finalCustomerId = customerDAO.getOrCreateCustomerId(name, phone);
+        } catch (Exception e) {
+            e.printStackTrace();
+            finalCustomerId = 1; // Fallback về Khách lẻ nếu lỗi
+        }
+
+        utils.DBContext db = new utils.DBContext();
         Connection con = db.connection;
 
         try {
-            con.setAutoCommit(false);
+            con.setAutoCommit(false); // Bắt đầu Transaction
 
-            // 1) CHECK tồn kho đủ trước (tránh trừ âm)
+            // BƯỚC 1: Kiểm tra tồn kho (An toàn dữ liệu)
             String checkSql = "SELECT StockQuantity FROM dbo.Products WHERE ProductID = ?";
             try (PreparedStatement checkStm = con.prepareStatement(checkSql)) {
                 for (CartItem it : cart.values()) {
                     checkStm.setInt(1, it.getProductId());
                     try (ResultSet rs = checkStm.executeQuery()) {
-                        if (!rs.next()) {
-                            throw new RuntimeException("Product not found: " + it.getProductId());
-                        }
-                        int stock = rs.getInt("StockQuantity");
-                        if (stock < it.getQty()) {
-                            throw new RuntimeException("Not enough stock for productId=" + it.getProductId()
-                                    + " stock=" + stock + " need=" + it.getQty());
+                        if (rs.next()) {
+                            int stock = rs.getInt("StockQuantity");
+                            if (stock < it.getQty()) {
+                                throw new RuntimeException("Sản phẩm ID " + it.getProductId() + " không đủ kho!");
+                            }
                         }
                     }
                 }
             }
 
-            // 2) INSERT StockOut (lấy StockOutID)
-            String insertOutSql = """
-                INSERT INTO dbo.StockOut (CustomerID, Date, TotalAmount, CreatedBy, Note, Status)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """;
-
+            // BƯỚC 2: INSERT hóa đơn tổng (StockOut)
+            String insertOutSql = "INSERT INTO dbo.StockOut (CustomerID, Date, TotalAmount, CreatedBy, Note, Status) VALUES (?, GETDATE(), ?, ?, ?, 'Completed')";
             int stockOutId;
             try (PreparedStatement stm = con.prepareStatement(insertOutSql, PreparedStatement.RETURN_GENERATED_KEYS)) {
-                if (customerId == null) stm.setNull(1, java.sql.Types.INTEGER);
-                else stm.setInt(1, customerId);
-
-                stm.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
-                stm.setDouble(3, totalAmount);
-                stm.setInt(4, createdBy);
-                stm.setString(5, note);
-                stm.setString(6, "Completed"); // hoặc "Paid" tuỳ bạn
-
+                stm.setInt(1, finalCustomerId);
+                stm.setDouble(2, totalAmount);
+                stm.setInt(3, createdBy);
+                stm.setString(4, note);
                 stm.executeUpdate();
 
                 try (ResultSet keys = stm.getGeneratedKeys()) {
-                    if (!keys.next()) throw new RuntimeException("Cannot get StockOutID");
+                    if (!keys.next()) {
+                        throw new RuntimeException("Không lấy được mã hóa đơn!");
+                    }
                     stockOutId = keys.getInt(1);
                 }
             }
 
-            // 3) INSERT StockOutDetails
-            String insertDetailSql = """
-                INSERT INTO dbo.StockOutDetails (StockOutID, ProductID, Quantity, UnitPrice)
-                VALUES (?, ?, ?, ?)
-            """;
-
-            try (PreparedStatement stm = con.prepareStatement(insertDetailSql)) {
+            // BƯỚC 3: INSERT chi tiết hóa đơn (StockOutDetails)
+            String insertDetailSql = "INSERT INTO dbo.StockOutDetails (StockOutID, ProductID, Quantity, UnitPrice) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement detStm = con.prepareStatement(insertDetailSql)) {
                 for (CartItem it : cart.values()) {
-                    stm.setInt(1, stockOutId);
-                    stm.setInt(2, it.getProductId());
-                    stm.setInt(3, it.getQty());
-                    stm.setDouble(4, it.getPrice());
-                    stm.addBatch();
+                    detStm.setInt(1, stockOutId);
+                    detStm.setInt(2, it.getProductId());
+                    detStm.setInt(3, it.getQty());
+                    detStm.setDouble(4, it.getPrice());
+                    detStm.addBatch();
                 }
-                stm.executeBatch();
+                detStm.executeBatch();
             }
 
-            // 4) TRỪ kho trong Products.StockQuantity
+            // BƯỚC 4: Trừ tồn kho trong bảng Products
             String updateStockSql = "UPDATE dbo.Products SET StockQuantity = StockQuantity - ? WHERE ProductID = ?";
-            try (PreparedStatement stm = con.prepareStatement(updateStockSql)) {
+            try (PreparedStatement stockStm = con.prepareStatement(updateStockSql)) {
                 for (CartItem it : cart.values()) {
-                    stm.setInt(1, it.getQty());
-                    stm.setInt(2, it.getProductId());
-                    stm.addBatch();
+                    stockStm.setInt(1, it.getQty());
+                    stockStm.setInt(2, it.getProductId());
+                    stockStm.addBatch();
                 }
-                stm.executeBatch();
+                stockStm.executeBatch();
             }
 
-            con.commit();
+            // BƯỚC 5: Cập nhật công nợ nếu khách trả thiếu (Chỉ áp dụng khách có ID khác khách lẻ)
+            if (totalAmount > amountPaid && finalCustomerId != 1) {
+                double debtIncrement = totalAmount - amountPaid;
+                customerDAO.updateCustomerDebt(finalCustomerId, debtIncrement);
+            }
 
-            // 5) Clear cart
+            con.commit(); // Hoàn tất Transaction
             session.removeAttribute("cart");
-
-            // Redirect về pos hoặc sang trang hóa đơn / chi tiết đơn
-            // Đổi từ "pos?success=1" thành:
             response.sendRedirect("sales_dashboard?tab=pos&success=1");
 
         } catch (Exception e) {
-            try { con.rollback(); } catch (Exception ignore) {}
-            throw new ServletException("Checkout failed: " + e.getMessage(), e);
+            
+            response.sendRedirect("sales_dashboard?tab=pos&error=" + e.getMessage());
         } finally {
-            try { con.setAutoCommit(true); } catch (Exception ignore) {}
-            // DBContext của bạn có closeConnection() thì gọi
-            try { db.closeConnection(); } catch (Exception ignore) {}
+            try {
+                con.setAutoCommit(true);
+                db.closeConnection();
+            } catch (Exception ignore) {
+            }
         }
     }
 
-    /** 
+    /**
      * Returns a short description of the servlet.
+     *
      * @return a String containing servlet description
      */
     @Override
     public String getServletInfo() {
         return "Short description";
     }// </editor-fold>
+
+    private static class SQLException {
+
+        public SQLException() {
+        }
+    }
 
 }
