@@ -18,13 +18,13 @@ public class ReturnDAO extends DBContext {
         List<ReturnRequest> list = new ArrayList<>();
         try {
             PreparedStatement stm = connection.prepareStatement("""
-                SELECT ReturnID, ReturnCode, SKU, ProductName, CustomerName, CustomerPhone,
-                       Reason, ConditionNote, Status,
-                       RefundAmount, RefundMethod, RefundReference, RefundedAt,
-                       CreatedAt, UpdatedAt
-                FROM dbo.ReturnRequests
-                ORDER BY UpdatedAt DESC, ReturnID DESC
-            """);
+                        SELECT ReturnID, ReturnCode, SKU, ProductName, CustomerName, CustomerPhone,
+                               Reason, ConditionNote, Status,
+                               RefundAmount, RefundMethod, RefundReference, RefundedAt,
+                               CreatedAt, UpdatedAt
+                        FROM dbo.ReturnRequests
+                        ORDER BY UpdatedAt DESC, ReturnID DESC
+                    """);
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {
                 list.add(mapReturn(rs));
@@ -45,19 +45,19 @@ public class ReturnDAO extends DBContext {
         boolean hasKeyword = normalizedKeyword != null && !normalizedKeyword.isEmpty();
 
         StringBuilder sql = new StringBuilder("""
-            SELECT r.ReturnID, r.ReturnCode, r.SKU, r.ProductName, r.CustomerName, r.CustomerPhone,
-                   r.Reason, r.ConditionNote, r.Status,
-                   r.RefundAmount, r.RefundMethod, r.RefundReference, r.RefundedAt,
-                   r.CreatedAt, r.UpdatedAt
-            FROM dbo.ReturnRequests r
-            INNER JOIN dbo.ReturnEvents e ON r.ReturnID = e.ReturnID
-            WHERE e.Action = 'CREATE' AND e.Actor = ?
-        """);
+                    SELECT r.ReturnID, r.ReturnCode, r.SKU, r.ProductName, r.CustomerName, r.CustomerPhone,
+                           r.Reason, r.ConditionNote, r.Status,
+                           r.RefundAmount, r.RefundMethod, r.RefundReference, r.RefundedAt,
+                           r.CreatedAt, r.UpdatedAt
+                    FROM dbo.ReturnRequests r
+                    INNER JOIN dbo.ReturnEvents e ON r.ReturnID = e.ReturnID
+                    WHERE e.Action = 'CREATE' AND e.Actor = ?
+                """);
 
         if (hasKeyword) {
             sql.append("""
-                 AND (r.ReturnCode LIKE ? OR r.SKU LIKE ? OR r.CustomerName LIKE ? OR r.CustomerPhone LIKE ?)
-            """);
+                         AND (r.ReturnCode LIKE ? OR r.SKU LIKE ? OR r.CustomerName LIKE ? OR r.CustomerPhone LIKE ?)
+                    """);
         }
         sql.append(" ORDER BY r.UpdatedAt DESC, r.ReturnID DESC");
 
@@ -86,13 +86,13 @@ public class ReturnDAO extends DBContext {
         ReturnRequest r = null;
         try {
             PreparedStatement stm = connection.prepareStatement("""
-                SELECT ReturnID, ReturnCode, SKU, ProductName, CustomerName, CustomerPhone,
-                       Reason, ConditionNote, Status,
-                       RefundAmount, RefundMethod, RefundReference, RefundedAt,
-                       CreatedAt, UpdatedAt
-                FROM dbo.ReturnRequests
-                WHERE ReturnID = ?
-            """);
+                        SELECT ReturnID, ReturnCode, SKU, ProductName, CustomerName, CustomerPhone,
+                               Reason, ConditionNote, Status,
+                               RefundAmount, RefundMethod, RefundReference, RefundedAt,
+                               CreatedAt, UpdatedAt
+                        FROM dbo.ReturnRequests
+                        WHERE ReturnID = ?
+                    """);
             stm.setInt(1, id);
             ResultSet rs = stm.executeQuery();
             if (rs.next()) {
@@ -102,11 +102,11 @@ public class ReturnDAO extends DBContext {
             }
 
             PreparedStatement ev = connection.prepareStatement("""
-                SELECT EventID, ReturnID, EventTime, Actor, Action, Note
-                FROM dbo.ReturnEvents
-                WHERE ReturnID = ?
-                ORDER BY EventTime DESC, EventID DESC
-            """);
+                        SELECT EventID, ReturnID, EventTime, Actor, Action, Note
+                        FROM dbo.ReturnEvents
+                        WHERE ReturnID = ?
+                        ORDER BY EventTime DESC, EventID DESC
+                    """);
             ev.setInt(1, id);
             ResultSet ers = ev.executeQuery();
             while (ers.next()) {
@@ -125,13 +125,14 @@ public class ReturnDAO extends DBContext {
             String customerPhone,
             String reason,
             String conditionNote,
-            String actor
-    ) {
+            String actor) {
         try {
-            PreparedStatement stm = connection.prepareStatement("""
-                INSERT INTO dbo.ReturnRequests (ReturnCode, SKU, ProductName, CustomerName, CustomerPhone, Reason, ConditionNote, Status)
-                VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)
-            """, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement stm = connection.prepareStatement(
+                    """
+                                INSERT INTO dbo.ReturnRequests (ReturnCode, SKU, ProductName, CustomerName, CustomerPhone, Reason, ConditionNote, Status)
+                                VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                    Statement.RETURN_GENERATED_KEYS);
 
             stm.setString(1, sku);
             stm.setString(2, productName);
@@ -150,10 +151,10 @@ public class ReturnDAO extends DBContext {
             String code = "RT-" + id;
 
             PreparedStatement up = connection.prepareStatement("""
-                UPDATE dbo.ReturnRequests
-                SET ReturnCode = ?, UpdatedAt = SYSUTCDATETIME()
-                WHERE ReturnID = ?
-            """);
+                        UPDATE dbo.ReturnRequests
+                        SET ReturnCode = ?, UpdatedAt = SYSUTCDATETIME()
+                        WHERE ReturnID = ?
+                    """);
             up.setString(1, code);
             up.setInt(2, id);
             up.executeUpdate();
@@ -174,10 +175,10 @@ public class ReturnDAO extends DBContext {
             }
 
             PreparedStatement stm = connection.prepareStatement("""
-                UPDATE dbo.ReturnRequests
-                SET Status = ?, UpdatedAt = SYSUTCDATETIME()
-                WHERE ReturnID = ?
-            """);
+                        UPDATE dbo.ReturnRequests
+                        SET Status = ?, UpdatedAt = SYSUTCDATETIME()
+                        WHERE ReturnID = ?
+                    """);
             stm.setString(1, newStatus.name());
             stm.setInt(2, returnId);
             stm.executeUpdate();
@@ -196,10 +197,10 @@ public class ReturnDAO extends DBContext {
     public boolean addNote(int returnId, String note, String actor) {
         try {
             PreparedStatement stm = connection.prepareStatement("""
-                UPDATE dbo.ReturnRequests
-                SET UpdatedAt = SYSUTCDATETIME()
-                WHERE ReturnID = ?
-            """);
+                        UPDATE dbo.ReturnRequests
+                        SET UpdatedAt = SYSUTCDATETIME()
+                        WHERE ReturnID = ?
+                    """);
             stm.setInt(1, returnId);
             stm.executeUpdate();
 
@@ -211,18 +212,19 @@ public class ReturnDAO extends DBContext {
         }
     }
 
-    public boolean recordRefund(int returnId, Double amount, String method, String reference, String note, String actor) {
+    public boolean recordRefund(int returnId, Double amount, String method, String reference, String note,
+            String actor) {
         try {
             PreparedStatement stm = connection.prepareStatement("""
-                UPDATE dbo.ReturnRequests
-                SET RefundAmount = ?,
-                    RefundMethod = ?,
-                    RefundReference = ?,
-                    RefundedAt = SYSUTCDATETIME(),
-                    Status = ?,
-                    UpdatedAt = SYSUTCDATETIME()
-                WHERE ReturnID = ?
-            """);
+                        UPDATE dbo.ReturnRequests
+                        SET RefundAmount = ?,
+                            RefundMethod = ?,
+                            RefundReference = ?,
+                            RefundedAt = SYSUTCDATETIME(),
+                            Status = ?,
+                            UpdatedAt = SYSUTCDATETIME()
+                        WHERE ReturnID = ?
+                    """);
             if (amount == null) {
                 stm.setNull(1, java.sql.Types.DECIMAL);
             } else {
@@ -248,9 +250,9 @@ public class ReturnDAO extends DBContext {
 
     private void insertEvent(int returnId, String actor, String action, String note) throws Exception {
         PreparedStatement stm = connection.prepareStatement("""
-            INSERT INTO dbo.ReturnEvents (ReturnID, Actor, Action, Note)
-            VALUES (?, ?, ?, ?)
-        """);
+                    INSERT INTO dbo.ReturnEvents (ReturnID, Actor, Action, Note)
+                    VALUES (?, ?, ?, ?)
+                """);
         stm.setInt(1, returnId);
         stm.setString(2, actor == null || actor.isBlank() ? "system" : actor);
         stm.setString(3, action);
@@ -313,4 +315,3 @@ public class ReturnDAO extends DBContext {
         return e;
     }
 }
-
