@@ -4,6 +4,7 @@
  */
 package controller;
 
+import dao.SupplierDAO;
 import dao.SupplierDebtDAO;
 import dao.SystemLogDAO;
 import java.io.IOException;
@@ -28,10 +29,12 @@ import model.User;
 public class SupplierDebtController extends HttpServlet {
 
     private SupplierDebtDAO debtDAO;
+    private SupplierDAO supplierDAO;
 
     @Override
     public void init() {
         debtDAO = new SupplierDebtDAO();
+        supplierDAO = new SupplierDAO();
     }
 
     /**
@@ -96,9 +99,14 @@ public class SupplierDebtController extends HttpServlet {
         Date toDate = null;
 
         try {
-            if (supplierIdRaw != null && !supplierIdRaw.trim().isEmpty()) {
-                supplierId = Integer.parseInt(supplierIdRaw);
+            // supplierId bắt buộc
+            if (supplierIdRaw == null || supplierIdRaw.trim().isEmpty()) {
+                response.sendRedirect("supplierList");
+                return;
             }
+
+            supplierId = Integer.parseInt(supplierIdRaw);
+
             if (fromDateRaw != null && !fromDateRaw.trim().isEmpty()) {
                 fromDate = Date.valueOf(fromDateRaw);
             }
@@ -107,19 +115,21 @@ public class SupplierDebtController extends HttpServlet {
             }
         } catch (Exception e) {
             request.setAttribute("error", "Dữ liệu tìm kiếm không hợp lệ!");
+            request.getRequestDispatcher("supplierDebtList.jsp").forward(request, response);
+            return;
         }
+
+        String supplierName = supplierDAO.getSupplierNameById(supplierId);
 
         List<SupplierDebt> list = debtDAO.searchDebts(supplierId, status, fromDate, toDate);
 
-        // Ghi log xem / tìm kiếm công nợ NCC
         try {
             SystemLogDAO logDao = new SystemLogDAO();
             SystemLog log = new SystemLog();
             log.setUserID(user.getUserID());
             log.setAction("VIEW_SUPPLIER_DEBT");
             log.setTargetObject("SupplierDebt");
-            log.setDescription("Viewed supplier debt list"
-                    + (supplierId != null ? " | supplierId=" + supplierId : "")
+            log.setDescription("Viewed supplier debt of supplierId=" + supplierId
                     + (status != null && !status.trim().isEmpty() ? " | status=" + status : "")
                     + (fromDate != null ? " | fromDate=" + fromDate : "")
                     + (toDate != null ? " | toDate=" + toDate : ""));
@@ -129,6 +139,8 @@ public class SupplierDebtController extends HttpServlet {
             e.printStackTrace();
         }
 
+        request.setAttribute("selectedSupplierId", supplierId);
+        request.setAttribute("selectedSupplierName", supplierName);
         request.setAttribute("debtList", list);
         request.getRequestDispatcher("supplierDebtList.jsp").forward(request, response);
     }

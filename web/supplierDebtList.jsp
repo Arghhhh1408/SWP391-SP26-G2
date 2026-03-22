@@ -41,6 +41,15 @@
                 color: #1f3c88;
                 font-weight: bold;
             }
+            .supplier-info {
+                margin-bottom: 18px;
+                padding: 12px 16px;
+                background: #f9fbff;
+                border: 1px solid #dbe6f3;
+                border-radius: 10px;
+                color: #2c3e50;
+                font-weight: 600;
+            }
             .search-box {
                 background: #f9fbff;
                 border: 1px solid #dbe6f3;
@@ -50,7 +59,7 @@
             }
             .search-grid {
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: repeat(3, 1fr);
                 gap: 15px;
             }
             .form-group {
@@ -94,7 +103,7 @@
             table {
                 width: 100%;
                 border-collapse: collapse;
-                min-width: 900px;
+                min-width: 800px;
             }
             thead {
                 background: #1f3c88;
@@ -149,14 +158,24 @@
                 <div class="error">${requestScope.error}</div>
             </c:if>
 
+            <div class="supplier-info">
+                Nhà cung cấp:
+                <c:choose>
+                    <c:when test="${not empty selectedSupplierName}">
+                        ${selectedSupplierName} (Mã NCC: ${selectedSupplierId})
+                    </c:when>
+                    <c:otherwise>
+                        <br>Mã NCC: ${selectedSupplierId}
+                    </c:otherwise>
+                </c:choose>
+            </div>
+
             <h3>Tìm kiếm công nợ</h3>
             <form action="supplierDebt" method="get" class="search-box">
-                <div class="search-grid">
-                    <div class="form-group">
-                        <label>Mã nhà cung cấp</label>
-                        <input type="number" name="supplierId" value="${param.supplierId}" placeholder="Nhập mã NCC">
-                    </div>
+                <!-- Giữ cố định supplierId -->
+                <input type="hidden" name="supplierId" value="${selectedSupplierId}">
 
+                <div class="search-grid">
                     <div class="form-group">
                         <label>Trạng thái</label>
                         <select name="status">
@@ -181,7 +200,7 @@
 
                 <div class="action-row">
                     <button type="submit" class="btn btn-primary">Tìm kiếm</button>
-                    <a href="supplierDebt" class="btn btn-secondary">Làm mới</a>
+                    <a href="supplierDebt?supplierId=${selectedSupplierId}" class="btn btn-secondary">Làm mới</a>
                 </div>
             </form>
 
@@ -190,8 +209,6 @@
                     <thead>
                         <tr>
                             <th>Debt ID</th>
-                            <th>Mã NCC</th>
-                            <th>Tên nhà cung cấp</th>
                             <th>StockIn ID</th>
                             <th>Số tiền nợ</th>
                             <th>Hạn thanh toán</th>
@@ -204,8 +221,6 @@
                                 <c:forEach items="${debtList}" var="d">
                                     <tr>
                                         <td>${d.debtID}</td>
-                                        <td>${d.supplierID}</td>
-                                        <td>${d.supplierName}</td>
                                         <td>${d.stockInID}</td>
                                         <td>${d.amount}</td>
                                         <td>${d.dueDate}</td>
@@ -230,7 +245,7 @@
                             </c:when>
                             <c:otherwise>
                                 <tr>
-                                    <td colspan="7" class="empty-row">Không có dữ liệu công nợ.</td>
+                                    <td colspan="5" class="empty-row">Không có dữ liệu công nợ.</td>
                                 </tr>
                             </c:otherwise>
                         </c:choose>

@@ -12,6 +12,21 @@ import utils.DBContext;
 
 public class SupplierDAO extends DBContext {
 
+    public String getSupplierNameById(int supplierId) {
+        String sql = "SELECT Name FROM Suppliers WHERE SupplierID = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, supplierId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("Name");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
     private Supplier mapResultSetToSupplier(ResultSet rs) throws SQLException {
         Supplier s = new Supplier();
         s.setId(rs.getInt("SupplierID"));
@@ -92,19 +107,63 @@ public class SupplierDAO extends DBContext {
         return null;
     }
 
-    public Supplier getSupplierById(int id) {
-        String sql = "SELECT SupplierID, Name, Phone, Address, Email, IsActive FROM Suppliers WHERE SupplierID = ?";
+    public List<Supplier> getAllActiveSuppliers() {
+        List<Supplier> list = new ArrayList<>();
+        String sql = "SELECT SupplierID, Name, Phone, Address, Email, IsActive "
+                + "FROM Suppliers WHERE IsActive = 1 ORDER BY Name";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Supplier s = new Supplier();
+                s.setId(rs.getInt("SupplierID"));
+                s.setSupplierName(rs.getString("Name"));
+                s.setPhone(rs.getString("Phone"));
+                s.setAddress(rs.getString("Address"));
+                s.setEmail(rs.getString("Email"));
+                s.setStatus(rs.getBoolean("IsActive"));
+                list.add(s);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public Supplier getSupplierById(int supplierId) {
+        String sql = "SELECT SupplierID, Name, Phone, Address, Email, IsActive "
+                + "FROM Suppliers WHERE SupplierID = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, id);
+            ps.setInt(1, supplierId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapResultSetToSupplier(rs);
+                    Supplier s = new Supplier();
+                    s.setId(rs.getInt("SupplierID"));
+                    s.setSupplierName(rs.getString("Name"));
+                    s.setPhone(rs.getString("Phone"));
+                    s.setAddress(rs.getString("Address"));
+                    s.setEmail(rs.getString("Email"));
+                    s.setStatus(rs.getBoolean("IsActive"));
+                    return s;
                 }
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public boolean isActiveSupplier(int supplierId) {
+        String sql = "SELECT 1 FROM Suppliers WHERE SupplierID = ? AND IsActive = 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, supplierId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public List<Supplier> getAllSupplier() {

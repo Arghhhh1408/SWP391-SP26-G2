@@ -123,6 +123,60 @@ public class ProductDAO extends DBContext {
         return null;
     }
 
+    public List<Product> searchBySupplier(int supplierId, String keyword) {
+        List<Product> list = new ArrayList<>();
+
+        String sql = "SELECT p.ProductID, p.Name, p.SKU, p.Cost, p.Price, p.StockQuantity, p.Unit, "
+                + "       sp.SupplyPrice "
+                + "FROM Products p "
+                + "INNER JOIN SupplierProduct sp ON p.ProductID = sp.ProductID "
+                + "WHERE sp.SupplierID = ? "
+                + "  AND sp.IsActive = 1 "
+                + "  AND p.Status = 'Active' "
+                + "  AND ( ? = '' OR p.Name LIKE ? OR p.SKU LIKE ? ) "
+                + "ORDER BY p.Name";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            String kw = keyword == null ? "" : keyword.trim();
+            ps.setInt(1, supplierId);
+            ps.setString(2, kw);
+            ps.setString(3, "%" + kw + "%");
+            ps.setString(4, "%" + kw + "%");
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Product p = new Product();
+                    p.setId(rs.getInt("ProductID"));
+                    p.setName(rs.getString("Name"));
+                    p.setSku(rs.getString("SKU"));
+                    p.setCost(rs.getDouble("SupplyPrice") > 0 ? rs.getDouble("SupplyPrice") : rs.getDouble("Cost"));
+                    p.setPrice(rs.getDouble("Price"));
+                    p.setQuantity(rs.getInt("StockQuantity"));
+                    p.setUnit(rs.getString("Unit"));
+                    list.add(p);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    public boolean existsInSupplier(int supplierId, int productId) {
+        String sql = "SELECT 1 FROM SupplierProduct WHERE SupplierID = ? AND ProductID = ? AND IsActive = 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, supplierId);
+            ps.setInt(2, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     private Product map(ResultSet rs) throws SQLException {
         Product p = new Product();
         p.setId(rs.getInt("ProductID"));
@@ -294,6 +348,40 @@ public class ProductDAO extends DBContext {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return null;
+    }
+
+    public Product getByIdAndSupplier(int productId, int supplierId) {
+        String sql = """
+        SELECT p.ProductID, p.Name, p.SKU, p.Cost, p.Price, p.StockQuantity, p.Unit,
+               p.Description, p.ImageURL, p.Status, p.CategoryID, p.CreatedDate, p.UpdatedDate, p.WarrantyPeriod,
+               sp.SupplyPrice
+        FROM dbo.Products p
+        INNER JOIN dbo.SupplierProduct sp ON p.ProductID = sp.ProductID
+        WHERE p.ProductID = ?
+          AND sp.SupplierID = ?
+          AND p.Status = 'Active'
+          AND sp.IsActive = 1
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            ps.setInt(2, supplierId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Product p = map(rs);
+                    double supplyPrice = rs.getDouble("SupplyPrice");
+                    if (supplyPrice > 0) {
+                        p.setCost(supplyPrice);
+                    }
+                    return p;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         return null;
     }
 
@@ -683,20 +771,51 @@ public class ProductDAO extends DBContext {
     }
 
     public static class ProductPerformance {
+
         private int productId;
         private String sku, name;
         private int quantitySold;
         private double revenueGenerated;
+
         // Getters/Setters
-        public int getProductId() { return productId; }
-        public void setProductId(int productId) { this.productId = productId; }
-        public String getSku() { return sku; }
-        public void setSku(String sku) { this.sku = sku; }
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-        public int getQuantitySold() { return quantitySold; }
-        public void setQuantitySold(int quantitySold) { this.quantitySold = quantitySold; }
-        public double getRevenueGenerated() { return revenueGenerated; }
-        public void setRevenueGenerated(double revenueGenerated) { this.revenueGenerated = revenueGenerated; }
+        public int getProductId() {
+            return productId;
+        }
+
+        public void setProductId(int productId) {
+            this.productId = productId;
+        }
+
+        public String getSku() {
+            return sku;
+        }
+
+        public void setSku(String sku) {
+            this.sku = sku;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getQuantitySold() {
+            return quantitySold;
+        }
+
+        public void setQuantitySold(int quantitySold) {
+            this.quantitySold = quantitySold;
+        }
+
+        public double getRevenueGenerated() {
+            return revenueGenerated;
+        }
+
+        public void setRevenueGenerated(double revenueGenerated) {
+            this.revenueGenerated = revenueGenerated;
+        }
     }
 }
