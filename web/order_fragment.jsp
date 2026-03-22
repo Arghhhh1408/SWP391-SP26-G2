@@ -8,7 +8,7 @@
         <h3>📜 Lịch sử đơn hàng</h3>
     </div>
     <div class="box-body">
-        <form action="sales_dashboard" method="get" style="margin-bottom: 20px; display: flex; gap: 10px;">
+        <form action="${currentPage == 'manager_dashboard' ? 'manager_dashboard' : 'sales_dashboard'}" method="get" style="margin-bottom: 20px; display: flex; gap: 10px;">
             <input type="hidden" name="tab" value="orders">
             <input type="text" name="orderSearch" value="${orderSearch}" 
                    placeholder="Nhập mã hóa đơn hoặc SĐT..." 
@@ -16,6 +16,13 @@
             <button type="submit" class="btn" style="background: #3b82f6; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">
                 Tìm kiếm
             </button>
+            <c:if test="${acc.roleID == 2}">
+                <a href="exportManager?type=stockout_details&keyword=${orderSearch}" 
+                   class="btn" 
+                   style="background: #10b981; color: white; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                    <span>📥</span> Xuất Excel
+                </a>
+            </c:if>
         </form>
 
         <table style="width: 100%; border-collapse: collapse;">

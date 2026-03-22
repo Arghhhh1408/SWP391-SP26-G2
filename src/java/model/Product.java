@@ -17,6 +17,7 @@ public class Product {
     private int categoryId;
     private Timestamp createDate;
     private Timestamp updateDate;
+    private int lowStockThreshold = 5; // Default threshold
     
     public Product() {
     }
@@ -37,6 +38,13 @@ public class Product {
         this.categoryId = categoryId;
         this.createDate = createDate;
         this.updateDate = updateDate;
+    }
+
+    public Product(int id, String name, String sku, double cost, double price, int quantity, String unit,
+            String description, String imageURL, String status, int categoryId, Timestamp createDate,
+            Timestamp updateDate, int lowStockThreshold) {
+        this(id, name, sku, cost, price, quantity, unit, description, imageURL, status, categoryId, createDate, updateDate);
+        this.lowStockThreshold = lowStockThreshold;
     }
 
     public int getId() {
@@ -149,6 +157,14 @@ public class Product {
 
     public void setUpdateDate(Timestamp updateDate) {
         this.updateDate = updateDate;
+    }
+
+    public int getLowStockThreshold() {
+        return lowStockThreshold;
+    }
+
+    public void setLowStockThreshold(int lowStockThreshold) {
+        this.lowStockThreshold = lowStockThreshold;
     }
 
 }

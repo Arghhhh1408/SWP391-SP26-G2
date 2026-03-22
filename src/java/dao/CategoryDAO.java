@@ -234,4 +234,16 @@ public class CategoryDAO extends DBContext {
         }
         return null;
     }
+    public java.util.Map<Integer, String> getCategoryIdToNameMap() {
+        java.util.Map<Integer, String> map = new java.util.HashMap<>();
+        String sql = "SELECT CategoryID, CategoryName FROM Categories";
+        try (PreparedStatement st = connection.prepareStatement(sql); ResultSet rs = st.executeQuery()) {
+            while (rs.next()) {
+                map.put(rs.getInt("CategoryID"), rs.getString("CategoryName"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return map;
+    }
 }

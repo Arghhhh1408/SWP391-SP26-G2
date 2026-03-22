@@ -76,19 +76,22 @@ public class ProductDAO extends DBContext {
         return list;
     }
 
-    public List<Product> getLowStockProducts(int threshold) {
+    public List<Product> getLowStockProducts(int defaultThreshold) {
         List<Product> list = new ArrayList<>();
-        // Lưu ý: Dùng đúng tên cột StockQuantity và tên bảng Products như các hàm trên của bạn
-        String sql = "SELECT * FROM dbo.Products WHERE StockQuantity < ? AND Status = 'Active'";
+        String sql = """
+            SELECT p.*, l.MinStockLevel
+            FROM dbo.Products p
+            LEFT JOIN dbo.LowStockAlerts l ON p.ProductID = l.ProductID
+            WHERE p.Status = 'Active' 
+              AND p.StockQuantity < ISNULL(l.MinStockLevel, ?)
+        """;
 
         try {
-            // Sử dụng biến 'connection' có sẵn từ DBContext (không cần khởi tạo lại conn)
             PreparedStatement stm = connection.prepareStatement(sql);
-            stm.setInt(1, threshold);
+            stm.setInt(1, defaultThreshold);
             ResultSet rs = stm.executeQuery();
 
             while (rs.next()) {
-                // Sử dụng hàm map(rs) bạn đã viết sẵn ở dưới để đồng bộ dữ liệu
                 list.add(map(rs));
             }
         } catch (Exception e) {
@@ -136,6 +139,14 @@ public class ProductDAO extends DBContext {
         p.setCategoryId(rs.getInt("CategoryID"));
         p.setCreateDate(rs.getTimestamp("CreatedDate"));
         p.setUpdateDate(rs.getTimestamp("UpdatedDate"));
+        try {
+            int threshold = rs.getInt("MinStockLevel");
+            if (!rs.wasNull()) {
+                p.setLowStockThreshold(threshold);
+            }
+        } catch (SQLException ignore) {
+            // Column might not exist in some simple SELECT * queries without JOIN
+        }
         return p;
     }
 
@@ -154,46 +165,31 @@ public class ProductDAO extends DBContext {
 
     public List<Product> getAllActiveProducts() throws Exception {
         List<Product> list = new ArrayList<>();
-        String sql = "SELECT * FROM Products WHERE Status = 'Active'";
+        String sql = """
+            SELECT p.*, l.MinStockLevel 
+            FROM Products p
+            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+            WHERE p.Status = 'Active'
+            """;
         PreparedStatement st = connection.prepareStatement(sql);
         ResultSet rs = st.executeQuery();
         while (rs.next()) {
-            list.add(new Product(rs.getInt("ProductID"),
-                    rs.getString("Name"),
-                    rs.getString("SKU"),
-                    rs.getDouble("Cost"),
-                    rs.getDouble("Price"),
-                    rs.getInt("StockQuantity"),
-                    rs.getString("Unit"),
-                    rs.getString("Description"),
-                    rs.getString("ImageURL"),
-                    rs.getString("Status") != null ? rs.getString("Status").trim() : null,
-                    rs.getInt("CategoryID"),
-                    rs.getTimestamp("CreatedDate"),
-                    rs.getTimestamp("UpdatedDate")));
+            list.add(map(rs));
         }
         return list;
     }
 
     public List<Product> getAllProducts() throws Exception {
         List<Product> list = new ArrayList<>();
-        String sql = "SELECT * FROM Products";
+        String sql = """
+            SELECT p.*, l.MinStockLevel 
+            FROM Products p
+            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+            """;
         PreparedStatement st = connection.prepareStatement(sql);
         ResultSet rs = st.executeQuery();
         while (rs.next()) {
-            list.add(new Product(rs.getInt("ProductID"),
-                    rs.getString("Name"),
-                    rs.getString("SKU"),
-                    rs.getDouble("Cost"),
-                    rs.getDouble("Price"),
-                    rs.getInt("StockQuantity"),
-                    rs.getString("Unit"),
-                    rs.getString("Description"),
-                    rs.getString("ImageURL"),
-                    rs.getString("Status") != null ? rs.getString("Status").trim() : null,
-                    rs.getInt("CategoryID"),
-                    rs.getTimestamp("CreatedDate"),
-                    rs.getTimestamp("UpdatedDate")));
+            list.add(map(rs));
         }
         return list;
     }
@@ -282,25 +278,18 @@ public class ProductDAO extends DBContext {
     }
 
     public Product getProductById(int id) {
-        String sql = "SELECT * FROM Products WHERE ProductID = ?";
+        String sql = """
+            SELECT p.*, l.MinStockLevel 
+            FROM Products p
+            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+            WHERE p.ProductID = ?
+        """;
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setInt(1, id);
             ResultSet rs = st.executeQuery();
             if (rs.next()) {
-                return new Product(rs.getInt("ProductID"),
-                        rs.getString("Name"),
-                        rs.getString("SKU"),
-                        rs.getDouble("Cost"),
-                        rs.getDouble("Price"),
-                        rs.getInt("StockQuantity"),
-                        rs.getString("Unit"),
-                        rs.getString("Description"),
-                        rs.getString("ImageURL"),
-                        rs.getString("Status") != null ? rs.getString("Status").trim() : null,
-                        rs.getInt("CategoryID"),
-                        rs.getTimestamp("CreatedDate"),
-                        rs.getTimestamp("UpdatedDate"));
+                return map(rs);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -660,5 +649,54 @@ public class ProductDAO extends DBContext {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public List<ProductPerformance> getTopSellingProducts(int limit) {
+        List<ProductPerformance> list = new ArrayList<>();
+        String sql = """
+            SELECT TOP (?) 
+                p.ProductID, p.SKU, p.Name,
+                SUM(sd.Quantity) as TotalQuantity,
+                SUM(sd.Quantity * sd.UnitPrice) as TotalRevenue
+            FROM dbo.Products p
+            JOIN dbo.StockOutDetails sd ON p.ProductID = sd.ProductID
+            GROUP BY p.ProductID, p.SKU, p.Name
+            ORDER BY TotalQuantity DESC
+            """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ProductPerformance pp = new ProductPerformance();
+                    pp.setProductId(rs.getInt("ProductID"));
+                    pp.setSku(rs.getString("SKU"));
+                    pp.setName(rs.getString("Name"));
+                    pp.setQuantitySold(rs.getInt("TotalQuantity"));
+                    pp.setRevenueGenerated(rs.getDouble("TotalRevenue"));
+                    list.add(pp);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public static class ProductPerformance {
+        private int productId;
+        private String sku, name;
+        private int quantitySold;
+        private double revenueGenerated;
+        // Getters/Setters
+        public int getProductId() { return productId; }
+        public void setProductId(int productId) { this.productId = productId; }
+        public String getSku() { return sku; }
+        public void setSku(String sku) { this.sku = sku; }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public int getQuantitySold() { return quantitySold; }
+        public void setQuantitySold(int quantitySold) { this.quantitySold = quantitySold; }
+        public double getRevenueGenerated() { return revenueGenerated; }
+        public void setRevenueGenerated(double revenueGenerated) { this.revenueGenerated = revenueGenerated; }
     }
 }
