@@ -211,42 +211,67 @@
             </c:if>
             <c:remove var="message" scope="session"/>
             <c:remove var="status" scope="session"/>
+            <c:if test="${sessionScope.acc.roleID == 2}">
+                <div class="form-box">
 
-            <div class="form-box">
-                <h3>Thêm mới sản phẩm cho nhà cung cấp</h3>
+                    <h3>Thêm mới sản phẩm cho nhà cung cấp</h3>
 
-                <form action="supplierProduct" method="post">
-                    <input type="hidden" name="action" value="add">
-                    <input type="hidden" name="supplierId" value="${supplierId}">
-                    <input type="hidden" name="productId" id="productId" required>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Sản phẩm</label>
-                            <input type="text" id="productSearch" placeholder="Tìm kiếm sản phẩm..." autocomplete="off">
-                            <div id="productDropdown" class="dropdown-box">
-                                <c:forEach items="${productList}" var="p">
-                                    <div class="dropdown-item"
-                                         data-id="${p.id}"
-                                         data-name="${p.name}">
-                                        ${p.name}
-                                    </div>
-                                </c:forEach>
+                    <form action="supplierProduct" method="post">
+                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="supplierId" value="${supplierId}">
+                        <input type="hidden" name="productId" id="productId" required>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sản phẩm</label>
+                                <input type="text" id="productSearch" placeholder="Tìm kiếm sản phẩm..." autocomplete="off">
+                                <div id="productDropdown" class="dropdown-box">
+                                    <c:forEach items="${productList}" var="p">
+                                        <div class="dropdown-item"
+                                             data-id="${p.id}"
+                                             data-name="${p.name}">
+                                            ${p.name}
+                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Giá nhập</label>
+                                <input type="number" step="0.01" name="supplyPrice" required>
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" class="btn">Thêm</button>
+                            </div>
+
+                        </div>
+                    </form>
+                </div>
+            </c:if>
+            <c:if test="${sessionScope.acc.roleID == 1}">
+                <div class="form-box">
+                    <h3>Tìm kiếm sản phẩm theo nhà cung cấp</h3>
+                    <form action="supplierProduct" method="get">
+                        <input type="hidden" name="supplierId" value="${supplierId}">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Từ khóa</label>
+                                <input type="text" name="keyword" placeholder="Nhập tên sản phẩm, giá nhập, trạng thái..."
+                                       value="${keyword}">
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn">Tìm kiếm</button>
+                            </div>
+                            <div class="form-group">
+                                <a href="supplierProduct?supplierId=${supplierId}" class="btn"
+                                   style="text-decoration:none; display:inline-block; text-align:center;">Làm mới</a>
                             </div>
                         </div>
-
-                        <div class="form-group">
-                            <label>Giá nhập</label>
-                            <input type="number" step="0.01" name="supplyPrice" required>
-                        </div>
-
-                        <div class="form-group">
-                            <button type="submit" class="btn">Thêm</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
+                    </form>
+                </div>
+            </c:if>
             <div class="table-wrapper">
                 <table>
                     <thead>

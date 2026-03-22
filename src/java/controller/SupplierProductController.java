@@ -80,7 +80,7 @@ public class SupplierProductController extends HttpServlet {
             return;
         }
 
-        if (user.getRoleID() != 2) {
+        if (user.getRoleID() != 2 && user.getRoleID() != 1) {
             response.sendRedirect("login.jsp");
             return;
         }
@@ -93,8 +93,14 @@ public class SupplierProductController extends HttpServlet {
 
         try {
             int supplierId = Integer.parseInt(supplierIdRaw);
+            String keyword = request.getParameter("keyword");
 
-            List<SupplierProduct> list = dao.getProductsBySupplier(supplierId);
+            List<SupplierProduct> list;
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                list = dao.searchProductsBySupplier(supplierId, keyword);
+            } else {
+                list = dao.getProductsBySupplier(supplierId);
+            }
 
             ProductDAO productDAO = new ProductDAO();
             List<Product> productList = productDAO.getAllActiveProducts();
@@ -102,6 +108,7 @@ public class SupplierProductController extends HttpServlet {
             request.setAttribute("supplierId", supplierId);
             request.setAttribute("supplierProducts", list);
             request.setAttribute("productList", productList);
+            request.setAttribute("keyword", keyword);
 
             request.getRequestDispatcher("supplierProductList.jsp").forward(request, response);
 

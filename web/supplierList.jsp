@@ -326,10 +326,10 @@
 
                             <c:if test="${sessionScope.acc.roleID == 1 || sessionScope.acc.roleID == 2}">
                                 <th>Công nợ</th>
+                                <th>Sản phẩm</th>
                                 </c:if>
 
                             <c:if test="${sessionScope.acc.roleID == 2}">
-                                <th>Sản phẩm</th>
                                 <th>Sửa</th>
                                 <th>Ngừng hoạt động</th>
                                 </c:if>
@@ -364,12 +364,14 @@
                                             </td>
                                         </c:if>
 
-                                        <c:if test="${sessionScope.acc.roleID == 2}">
+                                        <c:if test="${sessionScope.acc.roleID == 1 || sessionScope.acc.roleID == 2}">
                                             <td>
                                                 <a class="table-action product-link" href="supplierProduct?supplierId=${s.id}">
                                                     Quản lý sản phẩm
                                                 </a>
                                             </td>
+                                        </c:if>
+                                        <c:if test="${sessionScope.acc.roleID == 2}">
                                             <td>
                                                 <a class="table-action edit-link" href="addSupplier?action=edit&id=${s.id}">
                                                     Sửa
