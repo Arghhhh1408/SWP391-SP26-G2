@@ -25,17 +25,17 @@ import model.StockInDetail;
 import model.SystemLog;
 import model.User;
 
-@WebServlet(name = "CreateStockInController", urlPatterns = {"/createStockIn"})
+@WebServlet(name = "CreateStockInController", urlPatterns = { "/createStockIn" })
 public class CreateStockInController extends HttpServlet {
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -79,14 +79,15 @@ public class CreateStockInController extends HttpServlet {
         request.getRequestDispatcher("stockinForm.jsp").forward(request, response);
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
+    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the
+    // + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -217,10 +218,10 @@ public class CreateStockInController extends HttpServlet {
     /**
      * Handles the HTTP <code>POST</code> method.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -285,13 +286,11 @@ public class CreateStockInController extends HttpServlet {
                 paymentStatus = StockIn.PAYMENT_STATUS_UNPAID;
             }
 
-            boolean validStockStatus
-                    = StockIn.STOCK_STATUS_PENDING.equals(stockStatus)
+            boolean validStockStatus = StockIn.STOCK_STATUS_PENDING.equals(stockStatus)
                     || StockIn.STOCK_STATUS_COMPLETED.equals(stockStatus)
                     || StockIn.STOCK_STATUS_CANCELLED.equals(stockStatus);
 
-            boolean validPaymentStatus
-                    = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
+            boolean validPaymentStatus = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
                     || StockIn.PAYMENT_STATUS_PARTIAL.equals(paymentStatus)
                     || StockIn.PAYMENT_STATUS_PAID.equals(paymentStatus)
                     || StockIn.PAYMENT_STATUS_CANCELLED.equals(paymentStatus);
@@ -366,8 +365,24 @@ public class CreateStockInController extends HttpServlet {
             if (result) {
                 if (StockIn.STOCK_STATUS_COMPLETED.equals(stockIn.getStockStatus())) {
                     ProductDAO productDAO = new ProductDAO();
+                    dao.UserDAO userDAO = new dao.UserDAO();
+                    dao.NotificationDAO notifDAO = new dao.NotificationDAO();
+                    List<model.User> managers = userDAO.getUsersByRole(2);
+
                     for (StockInDetail d : details) {
                         productDAO.increaseQuantity(d.getProductId(), d.getQuantity());
+                        
+                        model.Product p = productDAO.getById(d.getProductId());
+                        String pName = (p != null) ? p.getName() : "Unknown";
+                        String pCode = (p != null) ? p.getSku() : "Unknown";
+                        String paymentStr = StockIn.PAYMENT_STATUS_PAID.equals(stockIn.getPaymentStatus()) || StockIn.PAYMENT_STATUS_PARTIAL.equals(stockIn.getPaymentStatus()) ? "Đã thanh toán" : "Chưa thanh toán";
+                        String msg = String.format("Nhập kho thành công: %s - %s, Số lượng: %d. %s", pCode, pName, d.getQuantity(), paymentStr);
+
+                        for (model.User manager : managers) {
+                            model.Notification notif = new model.Notification(manager.getUserID(), "Nhập kho thành công", msg, "Success");
+                            notifDAO.insertNotification(notif);
+                            websocket.NotificationEndpoint.sendNotification(String.valueOf(manager.getUserID()), "{\"unreadCount\": " + notifDAO.getUnreadCount(manager.getUserID()) + "}");
+                        }
                     }
                 }
 

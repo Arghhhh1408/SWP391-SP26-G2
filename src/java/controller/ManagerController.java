@@ -14,7 +14,7 @@ import model.ReturnStatus;
 import model.User;
 import model.WarrantyClaimStatus;
 
-@WebServlet(name = "ManagerController", urlPatterns = {"/manager_dashboard"})
+@WebServlet(name = "ManagerController", urlPatterns = { "/manager_dashboard" })
 public class ManagerController extends HttpServlet {
 
     @Override
@@ -41,18 +41,20 @@ public class ManagerController extends HttpServlet {
             WarrantyClaimDAO wDao = new WarrantyClaimDAO();
             ReturnDAO rDao = new ReturnDAO();
             CategoryDAO cDao = new CategoryDAO();
-            
+
             var claims = wDao.listAll();
             var returns = rDao.listAll();
-            
+
             request.setAttribute("totalClaims", claims.size());
-            request.setAttribute("pendingClaims", claims.stream().filter(c -> "NEW".equals(c.getStatus().name())).count());
-            
+            request.setAttribute("pendingClaims",
+                    claims.stream().filter(c -> "NEW".equals(c.getStatus().name())).count());
+
             request.setAttribute("totalReturns", returns.size());
-            request.setAttribute("pendingReturns", returns.stream().filter(r -> "NEW".equals(r.getStatus().name())).count());
-            
+            request.setAttribute("pendingReturns",
+                    returns.stream().filter(r -> "NEW".equals(r.getStatus().name())).count());
+
             request.setAttribute("recentClaims", claims.size() > 5 ? claims.subList(0, 5) : claims);
-            
+
             // Load categories for the Add Product form
             try {
                 request.setAttribute("categories", cDao.getHierarchicalList());
@@ -97,7 +99,7 @@ public class ManagerController extends HttpServlet {
             response.sendRedirect("manager_dashboard?tab=warranty");
             return;
         }
-        
+
         if ("rejectWarranty".equals(action)) {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
@@ -127,7 +129,7 @@ public class ManagerController extends HttpServlet {
             response.sendRedirect("manager_dashboard?tab=returns");
             return;
         }
-        
+
         if ("rejectReturn".equals(action)) {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
@@ -160,19 +162,19 @@ public class ManagerController extends HttpServlet {
     }
 
     private String getActor(HttpServletRequest request) {
-    HttpSession session = request.getSession();
-    Object acc = session.getAttribute("acc");
+        HttpSession session = request.getSession();
+        Object acc = session.getAttribute("acc");
 
-    if (acc instanceof User) {
-        User u = (User) acc;
-        if (u.getUsername() != null && !u.getUsername().isBlank()) {
-            return u.getUsername();
+        if (acc instanceof User) {
+            User u = (User) acc;
+            if (u.getUsername() != null && !u.getUsername().isBlank()) {
+                return u.getUsername();
+            }
+            return "user#" + u.getUserID();
         }
-        return "user#" + u.getUserID();
-    }
 
-    return "unknown";
-}
+        return "unknown";
+    }
 
     private String safeTrim(String s) {
         return s == null ? null : s.trim();

@@ -350,6 +350,18 @@
                     margin-left: 240px;
                     flex: 1;
                 }
+                .notification-badge {
+                    background-color: #ef4444;
+                    color: white;
+                    font-size: 11px;
+                    font-weight: 700;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    margin-left: auto;
+                    float: right;
+                    min-width: 18px;
+                    text-align: center;
+                }
             </style>
 
             <aside class="admin-sidebar">
@@ -362,6 +374,10 @@
                     <div class="sidebar-section-title">Tổng quan</div>
                     <a href="sales_dashboard?tab=dashboard" class="${tab == 'dashboard' || empty tab ? 'active' : ''}">
                         <span class="nav-icon">📊</span> Dashboard
+                    </a>
+                    <a href="sales_dashboard?tab=notifications" class="${tab == 'notifications' ? 'active' : ''}">
+                        <span class="nav-icon">🔔</span> Thông báo
+                        <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
                     </a>
 
                     <%-- PHẦN 2: NGHIỆP VỤ BÁN HÀNG --%>
@@ -407,3 +423,35 @@
                     <a href="logout">&#8592; Đăng xuất</a>
                 </div>
             </aside>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        let port = window.location.port ? ":" + window.location.port : "";
+        let wsUrl = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.hostname + port + "${pageContext.request.contextPath}/ws/notifications/${sessionScope.acc.userID}";
+        let notificationSocket = new WebSocket(wsUrl);
+        let badge = document.getElementById("notificationBadge");
+
+        notificationSocket.onmessage = function(event) {
+            if (badge) {
+                let currentCount = parseInt(badge.innerText || "0");
+                try {
+                    let data = JSON.parse(event.data);
+                    if (data.unreadCount !== undefined) {
+                        currentCount = data.unreadCount;
+                    } else {
+                        currentCount++;
+                    }
+                } catch(e) {
+                    currentCount++;
+                }
+
+                badge.innerText = currentCount;
+                if(currentCount > 0) {
+                    badge.style.display = "inline-block";
+                } else {
+                    badge.style.display = "none";
+                }
+            }
+        };
+    });
+</script>

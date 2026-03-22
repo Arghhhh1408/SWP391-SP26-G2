@@ -23,17 +23,17 @@ import model.SystemLog;
  *
  * @author dotha
  */
-@WebServlet(name = "StockInListController", urlPatterns = {"/stockinList"})
+@WebServlet(name = "StockInListController", urlPatterns = { "/stockinList" })
 public class StockInListController extends HttpServlet {
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -52,14 +52,15 @@ public class StockInListController extends HttpServlet {
         }
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
+    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the
+    // + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -90,110 +91,110 @@ public class StockInListController extends HttpServlet {
             request.getRequestDispatcher("stockinList.jsp").forward(request, response);
             return;
         }
-        
+
         switch (action) {
             case "edit":
                 try {
-                int id = Integer.parseInt(request.getParameter("id"));
-                StockIn stockIn = dao.getStockInById(id);
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    StockIn stockIn = dao.getStockInById(id);
 
-                if (stockIn != null) {
-                    request.setAttribute("stockIn", stockIn);
-                    request.getRequestDispatcher("editStockIn.jsp").forward(request, response);
-                } else {
-                    request.setAttribute("message", "Không tìm thấy phiếu nhập");
+                    if (stockIn != null) {
+                        request.setAttribute("stockIn", stockIn);
+                        request.getRequestDispatcher("editStockIn.jsp").forward(request, response);
+                    } else {
+                        request.setAttribute("message", "Không tìm thấy phiếu nhập");
+                        List<StockIn> list = dao.getAllStockIn();
+                        request.setAttribute("stockList", list);
+                        request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+                    }
+                } catch (Exception e) {
+                    request.setAttribute("message", "Dữ liệu không hợp lệ");
                     List<StockIn> list = dao.getAllStockIn();
                     request.setAttribute("stockList", list);
                     request.getRequestDispatcher("stockinList.jsp").forward(request, response);
                 }
-            } catch (Exception e) {
-                request.setAttribute("message", "Dữ liệu không hợp lệ");
+                break;
+
+            case "delete":
+                try {
+                    int id = Integer.parseInt(request.getParameter("id"));
+
+                    // Lấy dữ liệu trước khi xóa để ghi log chi tiết hơn
+                    StockIn stockInBeforeDelete = dao.getStockInById(id);
+
+                    boolean deleted = dao.deleteStockIn(id);
+
+                    if (deleted) {
+                        request.setAttribute("message", "Xóa phiếu nhập thành công");
+
+                        try {
+                            SystemLogDAO logDAO = new SystemLogDAO();
+                            SystemLog log = new SystemLog();
+
+                            log.setUserID(user.getUserID());
+                            log.setAction("DELETE_STOCKIN");
+                            log.setTargetObject("StockIn");
+
+                            String description;
+                            if (stockInBeforeDelete != null) {
+                                description = "Xóa phiếu nhập | StockInID: " + id
+                                        + " | Supplier: " + stockInBeforeDelete.getSupplierName()
+                                        + " | Total: " + stockInBeforeDelete.getTotalAmountCalculated()
+                                        + " | StockStatus: " + stockInBeforeDelete.getStockStatus()
+                                        + " | PaymentStatus: " + stockInBeforeDelete.getPaymentStatus();
+                            } else {
+                                description = "Xóa phiếu nhập | StockInID: " + id;
+                            }
+
+                            log.setDescription(description);
+                            log.setIpAddress(request.getRemoteAddr());
+
+                            logDAO.insertLog(log);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+
+                    } else {
+                        request.setAttribute("message", "Xóa phiếu nhập thất bại");
+
+                        try {
+                            SystemLogDAO logDAO = new SystemLogDAO();
+                            SystemLog log = new SystemLog();
+
+                            log.setUserID(user.getUserID());
+                            log.setAction("DELETE_STOCKIN");
+                            log.setTargetObject("StockIn");
+                            log.setDescription("Xóa phiếu nhập thất bại | StockInID: " + id);
+                            log.setIpAddress(request.getRemoteAddr());
+
+                            logDAO.insertLog(log);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                } catch (Exception e) {
+                    request.setAttribute("message", "Dữ liệu không hợp lệ");
+
+                    try {
+                        SystemLogDAO logDAO = new SystemLogDAO();
+                        SystemLog log = new SystemLog();
+
+                        log.setUserID(user.getUserID());
+                        log.setAction("DELETE_STOCKIN");
+                        log.setTargetObject("StockIn");
+                        log.setDescription("Xóa phiếu nhập thất bại | Dữ liệu không hợp lệ");
+                        log.setIpAddress(request.getRemoteAddr());
+
+                        logDAO.insertLog(log);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+
                 List<StockIn> list = dao.getAllStockIn();
                 request.setAttribute("stockList", list);
                 request.getRequestDispatcher("stockinList.jsp").forward(request, response);
-            }
-            break;
-
-            case "delete":
-    try {
-                int id = Integer.parseInt(request.getParameter("id"));
-
-                // Lấy dữ liệu trước khi xóa để ghi log chi tiết hơn
-                StockIn stockInBeforeDelete = dao.getStockInById(id);
-
-                boolean deleted = dao.deleteStockIn(id);
-
-                if (deleted) {
-                    request.setAttribute("message", "Xóa phiếu nhập thành công");
-
-                    try {
-                        SystemLogDAO logDAO = new SystemLogDAO();
-                        SystemLog log = new SystemLog();
-
-                        log.setUserID(user.getUserID());
-                        log.setAction("DELETE_STOCKIN");
-                        log.setTargetObject("StockIn");
-
-                        String description;
-                        if (stockInBeforeDelete != null) {
-                            description = "Xóa phiếu nhập | StockInID: " + id
-                                    + " | Supplier: " + stockInBeforeDelete.getSupplierName()
-                                    + " | Total: " + stockInBeforeDelete.getTotalAmountCalculated()
-                                    + " | StockStatus: " + stockInBeforeDelete.getStockStatus()
-                                    + " | PaymentStatus: " + stockInBeforeDelete.getPaymentStatus();
-                        } else {
-                            description = "Xóa phiếu nhập | StockInID: " + id;
-                        }
-
-                        log.setDescription(description);
-                        log.setIpAddress(request.getRemoteAddr());
-
-                        logDAO.insertLog(log);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-
-                } else {
-                    request.setAttribute("message", "Xóa phiếu nhập thất bại");
-
-                    try {
-                        SystemLogDAO logDAO = new SystemLogDAO();
-                        SystemLog log = new SystemLog();
-
-                        log.setUserID(user.getUserID());
-                        log.setAction("DELETE_STOCKIN");
-                        log.setTargetObject("StockIn");
-                        log.setDescription("Xóa phiếu nhập thất bại | StockInID: " + id);
-                        log.setIpAddress(request.getRemoteAddr());
-
-                        logDAO.insertLog(log);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            } catch (Exception e) {
-                request.setAttribute("message", "Dữ liệu không hợp lệ");
-
-                try {
-                    SystemLogDAO logDAO = new SystemLogDAO();
-                    SystemLog log = new SystemLog();
-
-                    log.setUserID(user.getUserID());
-                    log.setAction("DELETE_STOCKIN");
-                    log.setTargetObject("StockIn");
-                    log.setDescription("Xóa phiếu nhập thất bại | Dữ liệu không hợp lệ");
-                    log.setIpAddress(request.getRemoteAddr());
-
-                    logDAO.insertLog(log);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-
-            List<StockIn> list = dao.getAllStockIn();
-            request.setAttribute("stockList", list);
-            request.getRequestDispatcher("stockinList.jsp").forward(request, response);
-            break;
+                break;
 
             default:
                 List<StockIn> defaultList = dao.getAllStockIn();
@@ -206,10 +207,10 @@ public class StockInListController extends HttpServlet {
     /**
      * Handles the HTTP <code>POST</code> method.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -244,13 +245,11 @@ public class StockInListController extends HttpServlet {
                 String paymentStatus = request.getParameter("paymentStatus");
                 String note = request.getParameter("note");
 
-                boolean validStockStatus
-                        = StockIn.STOCK_STATUS_PENDING.equals(stockStatus)
+                boolean validStockStatus = StockIn.STOCK_STATUS_PENDING.equals(stockStatus)
                         || StockIn.STOCK_STATUS_COMPLETED.equals(stockStatus)
                         || StockIn.STOCK_STATUS_CANCELLED.equals(stockStatus);
 
-                boolean validPaymentStatus
-                        = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
+                boolean validPaymentStatus = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
                         || StockIn.PAYMENT_STATUS_PARTIAL.equals(paymentStatus)
                         || StockIn.PAYMENT_STATUS_PAID.equals(paymentStatus)
                         || StockIn.PAYMENT_STATUS_CANCELLED.equals(paymentStatus);
@@ -290,7 +289,7 @@ public class StockInListController extends HttpServlet {
 
                 boolean updated = dao.updateStockIn(s);
 
-                if (updated  && user.getRoleID() != 2) {
+                if (updated && user.getRoleID() != 2) {
                     request.setAttribute("message", "Cập nhật phiếu nhập thành công");
 
                     try {
@@ -303,7 +302,8 @@ public class StockInListController extends HttpServlet {
 
                         String oldStockStatus = (oldStockIn != null) ? oldStockIn.getStockStatus() : "N/A";
                         String oldPaymentStatus = (oldStockIn != null) ? oldStockIn.getPaymentStatus() : "N/A";
-                        String oldNote = (oldStockIn != null && oldStockIn.getNote() != null) ? oldStockIn.getNote() : "";
+                        String oldNote = (oldStockIn != null && oldStockIn.getNote() != null) ? oldStockIn.getNote()
+                                : "";
 
                         String description = "Cập nhật phiếu nhập | StockInID: " + stockInId
                                 + " | StockStatus: " + oldStockStatus + " -> " + stockStatus

@@ -193,6 +193,29 @@ public class CheckoutController extends HttpServlet {
             }
 
             con.commit(); // Hoàn tất Transaction
+
+            try {
+                dao.UserDAO userDAO = new dao.UserDAO();
+                dao.NotificationDAO notifDAO = new dao.NotificationDAO();
+                java.util.List<model.User> managers = userDAO.getUsersByRole(2);
+
+                for (CartItem it : cart.values()) {
+                    String pName = it.getName();
+                    int quantity = it.getQty();
+                    double price = it.getLineTotal(); 
+                    
+                    String msg = String.format("Đã bán thành công đơn hàng \"%s\" , số lượng: %d, giá tiền: %,.0f", pName, quantity, price);
+
+                    for (model.User manager : managers) {
+                        model.Notification notif = new model.Notification(manager.getUserID(), "Bán hàng thành công", msg, "Success");
+                        notifDAO.insertNotification(notif);
+                        websocket.NotificationEndpoint.sendNotification(String.valueOf(manager.getUserID()), "{\"unreadCount\": " + notifDAO.getUnreadCount(manager.getUserID()) + "}");
+                    }
+                }
+            } catch (Exception ex) {
+                System.err.println("Error sending notification: " + ex.getMessage());
+            }
+
             session.removeAttribute("cart");
             response.sendRedirect("sales_dashboard?tab=pos&success=1");
 

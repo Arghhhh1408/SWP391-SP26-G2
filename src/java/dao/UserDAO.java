@@ -70,6 +70,31 @@ public class UserDAO extends DBContext {
         return null;
     }
 
+    public List<User> getUsersByRole(int roleId) {
+        List<User> list = new ArrayList<>();
+        String sql = "SELECT * FROM [User] WHERE RoleID = ? AND IsActive = 1";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, roleId);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                User u = new User();
+                u.setUserID(rs.getInt("UserID"));
+                u.setUsername(rs.getString("Username"));
+                u.setFullName(rs.getString("FullName"));
+                u.setRoleID(rs.getInt("RoleID"));
+                u.setEmail(rs.getString("Email"));
+                u.setPhone(rs.getString("Phone"));
+                u.setCreateDate(rs.getDate("CreateDate"));
+                list.add(u);
+            }
+            return list;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     public boolean addUser(User u) {
         String sql = "insert into [User] (Username, PasswordHash, FullName, RoleID, Email, Phone, IsActive) "
                 + "VALUES (?, ?, ?, ?, ?, ?, 1)";

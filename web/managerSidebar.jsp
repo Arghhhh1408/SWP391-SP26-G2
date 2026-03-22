@@ -198,6 +198,18 @@
                     background: #f1f5f9;
                     border-color: #cbd5e1;
                 }
+                .notification-badge {
+                    background-color: #ef4444;
+                    color: white;
+                    font-size: 11px;
+                    font-weight: 700;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    margin-left: auto;
+                    float: right;
+                    min-width: 18px;
+                    text-align: center;
+                }
             </style>
 
             <aside class="admin-sidebar">
@@ -211,6 +223,11 @@
                     <a href="${pageContext.request.contextPath}/manager_dashboard"
                         class="${currentPage == 'manager_dashboard' && empty param.tab ? 'active' : ''}">
                         <span class="nav-icon">📊</span> Dashboard
+                    </a>
+                    <a href="${pageContext.request.contextPath}/manager_notification"
+                        class="${currentPage == 'manager_notification' ? 'active' : ''}">
+                        <span class="nav-icon">🔔</span> Thông báo
+                        <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
                     </a>
                     <a href="${pageContext.request.contextPath}/manager_dashboard?tab=warranty"
                         class="${param.tab == 'warranty' ? 'active' : ''}">
@@ -266,3 +283,35 @@
                     </a>
                 </div>
             </aside>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        let port = window.location.port ? ":" + window.location.port : "";
+        let wsUrl = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.hostname + port + "${pageContext.request.contextPath}/ws/notifications/${sessionScope.acc.userID}";
+        let notificationSocket = new WebSocket(wsUrl);
+        let badge = document.getElementById("notificationBadge");
+
+        notificationSocket.onmessage = function(event) {
+            if (badge) {
+                let currentCount = parseInt(badge.innerText || "0");
+                try {
+                    let data = JSON.parse(event.data);
+                    if (data.unreadCount !== undefined) {
+                        currentCount = data.unreadCount;
+                    } else {
+                        currentCount++;
+                    }
+                } catch(e) {
+                    currentCount++;
+                }
+
+                badge.innerText = currentCount;
+                if(currentCount > 0) {
+                    badge.style.display = "inline-block";
+                } else {
+                    badge.style.display = "none";
+                }
+            }
+        };
+    });
+</script>
