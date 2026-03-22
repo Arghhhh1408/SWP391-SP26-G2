@@ -457,6 +457,13 @@
 
         <c:choose>
             <c:when test="${tab == 'overview'}">
+                <%
+                    java.time.LocalDate now = java.time.LocalDate.now();
+                    String today = now.toString();
+                    String firstDay = now.withDayOfMonth(1).toString();
+                    request.setAttribute("todayDate", today);
+                    request.setAttribute("firstDayDate", firstDay);
+                %>
                 <!-- Dashboard Overview -->
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -492,6 +499,81 @@
                         <div class="stat-info">
                             <span class="value">${not empty lowStockProducts ? lowStockProducts.size() : 0}</span>
                             <span class="label">Sản phẩm sắp hết</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Export Center -->
+                <div class="glass-card" style="margin-bottom: 32px; border-top: 4px solid var(--primary);">
+                    <div class="card-header">
+                        <h3 style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 24px;">📊</span> Trung tâm Xuất báo cáo
+                        </h3>
+                        <span style="font-size: 12px; color: #64748b; font-weight: 500;">Tùy chọn xuất dữ liệu Excel cho Manager</span>
+                    </div>
+                    <div class="card-body" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; padding: 24px;">
+                        
+                        <!-- 1. Inventory -->
+                        <div class="export-tile" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 24px; border-radius: 16px; border: 1px solid #bae6fd; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s;">
+                            <div style="font-size: 32px; margin-bottom: 15px;">📦</div>
+                            <h4 style="margin-bottom: 8px; color: #0369a1;">Báo cáo Tồn kho</h4>
+                            <p style="font-size: 11px; color: #0c4a6e; margin-bottom: 16px; text-align: center;">Thông tin tồn kho, giá trị hàng hóa và cảnh báo nhập hàng.</p>
+                            <div style="margin-top: auto; width: 100%;">
+                                <a href="exportManager?type=inventory" class="btn" style="width: 100%; background: #0ea5e9; border: none; padding: 10px; font-weight: 600; text-align: center; text-decoration: none; display: block;">Xuất Excel</a>
+                            </div>
+                        </div>
+
+                        <!-- 2. Sales & Profit -->
+                        <div class="export-tile" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 24px; border-radius: 16px; border: 1px solid #bbf7d0; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s;">
+                            <div style="font-size: 32px; margin-bottom: 15px;">💰</div>
+                            <h4 style="margin-bottom: 8px; color: #15803d;">Doanh thu & Lợi nhuận</h4>
+                            <p style="font-size: 11px; color: #166534; margin-bottom: 16px; text-align: center;">Thống kê doanh thu, giá vốn và lợi nhuận gộp theo ngày.</p>
+                            <form action="exportManager" method="GET" style="width: 100%; margin-top: auto;">
+                                <input type="hidden" name="type" value="sales">
+                                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 10px; color: #166534; font-weight: 600; display: block; margin-bottom: 4px;">Từ ngày</label>
+                                        <input type="date" name="fromDate" id="salesFrom" value="${firstDayDate}" max="${todayDate}" class="form-control report-date" style="font-size: 11px; width: 100%; padding: 6px; border: 1px solid #86efac;">
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 10px; color: #166534; font-weight: 600; display: block; margin-bottom: 4px;">Đến ngày</label>
+                                        <input type="date" name="toDate" id="salesTo" value="${todayDate}" max="${todayDate}" class="form-control report-date" style="font-size: 11px; width: 100%; padding: 6px; border: 1px solid #86efac;">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn" style="width: 100%; background: #22c55e; border: none; padding: 10px; font-weight: 600;">Xuất Excel</button>
+                            </form>
+                        </div>
+
+                        <!-- 3. Transactions -->
+                        <div class="export-tile" style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); padding: 24px; border-radius: 16px; border: 1px solid #c7d2fe; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s;">
+                            <div style="font-size: 32px; margin-bottom: 15px;">📉</div>
+                            <h4 style="margin-bottom: 8px; color: #4338ca;">Chi tiết Nhập/Xuất</h4>
+                            <p style="font-size: 11px; color: #4338ca; margin-bottom: 16px; text-align: center;">Dữ liệu chi tiết từng dòng trong phiếu nhập hoặc hóa đơn.</p>
+                            <form action="exportManager" method="GET" style="width: 100%; margin-top: auto;">
+                                <select name="type" class="form-control" style="font-size: 11px; width: 100%; padding: 8px; border: 1px solid #a5b4fc; margin-bottom: 12px; background: white;">
+                                    <option value="stockin_details">📦 Chi tiết Nhập kho</option>
+                                    <option value="stockout_details">🤝 Chi tiết Xuất kho</option>
+                                </select>
+                                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                    <div style="flex: 1;">
+                                        <input type="date" name="fromDate" id="transFrom" value="${firstDayDate}" max="${todayDate}" class="form-control report-date" style="font-size: 11px; width: 100%; padding: 6px; border: 1px solid #a5b4fc;">
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <input type="date" name="toDate" id="transTo" value="${todayDate}" max="${todayDate}" class="form-control report-date" style="font-size: 11px; width: 100%; padding: 6px; border: 1px solid #a5b4fc;">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn" style="width: 100%; background: #6366f1; border: none; padding: 10px; font-weight: 600;">Xuất Excel</button>
+                            </form>
+                        </div>
+
+                        <!-- 4. Performance -->
+                        <div class="export-tile" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); padding: 24px; border-radius: 16px; border: 1px solid #fde68a; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s;">
+                            <div style="font-size: 32px; margin-bottom: 15px;">🏆</div>
+                            <h4 style="margin-bottom: 8px; color: #b45309;">Top 20 Sản phẩm</h4>
+                            <p style="font-size: 11px; color: #92400e; margin-bottom: 16px; text-align: center;">Danh sách sản phẩm bán chạy nhất theo doanh thu.</p>
+                            <div style="margin-top: auto; width: 100%;">
+                                <a href="exportManager?type=performance" class="btn" style="width: 100%; background: #f59e0b; border: none; padding: 10px; font-weight: 600; text-align: center; text-decoration: none; display: block;">Xuất Excel</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -732,6 +814,34 @@
                     details.style.display = 'none';
                 }
             }
+
+            // Logic cho việc chọn ngày xuất báo cáo
+            (function() {
+                const initDateControls = () => {
+                    const dateInputs = document.querySelectorAll('.report-date');
+                    dateInputs.forEach(input => {
+                        // Validation khi thay đổi
+                        input.addEventListener('change', function() {
+                            const form = this.closest('form');
+                            const fromInput = form.querySelector('input[name="fromDate"]');
+                            const toInput = form.querySelector('input[name="toDate"]');
+                            const from = fromInput.value;
+                            const to = toInput.value;
+                            
+                            if (from && to && from > to) {
+                                alert("Ngày bắt đầu không thể lớn hơn ngày kết thúc!");
+                                this.value = (this.name === 'fromDate') ? to : from;
+                            }
+                        });
+                    });
+                };
+
+                if (document.readyState === "loading") {
+                    document.addEventListener("DOMContentLoaded", initDateControls);
+                } else {
+                    initDateControls();
+                }
+            })();
         </script>
     </div>
 </div>

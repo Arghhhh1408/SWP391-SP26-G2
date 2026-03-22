@@ -262,4 +262,63 @@ public class StockInDAO extends DBContext {
 
         return false;
     }
+
+    public List<StockInDetailReport> getStockInDetailsReport(String fromDate, String toDate) {
+        List<StockInDetailReport> list = new ArrayList<>();
+        String sql = """
+            SELECT 
+                si.Date, si.StockInID, s.Name as SupplierName,
+                p.Name as ProductName, sd.Quantity, sd.UnitCost,
+                (sd.Quantity * sd.UnitCost) as TotalCost
+            FROM dbo.StockIn si
+            JOIN dbo.StockInDetails sd ON si.StockInID = sd.StockInID
+            JOIN dbo.Products p ON sd.ProductID = p.ProductID
+            JOIN dbo.Suppliers s ON si.SupplierID = s.SupplierID
+            WHERE CAST(si.Date AS DATE) BETWEEN ? AND ?
+            ORDER BY si.Date DESC
+            """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, fromDate);
+            ps.setString(2, toDate);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    StockInDetailReport r = new StockInDetailReport();
+                    r.setDate(rs.getTimestamp("Date"));
+                    r.setStockInId(rs.getInt("StockInID"));
+                    r.setSupplierName(rs.getString("SupplierName"));
+                    r.setProductName(rs.getString("ProductName"));
+                    r.setQuantity(rs.getInt("Quantity"));
+                    r.setUnitCost(rs.getDouble("UnitCost"));
+                    r.setTotalCost(rs.getDouble("TotalCost"));
+                    list.add(r);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public static class StockInDetailReport {
+        private java.sql.Timestamp date;
+        private int stockInId;
+        private String supplierName, productName;
+        private int quantity;
+        private double unitCost, totalCost;
+        // Getters/Setters
+        public java.sql.Timestamp getDate() { return date; }
+        public void setDate(java.sql.Timestamp date) { this.date = date; }
+        public int getStockInId() { return stockInId; }
+        public void setStockInId(int stockInId) { this.stockInId = stockInId; }
+        public String getSupplierName() { return supplierName; }
+        public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
+        public String getProductName() { return productName; }
+        public void setProductName(String productName) { this.productName = productName; }
+        public int getQuantity() { return quantity; }
+        public void setQuantity(int quantity) { this.quantity = quantity; }
+        public double getUnitCost() { return unitCost; }
+        public void setUnitCost(double unitCost) { this.unitCost = unitCost; }
+        public double getTotalCost() { return totalCost; }
+        public void setTotalCost(double totalCost) { this.totalCost = totalCost; }
+    }
 }

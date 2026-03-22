@@ -1,10 +1,14 @@
 package controller;
 
+import dao.CategoryDAO;
 import dao.ProductDAO;
 import dao.SystemLogDAO;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -13,6 +17,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
+import model.Category;
 import model.Product;
 import model.SystemLog;
 import model.User;
@@ -60,11 +65,19 @@ public class ProductImportExportController extends HttpServlet {
 
     private void handleExport(HttpServletRequest request, HttpServletResponse response) throws IOException {
         ProductDAO dao = new ProductDAO();
+        CategoryDAO catDao = new CategoryDAO();
         try {
-            List<model.Product> products = dao.getAllProducts();
+            List<Product> products = dao.getAllProducts();
             
+            // Prepare category map for the util
+            List<Category> cats = catDao.getAllCategories();
+            Map<Integer, String> catMap = new HashMap<>();
+            for (Category c : cats) {
+                catMap.put(c.getId(), c.getName());
+            }
+
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            ExcelUtils.exportProducts(products, baos);
+            ExcelUtils.exportProducts(products, catMap, baos);
             
             byte[] content = baos.toByteArray();
             
@@ -92,36 +105,74 @@ public class ProductImportExportController extends HttpServlet {
         }
 
         try (InputStream is = filePart.getInputStream()) {
-            ExcelUtils.ImportResult result = ExcelUtils.importProducts(is);
+            // Parse raw data from Excel
+            List<ExcelUtils.ImportedProduct> imported = ExcelUtils.parseProducts(is);
             
-            ProductDAO dao = new ProductDAO();
+            CategoryDAO catDao = new CategoryDAO();
+            ProductDAO prodDao = new ProductDAO();
+            
+            List<Product> productsToInsert = new ArrayList<>();
+            List<String> dataErrors = new ArrayList<>();
+            int rowNum = 1; // Counter for error messages
+            
+            for (ExcelUtils.ImportedProduct ip : imported) {
+                rowNum++;
+                // Validation (Logic moved from Utility to Controller)
+                if (ip.name == null || ip.name.isEmpty() || ip.sku == null || ip.sku.isEmpty()) {
+                    dataErrors.add("Dòng " + rowNum + ": Tên và SKU là bắt buộc.");
+                    continue;
+                }
+                if (prodDao.isProductSkuExists(ip.sku)) {
+                    dataErrors.add("Dòng " + rowNum + ": SKU '" + ip.sku + "' đã tồn tại.");
+                    continue;
+                }
+                Integer categoryId = catDao.getCategoryIdByName(ip.categoryName);
+                if (categoryId == null) {
+                    dataErrors.add("Dòng " + rowNum + ": Không tìm thấy danh mục '" + ip.categoryName + "'.");
+                    continue;
+                }
+
+                Product p = new Product();
+                p.setName(ip.name);
+                p.setSku(ip.sku);
+                p.setCost(ip.cost);
+                p.setPrice(ip.price);
+                p.setQuantity(ip.quantity);
+                p.setUnit(ip.unit);
+                p.setCategoryId(categoryId);
+                p.setStatus(ip.status == null || ip.status.isEmpty() ? "Active" : ip.status);
+                p.setDescription(ip.description);
+                p.setImageURL(ip.imageUrl);
+                productsToInsert.add(p);
+            }
+            
+            // Database updates
             int successCount = 0;
-            java.util.List<String> dbErrors = new java.util.ArrayList<>();
-            
-            for (Product p : result.getValidProducts()) {
+            List<String> dbErrors = new ArrayList<>();
+            for (Product p : productsToInsert) {
                 try {
-                    int newId = dao.addProduct(p);
+                    int newId = prodDao.addProduct(p);
                     if (newId > 0) {
                         successCount++;
                     } else {
-                        dbErrors.add("Sản phẩm '" + p.getName() + "' (SKU: " + p.getSku() + "): Lỗi không xác định khi thêm vào database.");
+                        dbErrors.add("Sản phẩm '" + p.getName() + "': Lỗi DB không xác định.");
                     }
                 } catch (Exception e) {
-                    dbErrors.add("Sản phẩm '" + p.getName() + "' (SKU: " + p.getSku() + "): " + e.getMessage());
+                    dbErrors.add("Sản phẩm '" + p.getName() + "': " + e.getMessage());
                 }
             }
 
             request.setAttribute("successCount", successCount);
-            request.setAttribute("totalValid", result.getValidProducts().size());
-            request.setAttribute("errors", result.getErrors());
+            request.setAttribute("totalValid", productsToInsert.size());
+            request.setAttribute("errors", dataErrors);
             request.setAttribute("dbErrors", dbErrors);
             
-            logAction(request, "IMPORT_PRODUCTS", "Import sản phẩm từ Excel: Thành công " + successCount + "/" + result.getValidProducts().size() + ". Lỗi data: " + result.getErrors().size() + ". Lỗi DB: " + dbErrors.size());
+            logAction(request, "IMPORT_PRODUCTS", "Import sản phẩm: Thành công " + successCount + "/" + imported.size());
             
             request.getRequestDispatcher("importResult.jsp").forward(request, response);
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("error", "Lỗi xử lý file (có thể file không đúng định dạng): " + e.getMessage());
+            request.setAttribute("error", "Lỗi gửi file hoặc định dạng file: " + e.getMessage());
             request.getRequestDispatcher("importResult.jsp").forward(request, response);
         }
     }
