@@ -584,4 +584,17 @@ public class ProductDAO extends DBContext {
         }
         return false;
     }
+
+    public void decreaseQuantity(int productId, int quantity) {
+        String sql = "UPDATE Products SET StockQuantity = StockQuantity - ? WHERE ProductID = ? AND StockQuantity >= ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setInt(1, quantity);
+            ps.setInt(2, productId);
+            ps.setInt(3, quantity); // Đảm bảo không trừ quá số lượng đang có
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

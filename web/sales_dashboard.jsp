@@ -245,9 +245,9 @@
                         <jsp:include page="products_list_fragment.jsp" />
                     </c:when>
                     <%-- MẶC ĐỊNH LÀ DASHBOARD --%>
-                    <c:otherwise>
+                    <c:when test="${tab == 'dashboard' || empty tab}">
                         <jsp:include page="sales_dashboardFragment.jsp" />
-                    </c:otherwise>
+                    </c:when>
                 </c:choose>
             </div>
         </div>
