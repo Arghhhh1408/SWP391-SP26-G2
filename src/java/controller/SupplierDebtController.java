@@ -4,7 +4,7 @@
  */
 package controller;
 
-import dao.SupplierDAO;
+import dao.SupplierDebtDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -13,16 +13,24 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.sql.Date;
 import java.util.List;
-import model.Supplier;
+import model.SupplierDebt;
 import model.User;
 
 /**
  *
  * @author dotha
  */
-@WebServlet(name = "SupplierListController", urlPatterns = {"/supplierList"})
-public class SupplierListController extends HttpServlet {
+@WebServlet(name = "SupplierDebtController", urlPatterns = {"/supplierDebt"})
+public class SupplierDebtController extends HttpServlet {
+
+    private SupplierDebtDAO debtDAO;
+
+    @Override
+    public void init() {
+        debtDAO = new SupplierDebtDAO();
+    }
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -41,10 +49,10 @@ public class SupplierListController extends HttpServlet {
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Servlet SupplierListController</title>");
+            out.println("<title>Servlet SupplierDebtController</title>");
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Servlet SupplierListController at " + request.getContextPath() + "</h1>");
+            out.println("<h1>Servlet SupplierDebtController at " + request.getContextPath() + "</h1>");
             out.println("</body>");
             out.println("</html>");
         }
@@ -64,47 +72,45 @@ public class SupplierListController extends HttpServlet {
             throws ServletException, IOException {
 
         HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("acc") == null) {
+        User user = (session != null) ? (User) session.getAttribute("acc") : null;
+
+        if (user == null) {
             response.sendRedirect("login.jsp");
             return;
         }
 
-        User user = (User) session.getAttribute("acc");
-        if (user == null || (user.getRoleID() != 1 && user.getRoleID() != 2)) {
+        if (user.getRoleID() != 1 && user.getRoleID() != 2) {
             response.sendRedirect("login.jsp");
             return;
         }
 
-        SupplierDAO supplierDAO = new SupplierDAO();
-
-        String supplierName = request.getParameter("supplierName");
-        String supplierPhone = request.getParameter("supplierPhone");
-        String supplierAddress = request.getParameter("supplierAddress");
-        String supplierEmail = request.getParameter("supplierEmail");
+        String supplierIdRaw = request.getParameter("supplierId");
         String status = request.getParameter("status");
+        String fromDateRaw = request.getParameter("fromDate");
+        String toDateRaw = request.getParameter("toDate");
 
-        boolean hasSearch
-                = (supplierName != null && !supplierName.trim().isEmpty())
-                || (supplierPhone != null && !supplierPhone.trim().isEmpty())
-                || (supplierAddress != null && !supplierAddress.trim().isEmpty())
-                || (supplierEmail != null && !supplierEmail.trim().isEmpty())
-                || (status != null && !status.trim().isEmpty());
+        Integer supplierId = null;
+        Date fromDate = null;
+        Date toDate = null;
 
-        List<Supplier> list;
-        if (hasSearch) {
-            list = supplierDAO.searchSupplier(
-                    supplierName,
-                    supplierPhone,
-                    supplierAddress,
-                    supplierEmail,
-                    status
-            );
-        } else {
-            list = supplierDAO.getAllSupplier();
+        try {
+            if (supplierIdRaw != null && !supplierIdRaw.trim().isEmpty()) {
+                supplierId = Integer.parseInt(supplierIdRaw);
+            }
+            if (fromDateRaw != null && !fromDateRaw.trim().isEmpty()) {
+                fromDate = Date.valueOf(fromDateRaw);
+            }
+            if (toDateRaw != null && !toDateRaw.trim().isEmpty()) {
+                toDate = Date.valueOf(toDateRaw);
+            }
+        } catch (Exception e) {
+            request.setAttribute("error", "Dữ liệu tìm kiếm không hợp lệ!");
         }
 
-        request.setAttribute("list", list);
-        request.getRequestDispatcher("/supplierList.jsp").forward(request, response);
+        List<SupplierDebt> list = debtDAO.searchDebts(supplierId, status, fromDate, toDate);
+
+        request.setAttribute("debtList", list);
+        request.getRequestDispatcher("supplierDebtList.jsp").forward(request, response);
     }
 
     /**
@@ -118,7 +124,7 @@ public class SupplierListController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        doGet(request, response);
+        response.sendRedirect("supplierDebt");
     }
 
     /**

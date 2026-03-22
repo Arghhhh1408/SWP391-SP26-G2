@@ -87,7 +87,7 @@ public class SystemLogDAO extends DBContext {
 
         String sql = "SELECT TOP (?) * "
                 + "FROM [dbo].[SystemLog] "
-                + "WHERE Action IN (?, ?, ?, ?, ?, ?, ?) "
+                + "WHERE Action IN (?, ?, ?, ?, ?, ?, ?, ?, ?) "
                 + "ORDER BY LogDate DESC";
 
         try {
@@ -95,12 +95,14 @@ public class SystemLogDAO extends DBContext {
             stm.setInt(1, limit);
 
             stm.setString(2, "CREATE_STOCKIN");
-            stm.setString(3, "COMPLETE_WARRANTY");
-            stm.setString(4, "REJECT_WARRANTY");
-            stm.setString(5, "COMPLETE_RETURN");
-            stm.setString(6, "REJECT_RETURN");
-            stm.setString(7, "NOTIFY_LOW_STOCK");
-            stm.setString(8, "UNNOTIFY_LOW_STOCK");
+            stm.setString(3, "UPDATE_STOCKIN");
+            stm.setString(4, "DELETE_STOCKIN");
+            stm.setString(5, "COMPLETE_WARRANTY");
+            stm.setString(6, "REJECT_WARRANTY");
+            stm.setString(7, "COMPLETE_RETURN");
+            stm.setString(8, "REJECT_RETURN");
+            stm.setString(9, "NOTIFY_LOW_STOCK");
+            stm.setString(10, "UNNOTIFY_LOW_STOCK");
 
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {
@@ -159,8 +161,8 @@ public class SystemLogDAO extends DBContext {
             String idSearch = "%ID: " + productId + "%";
             stm.setString(1, idSearch);
             stm.setString(2, "Product ID: " + productId + "%");
-            stm.setString(3, "%Product ID: " + productId + "%"); 
-            
+            stm.setString(3, "%Product ID: " + productId + "%");
+
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {
                 SystemLog log = new SystemLog();
@@ -214,7 +216,7 @@ public class SystemLogDAO extends DBContext {
                 log.setLogDate(rs.getTimestamp("LogDate"));
                 log.setIpAddress(rs.getString("IPAddress"));
                 log.setName(rs.getString("FullName"));
-                
+
                 // 3. Resolve Product Name from Description
                 String desc = log.getDescription();
                 Integer pid = null;
@@ -229,13 +231,14 @@ public class SystemLogDAO extends DBContext {
                         if (end > 0) {
                             pid = Integer.parseInt(idStr.substring(0, end));
                         }
-                    } catch (Exception e) {}
+                    } catch (Exception e) {
+                    }
                 }
-                
+
                 if (pid != null) {
                     log.setProductName(productMap.get(pid));
                 }
-                
+
                 list.add(log);
             }
         } catch (Exception e) {

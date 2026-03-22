@@ -43,22 +43,25 @@ public class addSupplierController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-        String action = request.getParameter("action");
-        String idStr = request.getParameter("id");
+
         if (u == null) {
             response.sendRedirect("login.jsp");
             return;
         }
+
+        String action = request.getParameter("action");
+        String idStr = request.getParameter("id");
+
         if ("delete".equals(action) && u.getRoleID() != 2) {
-            request.setAttribute("message", "Bạn không có quyền xóa nhà cung cấp.");
+            request.setAttribute("message", "Bạn không có quyền ngừng hoạt động nhà cung cấp.");
             request.getRequestDispatcher("supplierList").forward(request, response);
             return;
         }
 
-        if (("add".equals(action) || "edit".equals(action))
-                && u.getRoleID() != 2) {
+        if (("add".equals(action) || "edit".equals(action)) && u.getRoleID() != 2) {
             request.setAttribute("message", "Bạn không có quyền thực hiện chức năng này.");
             request.getRequestDispatcher("supplierList").forward(request, response);
             return;
@@ -67,48 +70,61 @@ public class addSupplierController extends HttpServlet {
         if ("delete".equals(action) && idStr != null) {
             try {
                 int id = Integer.parseInt(idStr);
-                dao.deleteSupplier(id);
-                session.setAttribute("message", "Xóa nhà cung cấp thành công!");
-                session.setAttribute("status", "success");
-                SystemLogDAO logDao = new SystemLogDAO();
-                SystemLog log = new SystemLog();
-                int userID = (u != null) ? u.getUserID() : 2;
-                log.setUserID(userID);
-                log.setAction("DELETE_SUPPLIER");
-                log.setTargetObject("Supplier ID: " + id);
-                log.setDescription("Deleted supplier");
-                log.setIpAddress(request.getRemoteAddr());
-                logDao.insertLog(log);
+                boolean ok = dao.deactivateSupplier(id);
+
+                if (ok) {
+                    session.setAttribute("message", "Ngừng hoạt động nhà cung cấp thành công!");
+                    session.setAttribute("status", "success");
+
+                    SystemLogDAO logDao = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+                    log.setUserID(u.getUserID());
+                    log.setAction("DEACTIVATE_SUPPLIER");
+                    log.setTargetObject("Supplier ID: " + id);
+                    log.setDescription("Deactivate supplier");
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDao.insertLog(log);
+                } else {
+                    session.setAttribute("message", "Không tìm thấy nhà cung cấp để cập nhật trạng thái!");
+                    session.setAttribute("status", "error");
+                }
+
             } catch (NumberFormatException e) {
                 session.setAttribute("message", "Lỗi định dạng ID: " + e.getMessage());
                 session.setAttribute("status", "error");
             } catch (Exception e) {
-                session.setAttribute("message", "Lỗi xóa nhà cung cấp: " + e.getMessage());
+                session.setAttribute("message", "Lỗi xử lý nhà cung cấp: " + e.getMessage());
                 session.setAttribute("status", "error");
             }
+
             response.sendRedirect(request.getContextPath() + "/supplierList");
             return;
-        } else if ("add".equals(action)) {
+        }
+
+        if ("add".equals(action)) {
             request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
             return;
-        } else if ("edit".equals(action) && idStr != null) {
+        }
+
+        if ("edit".equals(action) && idStr != null) {
             try {
                 int id = Integer.parseInt(idStr);
                 Supplier supplier = dao.getSupplierById(id);
                 if (supplier != null) {
                     request.setAttribute("supplier", supplier);
-                    request.setAttribute("mode", "edit");
                 } else {
                     request.setAttribute("error", "Không tìm thấy nhà cung cấp!");
                 }
             } catch (NumberFormatException e) {
                 request.setAttribute("error", "Lỗi định dạng ID: " + e.getMessage());
             } catch (Exception e) {
-                request.setAttribute("error", "Lỗi load nhà cung cấp: " + e.getMessage());
+                request.setAttribute("error", "Lỗi tải nhà cung cấp: " + e.getMessage());
             }
+
             request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
             return;
         }
+
         response.sendRedirect(request.getContextPath() + "/supplierList");
     }
 
@@ -123,7 +139,9 @@ public class addSupplierController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         request.setCharacterEncoding("UTF-8");
+
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("acc") == null) {
             response.sendRedirect("login.jsp");
@@ -131,135 +149,105 @@ public class addSupplierController extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("acc");
-        if (user == null) {
-            response.sendRedirect("login.jsp");
-            return;
-        }
-
-        if (user.getRoleID() != 2) {
+        if (user == null || user.getRoleID() != 2) {
             response.sendRedirect("login.jsp");
             return;
         }
 
         String action = request.getParameter("action");
-        if (action == null) {
-            action = "";
-        }
         String message = "";
         String status = "";
+
         try {
-            switch (action) {
-                case "addSupplier": {
-                    if (user.getRoleID() != 2) {
-                        response.sendRedirect("login.jsp");
-                        break;
-                    }
-                    String name = request.getParameter("supplierName");
-                    String phone = request.getParameter("phone");
-                    String address = request.getParameter("address");
-                    String email = request.getParameter("email");
-                    if (!ValidationUtils.isValidPhone(phone)) {
-                        message = "Invalid phone number format! Must be 10 digits starting with 03, 07, 08, 09.";
-                        status = "error";
-                        break;
-                    }
-                    if (!ValidationUtils.isValidEmail(email)) {
-                        message = "Invalid email format!";
-                        status = "error";
-                        break;
-                    }
+            if ("addSupplier".equals(action)) {
+                String name = request.getParameter("supplierName");
+                String phone = request.getParameter("phone");
+                String address = request.getParameter("address");
+                String email = request.getParameter("email");
+
+                if (!ValidationUtils.isValidPhone(phone)) {
+                    message = "Số điện thoại không hợp lệ!";
+                    status = "error";
+                } else if (!ValidationUtils.isValidEmail(email)) {
+                    message = "Email không hợp lệ!";
+                    status = "error";
+                } else {
                     String error = dao.checkDuplicate(name, email, phone);
                     if (error != null) {
                         message = error;
                         status = "error";
-                        break;
+                    } else {
+                        boolean ok = dao.addSupplier(name, phone, address, email);
+                        if (ok) {
+                            message = "Thêm nhà cung cấp thành công!";
+                            status = "success";
+
+                            SystemLogDAO logDao = new SystemLogDAO();
+                            SystemLog log = new SystemLog();
+                            log.setUserID(user.getUserID());
+                            log.setAction("CREATE_SUPPLIER");
+                            log.setTargetObject("New Supplier: " + name);
+                            log.setDescription("Created new supplier");
+                            log.setIpAddress(request.getRemoteAddr());
+                            logDao.insertLog(log);
+                        } else {
+                            message = "Thêm nhà cung cấp thất bại!";
+                            status = "error";
+                        }
                     }
-                    dao.addSupplier(name, phone, address, email);
-                    message = "Thêm nhà cung cấp thành công";
-                    status = "success";
-                    SystemLogDAO logDao = new SystemLogDAO();
-                    SystemLog log = new SystemLog();
-                    int userID = (user != null) ? user.getUserID() : 2;
-                    log.setUserID(userID);
-                    log.setAction("CREATE_SUPPLIER");
-                    log.setTargetObject("New Supplier: " + name);
-                    log.setDescription("Created new supplier");
-                    log.setIpAddress(request.getRemoteAddr());
-                    logDao.insertLog(log);
-                    break;
                 }
-                case "updateSupplier": {
-                    if (user.getRoleID() != 2) {
-                        response.sendRedirect("login.jsp");
-                        break;
-                    }
-                    int id = Integer.parseInt(request.getParameter("supplierID"));
-                    String newName = request.getParameter("supplierName");
-                    String newPhone = request.getParameter("phone");
-                    String newAddress = request.getParameter("address");
-                    String newEmail = request.getParameter("email");
-                    boolean newStatus = request.getParameter("status") != null;
-                    if (!ValidationUtils.isValidEmail(newEmail)) {
-                        message = "Invalid email format!";
-                        status = "error";
-                        break;
-                    }
-                    if (!ValidationUtils.isValidPhone(newPhone)) {
-                        message = "Invalid phone number format! Must be 10 digits starting with 03, 07, 08, 09.";
-                        status = "error";
-                        break;
-                    }
+
+            } else if ("updateSupplier".equals(action)) {
+                int id = Integer.parseInt(request.getParameter("supplierID"));
+                String newName = request.getParameter("supplierName");
+                String newPhone = request.getParameter("phone");
+                String newAddress = request.getParameter("address");
+                String newEmail = request.getParameter("email");
+                boolean newStatus = request.getParameter("status") != null;
+
+                if (!ValidationUtils.isValidPhone(newPhone)) {
+                    message = "Số điện thoại không hợp lệ!";
+                    status = "error";
+                } else if (!ValidationUtils.isValidEmail(newEmail)) {
+                    message = "Email không hợp lệ!";
+                    status = "error";
+                } else {
                     Supplier oldSupplier = dao.getSupplierById(id);
-                    String duplicateError = dao.checkDuplicateForUpdate(id, newName, newEmail, newPhone);
-                    if (duplicateError != null) {
-                        message = duplicateError;
-                        status = "error";
-                        break;
-                    }
                     if (oldSupplier == null) {
                         message = "Không tìm thấy nhà cung cấp!";
                         status = "error";
-                        break;
                     } else {
-                        dao.updateSupplier(id, newName, newPhone, newEmail, newAddress, newStatus);
-                        StringBuilder changes = new StringBuilder("Cập nhật nhà cung cấp thành công! Các thay đổi: ");
-                        if (!oldSupplier.getSupplierName().equals(newName)) {
-                            changes.append("Tên: ").append(oldSupplier.getSupplierName()).append("-> ").append(newName).append(";");
+                        String duplicateError = dao.checkDuplicateForUpdate(id, newName, newEmail, newPhone);
+                        if (duplicateError != null) {
+                            message = duplicateError;
+                            status = "error";
+                        } else {
+                            boolean ok = dao.updateSupplier(id, newName, newPhone, newEmail, newAddress, newStatus);
+                            if (ok) {
+                                message = "Cập nhật nhà cung cấp thành công!";
+                                status = "success";
+
+                                SystemLogDAO logDAO = new SystemLogDAO();
+                                SystemLog log = new SystemLog();
+                                log.setUserID(user.getUserID());
+                                log.setAction("UPDATE_SUPPLIER");
+                                log.setTargetObject("Supplier ID: " + id);
+                                log.setDescription("Updated supplier information");
+                                log.setIpAddress(request.getRemoteAddr());
+                                logDAO.insertLog(log);
+                            } else {
+                                message = "Cập nhật nhà cung cấp thất bại!";
+                                status = "error";
+                            }
                         }
-                        if (!oldSupplier.getPhone().equals(newPhone)) {
-                            changes.append("SĐT: ").append(oldSupplier.getPhone()).append("-> ").append(newPhone).append(";");
-                        }
-                        if ((oldSupplier.getAddress() == null ? newAddress != null : !oldSupplier.getAddress().equals(newAddress))) {
-                            changes.append("Địa chỉ: ").append(oldSupplier.getAddress()).append("-> ").append(newAddress).append(";");
-                        }
-                        if ((oldSupplier.getEmail() == null ? newEmail != null : !oldSupplier.getEmail().equals(newEmail))) {
-                            changes.append("Email: ").append(oldSupplier.getEmail()).append("-> ").append(newEmail).append(";");
-                        }
-                        if (oldSupplier.isStatus() != newStatus) {
-                            changes.append("Trạng thái: ").append(oldSupplier.isStatus() ? "Hoạt động" : "Ngừng")
-                                    .append("-> ").append(newStatus ? "Hoạt động" : "Ngừng").append(";");
-                        }
-                        if (changes.toString().endsWith("Các thay đổi: ")) {
-                            changes.append("Không có thay đổi nào!");
-                        }
-                        message = changes.toString();
-                        status = "success";
-                        SystemLogDAO logDAO = new SystemLogDAO();
-                        SystemLog log = new SystemLog();
-                        int userID = (user != null) ? user.getUserID() : 2;
-                        log.setUserID(userID);
-                        log.setAction("UPDATE_SUPPLIER");
-                        log.setTargetObject("Supplier ID: " + id);
-                        log.setDescription(changes.toString());
-                        log.setIpAddress(request.getRemoteAddr());
-                        logDAO.insertLog(log);
                     }
-                    break;
                 }
-                default:
-                    message = "Hành động không hợp lệ!";
-                    status = "error";
+
+            } else {
+                message = "Hành động không hợp lệ!";
+                status = "error";
             }
+
         } catch (NumberFormatException e) {
             message = "Lỗi định dạng số: " + e.getMessage();
             status = "error";
@@ -267,6 +255,7 @@ public class addSupplierController extends HttpServlet {
             message = "Lỗi: " + e.getMessage();
             status = "error";
         }
+
         session.setAttribute("message", message);
         session.setAttribute("status", status);
         response.sendRedirect(request.getContextPath() + "/supplierList");

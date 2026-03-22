@@ -255,7 +255,7 @@
 
     <body>
         <div class="container">
-            <div class="page-title">Danh sách phiếu nhập hàng</div>
+            <div class="page-title">Danh sách đơn đặt hàng</div>
 
             <div class="top-bar">
                 <div>

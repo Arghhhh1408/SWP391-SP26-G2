@@ -146,6 +146,29 @@ public class ProductDAO extends DBContext {
         }
     }
 
+    public List<Product> getAllActiveProducts() throws Exception {
+        List<Product> list = new ArrayList<>();
+        String sql = "SELECT * FROM Products WHERE Status = 'Active'";
+        PreparedStatement st = connection.prepareStatement(sql);
+        ResultSet rs = st.executeQuery();
+        while (rs.next()) {
+            list.add(new Product(rs.getInt("ProductID"),
+                    rs.getString("Name"),
+                    rs.getString("SKU"),
+                    rs.getDouble("Cost"),
+                    rs.getDouble("Price"),
+                    rs.getInt("StockQuantity"),
+                    rs.getString("Unit"),
+                    rs.getString("Description"),
+                    rs.getString("ImageURL"),
+                    rs.getString("Status") != null ? rs.getString("Status").trim() : null,
+                    rs.getInt("CategoryID"),
+                    rs.getTimestamp("CreatedDate"),
+                    rs.getTimestamp("UpdatedDate")));
+        }
+        return list;
+    }
+
     public List<Product> getAllProducts() throws Exception {
         List<Product> list = new ArrayList<>();
         String sql = "SELECT * FROM Products";
