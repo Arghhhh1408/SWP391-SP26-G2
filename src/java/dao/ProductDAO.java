@@ -79,7 +79,7 @@ public class ProductDAO extends DBContext {
     public List<Product> getLowStockProducts(int threshold) {
         List<Product> list = new ArrayList<>();
         // Lưu ý: Dùng đúng tên cột StockQuantity và tên bảng Products như các hàm trên của bạn
-        String sql = "SELECT * FROM dbo.Products WHERE StockQuantity <= ? AND Status = 'Active'";
+        String sql = "SELECT * FROM dbo.Products WHERE StockQuantity < ? AND Status = 'Active'";
 
         try {
             // Sử dụng biến 'connection' có sẵn từ DBContext (không cần khởi tạo lại conn)
@@ -125,12 +125,18 @@ public class ProductDAO extends DBContext {
         p.setId(rs.getInt("ProductID"));
         p.setName(rs.getString("Name"));
         p.setSku(rs.getString("SKU"));
+        p.setCost(rs.getDouble("Cost"));
         p.setPrice(rs.getDouble("Price"));
         p.setQuantity(rs.getInt("StockQuantity"));
         p.setUnit(rs.getString("Unit"));
+        p.setDescription(rs.getString("Description"));
+        p.setImageURL(rs.getString("ImageURL"));
+        p.setWarrantyPeriod(rs.getInt("WarrantyPeriod"));
         p.setStatus(rs.getString("Status"));
+        p.setCategoryId(rs.getInt("CategoryID"));
+        p.setCreateDate(rs.getTimestamp("CreatedDate"));
+        p.setUpdateDate(rs.getTimestamp("UpdatedDate"));
         return p;
-
     }
 
     public void increaseQuantity(int productId, int quantity) {
@@ -227,6 +233,9 @@ public class ProductDAO extends DBContext {
         st.setString(6, p.getUnit());
         st.setString(7, p.getDescription());
         st.setString(8, p.getImageURL());
+        if (p.getQuantity() <= 0) {
+            p.setStatus("Deactivated");
+        }
         st.setString(9, p.getStatus());
         st.setInt(10, p.getCategoryId());
 
@@ -251,6 +260,9 @@ public class ProductDAO extends DBContext {
         st.setString(6, p.getUnit());
         st.setString(7, p.getDescription());
         st.setString(8, p.getImageURL());
+        if (p.getQuantity() <= 0) {
+            p.setStatus("Deactivated");
+        }
         st.setString(9, p.getStatus());
         st.setInt(10, p.getCategoryId());
         st.setInt(11, p.getId());
@@ -322,11 +334,14 @@ public class ProductDAO extends DBContext {
         return false;
     }
 
-    public List<Product> searchProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId)
+    public List<Product> searchProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status)
             throws Exception {
         List<Product> list = new ArrayList<>();
         CategoryDAO catDao = new CategoryDAO();
         StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE 1=1");
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            sql.append(" AND Status = ?");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -355,6 +370,10 @@ public class ProductDAO extends DBContext {
 
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
+
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            st.setString(paramIndex++, status);
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
@@ -395,9 +414,12 @@ public class ProductDAO extends DBContext {
         return list;
     }
 
-    public int countProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId) throws Exception {
+    public int countProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status) throws Exception {
         CategoryDAO catDao = new CategoryDAO();
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM Products WHERE 1=1");
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            sql.append(" AND Status = ?");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -427,6 +449,10 @@ public class ProductDAO extends DBContext {
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
 
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            st.setString(paramIndex++, status);
+        }
+
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
             st.setString(paramIndex++, searchPattern);
@@ -454,11 +480,14 @@ public class ProductDAO extends DBContext {
         return 0;
     }
 
-    public List<Product> searchProductsPaginated(String keyword, Double minPrice, Double maxPrice, Integer categoryId,
+    public List<Product> searchProductsPaginated(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status,
             int page, int pageSize) throws Exception {
         List<Product> list = new ArrayList<>();
         CategoryDAO catDao = new CategoryDAO();
         StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE 1=1");
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            sql.append(" AND Status = ?");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -490,6 +519,10 @@ public class ProductDAO extends DBContext {
 
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
+
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            st.setString(paramIndex++, status);
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
@@ -539,7 +572,7 @@ public class ProductDAO extends DBContext {
         if (ids == null || ids.length == 0) {
             return false;
         }
-        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Inactive', UpdatedDate = GETDATE() WHERE ProductID IN (");
+        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Deactivated', UpdatedDate = GETDATE() WHERE ProductID IN (");
         for (int i = 0; i < ids.length; i++) {
             sql.append("?");
             if (i < ids.length - 1) {
@@ -593,8 +626,39 @@ public class ProductDAO extends DBContext {
             ps.setInt(2, productId);
             ps.setInt(3, quantity); // Đảm bảo không trừ quá số lượng đang có
             ps.executeUpdate();
+
+            // Auto-deactivate if stock hits zero
+            String checkSql = "UPDATE Products SET Status = 'Deactivated', UpdatedDate = GETDATE() WHERE ProductID = ? AND StockQuantity = 0";
+            try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+                checkPs.setInt(1, productId);
+                checkPs.executeUpdate();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public boolean bulkActivate(int[] ids) {
+        if (ids == null || ids.length == 0) {
+            return false;
+        }
+        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Active', UpdatedDate = GETDATE() WHERE ProductID IN (");
+        for (int i = 0; i < ids.length; i++) {
+            sql.append("?");
+            if (i < ids.length - 1) {
+                sql.append(",");
+            }
+        }
+        sql.append(")");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < ids.length; i++) {
+                ps.setInt(i + 1, ids[i]);
+            }
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }
