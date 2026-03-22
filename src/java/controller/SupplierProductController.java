@@ -6,6 +6,7 @@ package controller;
 
 import dao.ProductDAO;
 import dao.SupplierProductDAO;
+import dao.SystemLogDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -17,6 +18,7 @@ import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import model.Product;
 import model.SupplierProduct;
+import model.SystemLog;
 import model.User;
 
 /**
@@ -105,6 +107,21 @@ public class SupplierProductController extends HttpServlet {
             ProductDAO productDAO = new ProductDAO();
             List<Product> productList = productDAO.getAllActiveProducts();
 
+            // Ghi log xem / tìm kiếm sản phẩm của NCC
+            try {
+                SystemLogDAO logDao = new SystemLogDAO();
+                SystemLog log = new SystemLog();
+                log.setUserID(user.getUserID());
+                log.setAction("VIEW_SUPPLIER_PRODUCT");
+                log.setTargetObject("Supplier ID: " + supplierId);
+                log.setDescription("Viewed supplier product list"
+                        + (keyword != null && !keyword.trim().isEmpty() ? " | keyword=" + keyword : ""));
+                log.setIpAddress(request.getRemoteAddr());
+                logDao.insertLog(log);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
             request.setAttribute("supplierId", supplierId);
             request.setAttribute("supplierProducts", list);
             request.setAttribute("productList", productList);
@@ -171,6 +188,16 @@ public class SupplierProductController extends HttpServlet {
                     if (ok) {
                         session.setAttribute("message", "Thêm sản phẩm cho nhà cung cấp thành công!");
                         session.setAttribute("status", "success");
+
+                        SystemLogDAO logDao = new SystemLogDAO();
+                        SystemLog log = new SystemLog();
+                        log.setUserID(user.getUserID());
+                        log.setAction("ADD_SUPPLIER_PRODUCT");
+                        log.setTargetObject("Supplier ID: " + supplierId + ", Product ID: " + productId);
+                        log.setDescription("Added product to supplier with supplyPrice=" + supplyPrice);
+                        log.setIpAddress(request.getRemoteAddr());
+                        logDao.insertLog(log);
+
                     } else {
                         session.setAttribute("message", "Thêm sản phẩm thất bại!");
                         session.setAttribute("status", "error");
@@ -187,6 +214,17 @@ public class SupplierProductController extends HttpServlet {
                 if (ok) {
                     session.setAttribute("message", "Cập nhật sản phẩm nhà cung cấp thành công!");
                     session.setAttribute("status", "success");
+
+                    SystemLogDAO logDao = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+                    log.setUserID(user.getUserID());
+                    log.setAction("UPDATE_SUPPLIER_PRODUCT");
+                    log.setTargetObject("SupplierProduct ID: " + supplierProductId);
+                    log.setDescription("Updated supplier product with supplyPrice=" + supplyPrice
+                            + ", isActive=" + isActive);
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDao.insertLog(log);
+
                 } else {
                     session.setAttribute("message", "Cập nhật thất bại!");
                     session.setAttribute("status", "error");

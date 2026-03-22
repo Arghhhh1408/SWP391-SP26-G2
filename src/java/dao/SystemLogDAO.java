@@ -97,12 +97,14 @@ public class SystemLogDAO extends DBContext {
             stm.setString(2, "CREATE_STOCKIN");
             stm.setString(3, "UPDATE_STOCKIN");
             stm.setString(4, "DELETE_STOCKIN");
-            stm.setString(5, "COMPLETE_WARRANTY");
-            stm.setString(6, "REJECT_WARRANTY");
-            stm.setString(7, "COMPLETE_RETURN");
-            stm.setString(8, "REJECT_RETURN");
-            stm.setString(9, "NOTIFY_LOW_STOCK");
-            stm.setString(10, "UNNOTIFY_LOW_STOCK");
+            stm.setString(5, "VIEW_SUPPLIER_DEBT");
+            stm.setString(6, "VIEW_SUPPLIER_PRODUCT");
+            stm.setString(7, "COMPLETE_WARRANTY");
+            stm.setString(8, "REJECT_WARRANTY");
+            stm.setString(9, "COMPLETE_RETURN");
+            stm.setString(10, "REJECT_RETURN");
+            stm.setString(11, "NOTIFY_LOW_STOCK");
+            stm.setString(12, "UNNOTIFY_LOW_STOCK");
 
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {

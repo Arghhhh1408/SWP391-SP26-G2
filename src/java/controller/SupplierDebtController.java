@@ -5,6 +5,7 @@
 package controller;
 
 import dao.SupplierDebtDAO;
+import dao.SystemLogDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -16,6 +17,7 @@ import jakarta.servlet.http.HttpSession;
 import java.sql.Date;
 import java.util.List;
 import model.SupplierDebt;
+import model.SystemLog;
 import model.User;
 
 /**
@@ -108,6 +110,24 @@ public class SupplierDebtController extends HttpServlet {
         }
 
         List<SupplierDebt> list = debtDAO.searchDebts(supplierId, status, fromDate, toDate);
+
+        // Ghi log xem / tìm kiếm công nợ NCC
+        try {
+            SystemLogDAO logDao = new SystemLogDAO();
+            SystemLog log = new SystemLog();
+            log.setUserID(user.getUserID());
+            log.setAction("VIEW_SUPPLIER_DEBT");
+            log.setTargetObject("SupplierDebt");
+            log.setDescription("Viewed supplier debt list"
+                    + (supplierId != null ? " | supplierId=" + supplierId : "")
+                    + (status != null && !status.trim().isEmpty() ? " | status=" + status : "")
+                    + (fromDate != null ? " | fromDate=" + fromDate : "")
+                    + (toDate != null ? " | toDate=" + toDate : ""));
+            log.setIpAddress(request.getRemoteAddr());
+            logDao.insertLog(log);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         request.setAttribute("debtList", list);
         request.getRequestDispatcher("supplierDebtList.jsp").forward(request, response);
