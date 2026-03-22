@@ -153,6 +153,23 @@ public class StockInListController extends HttpServlet {
 
         request.setCharacterEncoding("UTF-8");
 
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("acc") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        User user = (User) session.getAttribute("acc");
+        if (user == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        if (user.getRoleID() != 1 && user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
         String action = request.getParameter("action");
         StockInDAO dao = new StockInDAO();
 
@@ -162,6 +179,26 @@ public class StockInListController extends HttpServlet {
                 String stockStatus = request.getParameter("stockStatus");
                 String paymentStatus = request.getParameter("paymentStatus");
                 String note = request.getParameter("note");
+
+                boolean validStockStatus
+                        = StockIn.STOCK_STATUS_PENDING.equals(stockStatus)
+                        || StockIn.STOCK_STATUS_COMPLETED.equals(stockStatus)
+                        || StockIn.STOCK_STATUS_CANCELLED.equals(stockStatus);
+
+                boolean validPaymentStatus
+                        = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
+                        || StockIn.PAYMENT_STATUS_PARTIAL.equals(paymentStatus)
+                        || StockIn.PAYMENT_STATUS_PAID.equals(paymentStatus)
+                        || StockIn.PAYMENT_STATUS_CANCELLED.equals(paymentStatus);
+
+                if (!validStockStatus || !validPaymentStatus) {
+                    request.setAttribute("message", "Trạng thái cập nhật không hợp lệ");
+
+                    StockIn stockIn = dao.getStockInById(stockInId);
+                    request.setAttribute("stockIn", stockIn);
+                    request.getRequestDispatcher("editStockIn.jsp").forward(request, response);
+                    return;
+                }
 
                 StockIn s = new StockIn();
                 s.setStockInId(stockInId);
