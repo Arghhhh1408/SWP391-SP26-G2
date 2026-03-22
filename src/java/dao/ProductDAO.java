@@ -76,6 +76,27 @@ public class ProductDAO extends DBContext {
         return list;
     }
 
+    public List<Product> getLowStockProducts(int threshold) {
+        List<Product> list = new ArrayList<>();
+        // Lưu ý: Dùng đúng tên cột StockQuantity và tên bảng Products như các hàm trên của bạn
+        String sql = "SELECT * FROM dbo.Products WHERE StockQuantity <= ? AND Status = 'Active'";
+
+        try {
+            // Sử dụng biến 'connection' có sẵn từ DBContext (không cần khởi tạo lại conn)
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, threshold);
+            ResultSet rs = stm.executeQuery();
+
+            while (rs.next()) {
+                // Sử dụng hàm map(rs) bạn đã viết sẵn ở dưới để đồng bộ dữ liệu
+                list.add(map(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     // Lấy product theo ID (add vào cart)
     public Product getById(int id) {
         String sql = """
@@ -185,7 +206,7 @@ public class ProductDAO extends DBContext {
         st.setString(8, p.getImageURL());
         st.setString(9, p.getStatus());
         st.setInt(10, p.getCategoryId());
-        
+
         int affectedRows = st.executeUpdate();
         if (affectedRows > 0) {
             java.sql.ResultSet rs = st.getGeneratedKeys();
@@ -301,8 +322,9 @@ public class ProductDAO extends DBContext {
             StringBuilder catSql = new StringBuilder(" AND CategoryID IN (");
             for (int i = 0; i < categoryIds.size(); i++) {
                 catSql.append("?");
-                if (i < categoryIds.size() - 1)
+                if (i < categoryIds.size() - 1) {
                     catSql.append(",");
+                }
             }
             catSql.append(")");
             sql.append(catSql);
@@ -371,8 +393,9 @@ public class ProductDAO extends DBContext {
             StringBuilder catSql = new StringBuilder(" AND CategoryID IN (");
             for (int i = 0; i < categoryIds.size(); i++) {
                 catSql.append("?");
-                if (i < categoryIds.size() - 1)
+                if (i < categoryIds.size() - 1) {
                     catSql.append(",");
+                }
             }
             catSql.append(")");
             sql.append(catSql);
@@ -431,8 +454,9 @@ public class ProductDAO extends DBContext {
             StringBuilder catSql = new StringBuilder(" AND CategoryID IN (");
             for (int i = 0; i < categoryIds.size(); i++) {
                 catSql.append("?");
-                if (i < categoryIds.size() - 1)
+                if (i < categoryIds.size() - 1) {
                     catSql.append(",");
+                }
             }
             catSql.append(")");
             sql.append(catSql);
@@ -489,14 +513,18 @@ public class ProductDAO extends DBContext {
     }
 
     public boolean bulkSoftDelete(int[] ids) {
-        if (ids == null || ids.length == 0) return false;
+        if (ids == null || ids.length == 0) {
+            return false;
+        }
         StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Inactive', UpdatedDate = GETDATE() WHERE ProductID IN (");
         for (int i = 0; i < ids.length; i++) {
             sql.append("?");
-            if (i < ids.length - 1) sql.append(",");
+            if (i < ids.length - 1) {
+                sql.append(",");
+            }
         }
         sql.append(")");
-        
+
         try {
             PreparedStatement st = connection.prepareStatement(sql.toString());
             for (int i = 0; i < ids.length; i++) {
@@ -510,14 +538,18 @@ public class ProductDAO extends DBContext {
     }
 
     public boolean bulkHardDelete(int[] ids) {
-        if (ids == null || ids.length == 0) return false;
+        if (ids == null || ids.length == 0) {
+            return false;
+        }
         StringBuilder sql = new StringBuilder("DELETE FROM Products WHERE ProductID IN (");
         for (int i = 0; i < ids.length; i++) {
             sql.append("?");
-            if (i < ids.length - 1) sql.append(",");
+            if (i < ids.length - 1) {
+                sql.append(",");
+            }
         }
         sql.append(")");
-        
+
         try {
             PreparedStatement st = connection.prepareStatement(sql.toString());
             for (int i = 0; i < ids.length; i++) {

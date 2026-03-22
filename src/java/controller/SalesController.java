@@ -1,5 +1,6 @@
 package controller;
 
+import dao.OrderHistoryDAO;
 import dao.ProductDAO;
 import dao.ReturnDAO;
 import dao.WarrantyClaimDAO;
@@ -11,6 +12,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import model.OrderHistory;
 import model.Product;
 import model.ReturnRequest;
 import model.User;
@@ -25,40 +27,80 @@ public class SalesController extends HttpServlet {
         if (!ensureSales(request, response)) {
             return;
         }
-
+        ProductDAO pDao = new ProductDAO();
         String tab = safeTrim(request.getParameter("tab"));
         if (tab == null || tab.isEmpty()) {
             tab = "dashboard";
         }
         request.setAttribute("tab", tab);
 
-        if ("warranty-lookup".equals(tab)) {
-            WarrantyClaimDAO dao = new WarrantyClaimDAO();
-            String q = safeTrim(request.getParameter("q"));
-            String created = safeTrim(request.getParameter("created"));
-            request.setAttribute("q", q);
-            request.setAttribute("created", created);
-            request.setAttribute("claims", dao.listByCreator(getActor(request), q));
-        } else if ("return-lookup".equals(tab)) {
-            ReturnDAO dao = new ReturnDAO();
-            String q = safeTrim(request.getParameter("rq"));
-            String returnCreated = safeTrim(request.getParameter("returnCreated"));
-            request.setAttribute("rq", q);
-            request.setAttribute("returnCreated", returnCreated);
-            request.setAttribute("returnClaims", dao.listByCreator(getActor(request), q));
-        } else if ("return-create".equals(tab)) {
-            String returnCreated = safeTrim(request.getParameter("returnCreated"));
-            request.setAttribute("returnCreated", returnCreated);
-        } else if ("products".equals(tab)) {
-            try {
-                ProductDAO pDao = new ProductDAO();
-                List<Product> products = pDao.getAllProducts();
-                request.setAttribute("salesProducts", products);
-            } catch (Exception e) {
-                request.setAttribute("error", "Không thể tải danh sách sản phẩm.");
+        try {
+            if ("dashboard".equals(tab)) {
+                // Phần của Lý: Thống kê Dashboard
+                request.setAttribute("revenueToday", 1500000); // Có thể thay bằng oDao.getTodayRevenue()
+                request.setAttribute("revenueWeek", 10500000);
+                request.setAttribute("revenueMonth", 45000000);
+                request.setAttribute("lowStockProducts", pDao.getLowStockProducts(5));
+
+            } else if ("pos".equals(tab)) {
+                try {
+                    List<Product> list = pDao.getAllProducts();
+                    request.setAttribute("products", list); // Tên này phải khớp với JSP
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            } else if ("products".equals(tab)) {
+                // Phần xem danh sách sản phẩm (Cường/Lý dùng chung)
+                request.setAttribute("salesProducts", pDao.getAllProducts());
+
+            } else if ("warranty-lookup".equals(tab)) {
+                // PHẦN CỦA CƯỜNG: Phải lấy dữ liệu claims thì bảng mới hiện
+                WarrantyClaimDAO wDao = new WarrantyClaimDAO();
+                String q = safeTrim(request.getParameter("q"));
+                request.setAttribute("q", q);
+                request.setAttribute("claims", wDao.listByCreator(getActor(request), q));
+
+            } else if ("return-lookup".equals(tab)) {
+                // PHẦN CỦA CƯỜNG: Phải lấy dữ liệu returns thì bảng mới hiện
+                ReturnDAO rDao = new ReturnDAO();
+                String rq = safeTrim(request.getParameter("rq"));
+                request.setAttribute("rq", rq);
+                request.setAttribute("returnClaims", rDao.listByCreator(getActor(request), rq));
             }
+            else if ("orders".equals(tab)) {
+                String keyword = request.getParameter("orderSearch"); // Lấy từ ô input trong JSP
+                OrderHistoryDAO dao = new OrderHistoryDAO();
+                List<OrderHistory> list;
+
+                if (keyword != null && !keyword.trim().isEmpty()) {
+                    // Nếu có nhập từ khóa, gọi hàm search
+                    list = dao.searchOrders(keyword.trim(), "new");
+                } else {
+                    // Nếu không, hiện tất cả như bình thường
+                    list = dao.getAllOrders("new");
+                }
+
+                request.setAttribute("orders", list);
+                request.setAttribute("orderSearch", keyword); // Gửi lại keyword để hiện trên ô nhập
+            }
+            else if ("customers".equals(tab)) {
+                String q = request.getParameter("orderSearch"); // Tận dụng ô search chung
+                dao.CustomerDAO customerDAO = new dao.CustomerDAO();
+
+                // Gọi hàm getAllCustomers(keyword) từ file DAO bạn vừa gửi
+                List<model.Customer> customerList = customerDAO.getAllCustomers(q);
+
+                request.setAttribute("customerList", customerList);
+            }
+            
+
+        } catch (Exception e) {
+            e.printStackTrace(); // Quan trọng: xem lỗi cụ thể ở Console nếu bị trắng trang
+            request.setAttribute("error", "Lỗi hệ thống: " + e.getMessage());
         }
 
+        // LUÔN LUÔN forward về trang chính dù là tab nào
         request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
     }
 
@@ -181,20 +223,21 @@ public class SalesController extends HttpServlet {
     }
 
     private String getActor(HttpServletRequest request) {
-    HttpSession session = request.getSession();
-    Object acc = session.getAttribute("acc");
+        HttpSession session = request.getSession();
+        Object acc = session.getAttribute("acc");
 
-    if (acc instanceof User) {
-        User u = (User) acc;
+        if (acc instanceof User) {
+            User u = (User) acc;
 
-        if (u.getUsername() != null && !u.getUsername().isBlank()) {
-            return u.getUsername();
+            if (u.getUsername() != null && !u.getUsername().isBlank()) {
+                return u.getUsername();
+            }
+            return "user#" + u.getUserID();
         }
-        return "user#" + u.getUserID();
+
+        return "unknown";
     }
 
-    return "unknown";
-}
     private String safeTrim(String s) {
         return s == null ? null : s.trim();
     }
