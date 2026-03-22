@@ -454,6 +454,7 @@
     </div>
 
     <div class="admin-content">
+
         <c:choose>
             <c:when test="${tab == 'overview'}">
                 <!-- Dashboard Overview -->
@@ -485,6 +486,45 @@
                             <span class="value">${pendingReturns}</span>
                             <span class="label">Trả hàng Chờ xử lý</span>
                         </div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer; border: 1px solid ${not empty lowStockProducts ? '#f59e0b' : '#f1f5f9'}; box-shadow: ${not empty lowStockProducts ? '0 0 10px rgba(245, 158, 11, 0.2)' : 'none'};" onclick="toggleLowStockList()">
+                        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">⚠️</div>
+                        <div class="stat-info">
+                            <span class="value">${not empty lowStockProducts ? lowStockProducts.size() : 0}</span>
+                            <span class="label">Sản phẩm sắp hết</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Stock Detailed List -->
+                <div id="lowStockDetails" class="glass-card" style="display: none; border: 2px solid #f59e0b; background: #fffcf0; margin-bottom: 32px;">
+                    <div class="card-header" style="background: #fef3c7; border-bottom: 1px solid #fde68a;">
+                        <h3 style="color: #92400e; font-weight: 700;">Danh sách sản phẩm dưới mức an tồn (< 5 sản phẩm)</h3>
+                        <button onclick="toggleLowStockList()" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; padding: 2px 8px; cursor: pointer; color: #92400e;">Đóng</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="admin-table">
+                            <thead>
+                                <tr style="background: rgba(245, 158, 11, 0.05);">
+                                    <th>Ảnh</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th>SKU</th>
+                                    <th>Số lượng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach items="${lowStockProducts}" var="lp">
+                                    <tr>
+                                        <td><img src="${lp.imageURL}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: contain; background: #fff; border: 1px solid #eee;"></td>
+                                        <td style="font-weight: 600;">${lp.name}</td>
+                                        <td><code style="font-size: 12px; color: #64748b;">${lp.sku}</code></td>
+                                        <td>
+                                            <span class="stock-badge stock-low" style="font-size: 16px; background: #fee2e2; padding: 2px 8px; border-radius: 4px;">${lp.quantity}</span>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -682,6 +722,17 @@
         </div>
     </c:otherwise>
 </c:choose>
+        <script>
+            function toggleLowStockList() {
+                var details = document.getElementById('lowStockDetails');
+                if (details.style.display === 'none') {
+                    details.style.display = 'block';
+                    details.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    details.style.display = 'none';
+                }
+            }
+        </script>
     </div>
 </div>
 </body>

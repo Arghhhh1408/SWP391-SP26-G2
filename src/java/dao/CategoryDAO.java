@@ -153,7 +153,7 @@ public class CategoryDAO extends DBContext {
         }
         return null;
     }
-    
+
     public boolean isCategoryExists(String name) {
         String sql = "SELECT CategoryID FROM Categories WHERE CategoryName = ?";
         try {
@@ -219,7 +219,8 @@ public class CategoryDAO extends DBContext {
     }
 
     public Integer getCategoryIdByName(String name) {
-        if (name == null || name.trim().isEmpty()) return null;
+        if (name == null || name.trim().isEmpty())
+            return null;
         String sql = "SELECT CategoryID FROM Categories WHERE LTRIM(RTRIM(CategoryName)) = ?";
         try {
             PreparedStatement st = connection.prepareStatement(sql);

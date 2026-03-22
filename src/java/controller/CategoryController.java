@@ -30,6 +30,7 @@ public class CategoryController extends HttpServlet {
             String keyword = request.getParameter("keyword");
             String minPriceRaw = request.getParameter("minPrice");
             String maxPriceRaw = request.getParameter("maxPrice");
+            String status = request.getParameter("status");
             String pageRaw = request.getParameter("page");
 
             Integer categoryId = null;
@@ -72,17 +73,18 @@ public class CategoryController extends HttpServlet {
             }
 
             // Get total count for pagination
-            int totalProducts = pDao.countProducts(keyword, minPrice, maxPrice, categoryId);
+            int totalProducts = pDao.countProducts(keyword, minPrice, maxPrice, categoryId, status);
             int totalPages = (int) Math.ceil((double) totalProducts / pageSize);
 
             // Get paginated products
-            List<Product> products = pDao.searchProductsPaginated(keyword, minPrice, maxPrice, categoryId, page,
+            List<Product> products = pDao.searchProductsPaginated(keyword, minPrice, maxPrice, categoryId, status, page,
                     pageSize);
 
             // Preserve search parameters in request
             request.setAttribute("keyword", keyword);
             request.setAttribute("minPrice", minPriceRaw);
             request.setAttribute("maxPrice", maxPriceRaw);
+            request.setAttribute("status", status);
             request.setAttribute("products", products);
 
             // Pagination attributes
