@@ -52,12 +52,28 @@ public class StockInListController extends HttpServlet {
         }
     }
 
-    private void loadList(HttpServletRequest request, HttpServletResponse response, String message)
+    private void loadList(HttpServletRequest request, HttpServletResponse response, String message, String messageType)
             throws ServletException, IOException {
+
+        HttpSession session = request.getSession(false);
         StockInDAO dao = new StockInDAO();
         List<StockIn> list = dao.getAllStockIn();
+
+        if (message == null && session != null) {
+            String flashMessage = (String) session.getAttribute("flashMessage");
+            String flashType = (String) session.getAttribute("flashType");
+
+            if (flashMessage != null) {
+                message = flashMessage;
+                messageType = flashType;
+                session.removeAttribute("flashMessage");
+                session.removeAttribute("flashType");
+            }
+        }
+
         request.setAttribute("stockList", list);
         request.setAttribute("message", message);
+        request.setAttribute("messageType", messageType);
         request.getRequestDispatcher("stockinList.jsp").forward(request, response);
     }
 
@@ -73,6 +89,7 @@ public class StockInListController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("acc") == null) {
             response.sendRedirect("login.jsp");
@@ -89,7 +106,7 @@ public class StockInListController extends HttpServlet {
         StockInDAO dao = new StockInDAO();
 
         if (action == null || action.trim().isEmpty()) {
-            loadList(request, response, null);
+            loadList(request, response, null, null);
             return;
         }
 
@@ -98,7 +115,13 @@ public class StockInListController extends HttpServlet {
                 try {
                 int id = Integer.parseInt(request.getParameter("id"));
                 String reason = request.getParameter("reason");
-                boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason);
+
+                if (reason == null || reason.trim().isEmpty()) {
+                    loadList(request, response, "Vui lòng nhập lý do hủy phiếu.", "error");
+                    return;
+                }
+
+                boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason.trim());
 
                 try {
                     SystemLogDAO logDAO = new SystemLogDAO();
@@ -106,17 +129,21 @@ public class StockInListController extends HttpServlet {
                     log.setUserID(user.getUserID());
                     log.setAction("REQUEST_CANCEL_STOCKIN");
                     log.setTargetObject("StockIn");
-                    log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason);
+                    log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason.trim());
                     log.setIpAddress(request.getRemoteAddr());
                     logDAO.insertLog(log);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
 
-                loadList(request, response, ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.");
+                loadList(request, response,
+                        ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.",
+                        ok ? "success" : "error");
                 return;
+
             } catch (Exception e) {
-                loadList(request, response, "Dữ liệu không hợp lệ.");
+                e.printStackTrace();
+                loadList(request, response, "Dữ liệu không hợp lệ.", "error");
                 return;
             }
 
@@ -125,6 +152,7 @@ public class StockInListController extends HttpServlet {
                     response.sendRedirect("login.jsp");
                     return;
                 }
+
                 try {
                     int id = Integer.parseInt(request.getParameter("id"));
                     boolean ok = dao.approveCancelStockIn(id, user.getUserID());
@@ -142,10 +170,14 @@ public class StockInListController extends HttpServlet {
                         ex.printStackTrace();
                     }
 
-                    loadList(request, response, ok ? "Đã duyệt hủy phiếu." : "Duyệt hủy thất bại.");
+                    loadList(request, response,
+                            ok ? "Đã duyệt hủy phiếu." : "Duyệt hủy thất bại.",
+                            ok ? "success" : "error");
                     return;
+
                 } catch (Exception e) {
-                    loadList(request, response, "Dữ liệu không hợp lệ.");
+                    e.printStackTrace();
+                    loadList(request, response, "Dữ liệu không hợp lệ.", "error");
                     return;
                 }
 
@@ -154,6 +186,7 @@ public class StockInListController extends HttpServlet {
                     response.sendRedirect("login.jsp");
                     return;
                 }
+
                 try {
                     int id = Integer.parseInt(request.getParameter("id"));
                     boolean ok = dao.rejectCancelStockIn(id);
@@ -171,15 +204,19 @@ public class StockInListController extends HttpServlet {
                         ex.printStackTrace();
                     }
 
-                    loadList(request, response, ok ? "Đã từ chối yêu cầu hủy." : "Từ chối yêu cầu hủy thất bại.");
+                    loadList(request, response,
+                            ok ? "Đã từ chối yêu cầu hủy." : "Từ chối yêu cầu hủy thất bại.",
+                            ok ? "success" : "error");
                     return;
+
                 } catch (Exception e) {
-                    loadList(request, response, "Dữ liệu không hợp lệ.");
+                    e.printStackTrace();
+                    loadList(request, response, "Dữ liệu không hợp lệ.", "error");
                     return;
                 }
 
             default:
-                loadList(request, response, null);
+                loadList(request, response, null, null);
         }
     }
 
@@ -194,6 +231,7 @@ public class StockInListController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         request.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession(false);
@@ -224,7 +262,7 @@ public class StockInListController extends HttpServlet {
                         || StockIn.PAYMENT_STATUS_CANCELLED.equals(paymentStatus);
 
                 if (!validPaymentStatus) {
-                    loadList(request, response, "Trạng thái thanh toán không hợp lệ.");
+                    loadList(request, response, "Trạng thái thanh toán không hợp lệ.", "error");
                     return;
                 }
 
@@ -245,15 +283,19 @@ public class StockInListController extends HttpServlet {
                     ex.printStackTrace();
                 }
 
-                loadList(request, response, updated ? "Cập nhật phiếu nhập thành công." : "Cập nhật phiếu nhập thất bại.");
+                loadList(request, response,
+                        updated ? "Cập nhật phiếu nhập thành công." : "Cập nhật phiếu nhập thất bại.",
+                        updated ? "success" : "error");
                 return;
+
             } catch (Exception e) {
-                loadList(request, response, "Dữ liệu cập nhật không hợp lệ.");
+                e.printStackTrace();
+                loadList(request, response, "Dữ liệu cập nhật không hợp lệ.", "error");
                 return;
             }
         }
 
-        loadList(request, response, null);
+        loadList(request, response, null, null);
     }
 
     /**

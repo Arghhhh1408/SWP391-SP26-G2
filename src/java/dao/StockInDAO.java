@@ -4,6 +4,8 @@
  */
 package dao;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -161,37 +163,53 @@ public class StockInDAO extends DBContext {
     }
 
     public int insertStockInWithDetailsAndDebt(StockIn stockIn, List<StockInDetail> details, double paidNow) {
-        String insertStockIn = "INSERT INTO StockIn (SupplierID, TotalAmount, CreatedBy, Note, StockStatus, PaymentStatus) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+        String insertStockIn = """
+            INSERT INTO StockIn (SupplierID, TotalAmount, CreatedBy, Note, StockStatus, PaymentStatus)
+            OUTPUT INSERTED.StockInID
+            VALUES (?, ?, ?, ?, ?, ?)
+            """;
 
-        String insertDetail = "INSERT INTO StockInDetails (StockInID, ProductID, Quantity, ReceivedQuantity, UnitCost) "
-                + "VALUES (?, ?, ?, 0, ?)";
+        String insertDetail = """
+            INSERT INTO StockInDetails (StockInID, ProductID, Quantity, ReceivedQuantity, UnitCost)
+            VALUES (?, ?, ?, 0, ?)
+            """;
 
-        String insertDebt = "INSERT INTO SupplierDebt (StockInID, SupplierID, DebtAmount, PaidAmount, Status, CreatedDate, UpdatedDate) "
-                + "VALUES (?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+        String insertDebt = """
+            INSERT INTO SupplierDebts (SupplierID, StockInID, Amount, DueDate, Status)
+            OUTPUT INSERTED.DebtID
+            VALUES (?, ?, ?, ?, ?)
+            """;
 
-        String insertDebtPayment = "INSERT INTO SupplierDebtPayment (DebtID, Amount, PaymentDate, Note, CreatedBy) "
-                + "VALUES (?, ?, GETDATE(), ?, ?)";
+        String insertDebtPayment = """
+            INSERT INTO SupplierDebtPayment (DebtID, Amount, PaymentDate, Note, CreatedBy)
+            VALUES (?, ?, GETDATE(), ?, ?)
+            """;
 
         int stockInId = -1;
 
         try {
             connection.setAutoCommit(false);
 
-            try (PreparedStatement ps = connection.prepareStatement(insertStockIn, Statement.RETURN_GENERATED_KEYS)) {
+            BigDecimal total = BigDecimal.valueOf(stockIn.getTotalAmount()).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal paid = BigDecimal.valueOf(Math.max(0, paidNow)).setScale(2, RoundingMode.HALF_UP);
+
+            if (paid.compareTo(total) > 0) {
+                paid = total;
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(insertStockIn)) {
                 ps.setInt(1, stockIn.getSupplierId());
-                ps.setDouble(2, stockIn.getTotalAmount());
+                ps.setBigDecimal(2, total);
                 ps.setInt(3, stockIn.getCreatedBy());
                 ps.setString(4, stockIn.getNote());
                 ps.setString(5, stockIn.getStockStatus());
                 ps.setString(6, stockIn.getPaymentStatus());
-                ps.executeUpdate();
 
-                try (ResultSet rs = ps.getGeneratedKeys()) {
+                try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         stockInId = rs.getInt(1);
                     } else {
-                        throw new Exception("Không lấy được StockInID.");
+                        throw new RuntimeException("Không lấy được StockInID.");
                     }
                 }
             }
@@ -201,43 +219,35 @@ public class StockInDAO extends DBContext {
                     ps.setInt(1, stockInId);
                     ps.setInt(2, d.getProductId());
                     ps.setInt(3, d.getQuantity());
-                    ps.setDouble(4, d.getUnitCost());
+                    ps.setBigDecimal(4, BigDecimal.valueOf(d.getUnitCost()).setScale(2, RoundingMode.HALF_UP));
                     ps.addBatch();
                 }
                 ps.executeBatch();
             }
 
-            // Nếu DB chưa có bảng SupplierDebt / SupplierDebtPayment, bạn có thể comment đoạn dưới.
-            double total = stockIn.getTotalAmount();
-            double paid = Math.max(0, paidNow);
-            if (paid > total) {
-                paid = total;
-            }
-
-            String debtStatus = paid <= 0
-                    ? StockIn.PAYMENT_STATUS_UNPAID
-                    : (paid < total ? StockIn.PAYMENT_STATUS_PARTIAL : StockIn.PAYMENT_STATUS_PAID);
+            String debtStatus = paid.compareTo(BigDecimal.ZERO) <= 0
+                    ? "Pending"
+                    : (paid.compareTo(total) < 0 ? "Partial" : "Paid");
 
             int debtId = -1;
-            try (PreparedStatement ps = connection.prepareStatement(insertDebt, Statement.RETURN_GENERATED_KEYS)) {
-                ps.setInt(1, stockInId);
-                ps.setInt(2, stockIn.getSupplierId());
-                ps.setDouble(3, total);
-                ps.setDouble(4, paid);
+            try (PreparedStatement ps = connection.prepareStatement(insertDebt)) {
+                ps.setInt(1, stockIn.getSupplierId());
+                ps.setInt(2, stockInId);
+                ps.setBigDecimal(3, total);
+                ps.setNull(4, java.sql.Types.DATE);
                 ps.setString(5, debtStatus);
-                ps.executeUpdate();
 
-                try (ResultSet rs = ps.getGeneratedKeys()) {
+                try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         debtId = rs.getInt(1);
                     }
                 }
             }
 
-            if (debtId > 0 && paid > 0) {
+            if (debtId > 0 && paid.compareTo(BigDecimal.ZERO) > 0) {
                 try (PreparedStatement ps = connection.prepareStatement(insertDebtPayment)) {
                     ps.setInt(1, debtId);
-                    ps.setDouble(2, paid);
+                    ps.setBigDecimal(2, paid);
                     ps.setString(3, "Thanh toán ban đầu khi tạo phiếu nhập");
                     ps.setInt(4, stockIn.getCreatedBy());
                     ps.executeUpdate();
@@ -253,7 +263,7 @@ public class StockInDAO extends DBContext {
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
-            e.printStackTrace();
+            throw new RuntimeException("insertStockInWithDetailsAndDebt failed: " + e.getMessage(), e);
         } finally {
             try {
                 connection.setAutoCommit(true);
@@ -261,8 +271,6 @@ public class StockInDAO extends DBContext {
                 e.printStackTrace();
             }
         }
-
-        return -1;
     }
 
     public boolean receiveStockInDetail(int detailId, int receiveQty) {
