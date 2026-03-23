@@ -86,29 +86,33 @@ public class InventoryCheckController extends HttpServlet {
         }
 
         String mode = request.getParameter("mode");
-        InventoryCheckDAO dao = new InventoryCheckDAO();
 
         if ("view".equals(mode)) {
-            handleView(request, response, dao);
+            handleView(request, response);
             return;
         }
 
         if ("edit".equals(mode)) {
-            handleEditForm(request, response, dao);
+            handleEditForm(request, response);
             return;
         }
 
-        String keyword = request.getParameter("keyword");
+        if ("history".equals(mode)) {
+            handleProductHistory(request, response);
+            return;
+        }
 
-        List<InventoryCheckItem> items = dao.searchProductsForCounting(keyword);
+        if (user.getRoleID() == 2 && "approval".equals(mode)) {
+            handleApprovalList(request, response);
+            return;
+        }
 
-        InventoryCheckDAO dao2 = new InventoryCheckDAO();
-        List<InventoryCheckItem> checkedItems = dao2.getLatestInventoryCountsByProduct();
+        if (user.getRoleID() == 2 && "approvalDetail".equals(mode)) {
+            handleApprovalDetail(request, response);
+            return;
+        }
 
-        request.setAttribute("keyword", keyword);
-        request.setAttribute("items", items);
-        request.setAttribute("checkedItems", checkedItems);
-        request.getRequestDispatcher("inventoryCheck.jsp").forward(request, response);
+        loadInventoryCheckPage(request, response, null, null, null);
     }
 
     /**
@@ -124,6 +128,7 @@ public class InventoryCheckController extends HttpServlet {
             throws ServletException, IOException {
 
         request.setCharacterEncoding("UTF-8");
+
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("acc") == null) {
             response.sendRedirect("login.jsp");
@@ -142,6 +147,22 @@ public class InventoryCheckController extends HttpServlet {
         }
 
         String action = request.getParameter("action");
+
+        if ("update".equals(action)) {
+            handleUpdate(request, response);
+            return;
+        }
+
+        if ("approveSession".equals(action)) {
+            handleApproveSession(request, response);
+            return;
+        }
+
+        if ("rejectSession".equals(action)) {
+            handleRejectSession(request, response);
+            return;
+        }
+
         String keyword = request.getParameter("keyword");
         String[] productIds = request.getParameterValues("productId");
 
@@ -155,6 +176,8 @@ public class InventoryCheckController extends HttpServlet {
                     int systemQuantity = Integer.parseInt(request.getParameter("systemQuantity_" + productId));
 
                     String physicalRaw = request.getParameter("physicalQuantity_" + productId);
+                    String reason = request.getParameter("reason_" + productId);
+
                     Integer physicalQuantity = null;
 
                     if (physicalRaw != null && !physicalRaw.trim().isEmpty()) {
@@ -163,6 +186,11 @@ public class InventoryCheckController extends HttpServlet {
                         if (physicalQuantity < 0) {
                             errors.add("Số lượng thực tế không được âm ở sản phẩm ID " + productId);
                             continue;
+                        }
+
+                        if (physicalQuantity != systemQuantity
+                                && (reason == null || reason.trim().isEmpty())) {
+                            errors.add("Sản phẩm ID " + productId + " có chênh lệch nên phải nhập lý do.");
                         }
                     }
 
@@ -173,14 +201,14 @@ public class InventoryCheckController extends HttpServlet {
                     item.setUnit(request.getParameter("unit_" + productId));
                     item.setSystemQuantity(systemQuantity);
                     item.setPhysicalQuantity(physicalQuantity);
+                    item.setReason(reason);
+                    item.setStatus("Pending");
 
                     int variance = 0;
                     if (physicalQuantity != null) {
                         variance = physicalQuantity - systemQuantity;
                     }
                     item.setVariance(variance);
-
-                    item.setStatus("Pending");
 
                     items.add(item);
 
@@ -191,28 +219,15 @@ public class InventoryCheckController extends HttpServlet {
                 }
             }
         }
-        
-        if (("calculate".equals(action) || "save".equals(action))
-                && user.getRoleID() != 1 && user.getRoleID() != 2) {
-            request.setAttribute("message", "Bạn không có quyền thực hiện chức năng này.");
-            request.getRequestDispatcher("supplierList").forward(request, response);
-            return;
-        }
-        
-        if ("calculate".equals(action)) {
-            InventoryCheckDAO dao = new InventoryCheckDAO();
-            List<InventoryCheckItem> checkedItems = dao.getLatestInventoryCountsByProduct();
 
-            request.setAttribute("keyword", keyword);
-            request.setAttribute("items", items);
-            request.setAttribute("checkedItems", checkedItems);
-            request.setAttribute("errors", errors);
-            request.getRequestDispatcher("inventoryCheck.jsp").forward(request, response);
+        if ("calculate".equals(action)) {
+            loadInventoryCheckPage(request, response, items, errors, null);
             return;
         }
 
         if ("save".equals(action)) {
             boolean hasAtLeastOneInput = false;
+
             for (InventoryCheckItem item : items) {
                 if (item.getPhysicalQuantity() != null) {
                     hasAtLeastOneInput = true;
@@ -221,50 +236,110 @@ public class InventoryCheckController extends HttpServlet {
             }
 
             if (!errors.isEmpty()) {
-                InventoryCheckDAO dao = new InventoryCheckDAO();
-                List<InventoryCheckItem> checkedItems = dao.getLatestInventoryCountsByProduct();
-
-                request.setAttribute("keyword", keyword);
-                request.setAttribute("items", items);
-                request.setAttribute("checkedItems", checkedItems);
-                request.setAttribute("errors", errors);
-                request.getRequestDispatcher("inventoryCheck.jsp").forward(request, response);
+                loadInventoryCheckPage(request, response, items, errors, null);
                 return;
             }
 
             if (!hasAtLeastOneInput) {
-                InventoryCheckDAO dao = new InventoryCheckDAO();
-                List<InventoryCheckItem> checkedItems = dao.getLatestInventoryCountsByProduct();
-
-                request.setAttribute("keyword", keyword);
-                request.setAttribute("items", items);
-                request.setAttribute("checkedItems", checkedItems);
-                request.setAttribute("error", "Bạn chưa nhập số lượng thực tế cho sản phẩm nào.");
-                request.getRequestDispatcher("inventoryCheck.jsp").forward(request, response);
+                loadInventoryCheckPage(request, response, items, null,
+                        "Bạn chưa nhập số lượng thực tế cho sản phẩm nào.");
                 return;
             }
 
             InventoryCheckDAO dao = new InventoryCheckDAO();
-            boolean ok = dao.saveInventoryCounts(items);
+            boolean ok = dao.saveInventoryCounts(items, user.getUserID());
 
             if (ok) {
-                request.getSession().setAttribute("message", "Lưu kiểm kê thành công.");
+                session.setAttribute("message", "Lưu kiểm kê thành công.");
             } else {
-                request.getSession().setAttribute("error", "Lưu kiểm kê thất bại.");
+                session.setAttribute("error", "Lưu kiểm kê thất bại.");
             }
 
             String encodedKeyword = keyword == null ? "" : URLEncoder.encode(keyword, "UTF-8");
-            response.sendRedirect("inventoryCheck?keyword=" + encodedKeyword);
+            String pageParam = request.getParameter("page");
+            if (pageParam == null || pageParam.trim().isEmpty()) {
+                pageParam = "1";
+            }
+
+            response.sendRedirect("inventoryCheck?keyword=" + encodedKeyword + "&page=" + pageParam);
+            return;
         }
+
+        response.sendRedirect("inventoryCheck");
     }
 
-    private void handleView(HttpServletRequest request, HttpServletResponse response, InventoryCheckDAO dao)
+    private void loadInventoryCheckPage(HttpServletRequest request, HttpServletResponse response,
+            List<InventoryCheckItem> overrideItems,
+            List<String> errors,
+            String singleError)
+            throws ServletException, IOException {
+
+        String keyword = request.getParameter("keyword");
+        int page = 1;
+        int pageSize = 10;
+
+        try {
+            String pageRaw = request.getParameter("page");
+            if (pageRaw != null && !pageRaw.trim().isEmpty()) {
+                page = Integer.parseInt(pageRaw);
+                if (page < 1) {
+                    page = 1;
+                }
+            }
+        } catch (Exception e) {
+            page = 1;
+        }
+
+        InventoryCheckDAO daoCount = new InventoryCheckDAO();
+        int totalProducts = daoCount.countProductsForCounting(keyword);
+        int totalPages = (int) Math.ceil((double) totalProducts / pageSize);
+
+        if (totalPages == 0) {
+            totalPages = 1;
+        }
+        if (page > totalPages) {
+            page = totalPages;
+        }
+
+        List<InventoryCheckItem> items;
+        if (overrideItems != null) {
+            items = overrideItems;
+        } else {
+            InventoryCheckDAO daoItems = new InventoryCheckDAO();
+            items = daoItems.searchProductsForCounting(keyword, page, pageSize);
+        }
+
+        InventoryCheckDAO daoChecked = new InventoryCheckDAO();
+        List<InventoryCheckItem> checkedProducts = daoChecked.getCheckedProductSummaries();
+
+        request.setAttribute("keyword", keyword);
+        request.setAttribute("items", items);
+        request.setAttribute("checkedProducts", checkedProducts);
+        request.setAttribute("page", page);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("totalProducts", totalProducts);
+
+        if (errors != null && !errors.isEmpty()) {
+            request.setAttribute("errors", errors);
+        }
+
+        if (singleError != null && !singleError.trim().isEmpty()) {
+            request.setAttribute("error", singleError);
+        }
+
+        request.getRequestDispatcher("inventoryCheck.jsp").forward(request, response);
+    }
+
+    private void handleView(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         String idRaw = request.getParameter("id");
 
         try {
             int countId = Integer.parseInt(idRaw);
+
+            InventoryCheckDAO dao = new InventoryCheckDAO();
             InventoryCheckItem item = dao.getInventoryCountById(countId);
 
             if (item == null) {
@@ -282,13 +357,15 @@ public class InventoryCheckController extends HttpServlet {
         }
     }
 
-    private void handleEditForm(HttpServletRequest request, HttpServletResponse response, InventoryCheckDAO dao)
+    private void handleEditForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         String idRaw = request.getParameter("id");
 
         try {
             int countId = Integer.parseInt(idRaw);
+
+            InventoryCheckDAO dao = new InventoryCheckDAO();
             InventoryCheckItem item = dao.getInventoryCountById(countId);
 
             if (item == null) {
@@ -306,6 +383,33 @@ public class InventoryCheckController extends HttpServlet {
         }
     }
 
+    private void handleProductHistory(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String productIdRaw = request.getParameter("productId");
+
+        try {
+            int productId = Integer.parseInt(productIdRaw);
+
+            InventoryCheckDAO dao = new InventoryCheckDAO();
+            List<InventoryCheckItem> historyList = dao.getInventoryHistoryByProductId(productId);
+
+            if (historyList == null || historyList.isEmpty()) {
+                request.getSession().setAttribute("error", "Không tìm thấy lịch sử kiểm kê của sản phẩm.");
+                response.sendRedirect("inventoryCheck");
+                return;
+            }
+
+            request.setAttribute("historyList", historyList);
+            request.setAttribute("productInfo", historyList.get(0));
+            request.getRequestDispatcher("inventoryCheckHistory.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            request.getSession().setAttribute("error", "Dữ liệu sản phẩm không hợp lệ.");
+            response.sendRedirect("inventoryCheck");
+        }
+    }
+
     private void handleUpdate(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -314,9 +418,14 @@ public class InventoryCheckController extends HttpServlet {
             int systemQuantity = Integer.parseInt(request.getParameter("systemQuantity"));
             int physicalQuantity = Integer.parseInt(request.getParameter("physicalQuantity"));
             String status = request.getParameter("status");
+            String reason = request.getParameter("reason");
 
-            InventoryCheckDAO dao = new InventoryCheckDAO();
-            InventoryCheckItem oldItem = dao.getInventoryCountById(countId);
+            if (physicalQuantity == systemQuantity) {
+                reason = null;
+            }
+
+            InventoryCheckDAO daoCheck = new InventoryCheckDAO();
+            InventoryCheckItem oldItem = daoCheck.getInventoryCountById(countId);
 
             if (oldItem == null) {
                 request.getSession().setAttribute("error", "Không tìm thấy bản ghi cần cập nhật.");
@@ -331,14 +440,23 @@ public class InventoryCheckController extends HttpServlet {
                 return;
             }
 
+            if (physicalQuantity != systemQuantity && (reason == null || reason.trim().isEmpty())) {
+                request.setAttribute("error", "Nếu số lượng thực tế chênh lệch, bạn phải nhập lý do.");
+                request.setAttribute("item", oldItem);
+                request.getRequestDispatcher("inventoryCheckEdit.jsp").forward(request, response);
+                return;
+            }
+
             InventoryCheckItem item = new InventoryCheckItem();
             item.setCountId(countId);
             item.setSystemQuantity(systemQuantity);
             item.setPhysicalQuantity(physicalQuantity);
             item.setStatus(status);
+            item.setReason(reason);
             item.setDate(new Date(System.currentTimeMillis()));
 
-            boolean ok = dao.updateInventoryCount(item);
+            InventoryCheckDAO daoUpdate = new InventoryCheckDAO();
+            boolean ok = daoUpdate.updateInventoryCount(item);
 
             if (ok) {
                 request.getSession().setAttribute("message", "Cập nhật kiểm kê thành công.");
@@ -349,9 +467,141 @@ public class InventoryCheckController extends HttpServlet {
             response.sendRedirect("inventoryCheck");
 
         } catch (Exception e) {
+            e.printStackTrace();
             request.getSession().setAttribute("error", "Dữ liệu cập nhật không hợp lệ.");
             response.sendRedirect("inventoryCheck");
         }
+    }
+
+    private void handleApprovalList(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        HttpSession session = request.getSession(false);
+        User user = (User) session.getAttribute("acc");
+
+        if (user == null || user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        InventoryCheckDAO dao = new InventoryCheckDAO();
+        List<InventoryCheckItem> approvalSessions = dao.getPendingApprovalSessions();
+
+        request.setAttribute("currentPage", "inventoryApproval");
+        request.setAttribute("approvalSessions", approvalSessions);
+        request.getRequestDispatcher("inventoryApproval.jsp").forward(request, response);
+    }
+
+    private void handleApprovalDetail(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        HttpSession session = request.getSession(false);
+        User user = (User) session.getAttribute("acc");
+
+        if (user == null || user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        String sessionCode = request.getParameter("sessionCode");
+        if (sessionCode == null || sessionCode.trim().isEmpty()) {
+            request.getSession().setAttribute("error", "Session code không hợp lệ.");
+            response.sendRedirect("inventoryCheck?mode=approval");
+            return;
+        }
+
+        InventoryCheckDAO dao1 = new InventoryCheckDAO();
+        List<InventoryCheckItem> approvalSessions = dao1.getPendingApprovalSessions();
+
+        InventoryCheckDAO dao2 = new InventoryCheckDAO();
+        List<InventoryCheckItem> sessionItems = dao2.getInventoryCountsBySessionCode(sessionCode);
+
+        if (sessionItems == null || sessionItems.isEmpty()) {
+            request.getSession().setAttribute("error", "Không tìm thấy phiếu kiểm kho.");
+            response.sendRedirect("inventoryCheck?mode=approval");
+            return;
+        }
+
+        InventoryCheckItem first = sessionItems.get(0);
+
+        request.setAttribute("currentPage", "inventoryApproval");
+        request.setAttribute("approvalSessions", approvalSessions);
+        request.setAttribute("selectedSessionCode", sessionCode);
+        request.setAttribute("selectedSessionDate", first.getDate());
+        request.setAttribute("selectedSessionCreatedBy", first.getCreatedBy());
+        request.setAttribute("selectedSessionSize", sessionItems.size());
+        request.setAttribute("selectedSessionItems", sessionItems);
+
+        request.getRequestDispatcher("inventoryApproval.jsp").forward(request, response);
+    }
+
+    private void handleApproveSession(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        HttpSession session = request.getSession(false);
+        User user = (User) session.getAttribute("acc");
+
+        if (user == null || user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        String sessionCode = request.getParameter("sessionCode");
+
+        if (sessionCode == null || sessionCode.trim().isEmpty()) {
+            session.setAttribute("error", "Session code không hợp lệ.");
+            response.sendRedirect("inventoryCheck?mode=approval");
+            return;
+        }
+
+        InventoryCheckDAO dao = new InventoryCheckDAO();
+        boolean ok = dao.approveInventorySession(sessionCode, user.getUserID());
+
+        if (ok) {
+            session.setAttribute("message", "Approve phiếu kiểm kho thành công.");
+        } else {
+            session.setAttribute("error", "Approve phiếu kiểm kho thất bại.");
+        }
+
+        response.sendRedirect("inventoryCheck?mode=approval");
+    }
+
+    private void handleRejectSession(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        HttpSession session = request.getSession(false);
+        User user = (User) session.getAttribute("acc");
+
+        if (user == null || user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        String sessionCode = request.getParameter("sessionCode");
+        String rejectReason = request.getParameter("rejectReason");
+
+        if (sessionCode == null || sessionCode.trim().isEmpty()) {
+            session.setAttribute("error", "Session code không hợp lệ.");
+            response.sendRedirect("inventoryCheck?mode=approval");
+            return;
+        }
+
+        if (rejectReason == null || rejectReason.trim().isEmpty()) {
+            session.setAttribute("error", "Bạn phải nhập lý do reject.");
+            response.sendRedirect("inventoryCheck?mode=approvalDetail&sessionCode=" + sessionCode);
+            return;
+        }
+
+        InventoryCheckDAO dao = new InventoryCheckDAO();
+        boolean ok = dao.rejectInventorySession(sessionCode, user.getUserID(), rejectReason.trim());
+
+        if (ok) {
+            session.setAttribute("message", "Reject phiếu kiểm kho thành công.");
+        } else {
+            session.setAttribute("error", "Reject phiếu kiểm kho thất bại.");
+        }
+
+        response.sendRedirect("inventoryCheck?mode=approval");
     }
 
     /**
