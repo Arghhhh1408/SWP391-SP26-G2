@@ -7,7 +7,6 @@ public class Customer {
     private String phone;
     private String address;
     private String email;
-    // 1. THÊM TRƯỜNG NÀY
     private double debt; 
 
     public int getCustomerId() {
