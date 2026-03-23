@@ -376,11 +376,36 @@
                     gap: 8px;
                 }
 
-                /* Fix cho nội dung chính không bị đè */
-                .admin-main {
-                    margin-left: 240px;
-                    flex: 1;
+                /* ===== NOTIFICATION DROPDOWN ===== */
+                .notif-toggle-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px 18px;
+                    color: #bbb;
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    user-select: none;
                 }
+                .notif-toggle-btn:hover { background: #24243e; color: #fff; }
+                .notif-toggle-btn.active { background: #3b82f6; color: #fff; }
+                .notif-panel {
+                    display: none;
+                    background: #19192e;
+                    margin: 0 6px 8px 6px;
+                    border-radius: 8px;
+                    max-height: 300px;
+                    overflow-y: auto;
+                }
+                .notif-panel.open { display: block; }
+                .notif-item { padding: 9px 13px; border-bottom: 1px solid #2a2a50; font-size: 12px; line-height: 1.5; }
+                .notif-item:last-child { border-bottom: none; }
+                .notif-item.unread { background: rgba(59,130,246,0.1); }
+                .notif-item-title { font-weight: 700; color: #e0e0ff; margin-bottom: 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+                .notif-item-body { color: #8888aa; white-space: pre-line; font-size:11px; }
+                .notif-item-time { color: #555577; font-size: 10px; margin-top: 3px; }
+                .notif-empty { padding: 14px; text-align: center; color: #555577; font-size: 12px; }
             </style>
 
             <aside class="admin-sidebar">
@@ -448,27 +473,23 @@
 
             <script>
                 (function () {
+                    var ctx = '${pageContext.request.contextPath}';
                     var badge = document.getElementById('sale-notif-badge');
-                    if (!badge) return;
                     var wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
-                    var wsUrl = wsProtocol + '://' + location.host + '${pageContext.request.contextPath}/notifications';
                     var ws;
                     function connect() {
-                        ws = new WebSocket(wsUrl);
+                        ws = new WebSocket(wsProtocol + '://' + location.host + ctx + '/notifications');
                         ws.onmessage = function (e) {
                             try {
                                 var data = JSON.parse(e.data);
-                                var count = parseInt(data.unreadCount || data.count || 0);
-                                if (count > 0) {
-                                    badge.textContent = count > 99 ? '99+' : count;
-                                    badge.style.display = '';
-                                } else {
-                                    badge.style.display = 'none';
-                                }
+                                var count = parseInt(data.unreadCount || 0);
+                                if (!badge) return;
+                                if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = ''; }
+                                else { badge.style.display = 'none'; }
                             } catch (ex) {}
                         };
-                        ws.onclose = function () { setTimeout(connect, 5000); };
-                        ws.onerror = function () { ws.close(); };
+                        ws.onclose = function() { setTimeout(connect, 5000); };
+                        ws.onerror = function() { ws.close(); };
                     }
                     connect();
                 })();

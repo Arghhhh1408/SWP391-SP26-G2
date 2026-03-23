@@ -109,6 +109,40 @@
                     100% { transform: scale(1);   opacity: 1; }
                 }
 
+                /* ===== NOTIFICATION DROPDOWN ===== */
+                .notif-toggle-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 10px 16px;
+                    color: #bbb;
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: background 0.2s, color 0.2s;
+                    user-select: none;
+                }
+                .notif-toggle-btn:hover, .notif-toggle-btn.active {
+                    background: #2e2e50; color: #fff;
+                }
+                .notif-panel {
+                    display: none;
+                    background: #1a1a38;
+                    margin: 0 6px 6px 6px;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    max-height: 320px;
+                    overflow-y: auto;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                }
+                .notif-panel.open { display: block; }
+                .notif-item { padding: 9px 13px; border-bottom: 1px solid #2a2a4a; font-size: 12px; line-height: 1.5; }
+                .notif-item:last-child { border-bottom: none; }
+                .notif-item.unread { background: rgba(100,100,200,0.1); }
+                .notif-item-title { font-weight: 700; color: #e0e0ff; margin-bottom: 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+                .notif-item-body { color: #8888bb; white-space: pre-line; font-size: 11px; }
+                .notif-item-time { color: #555577; font-size: 10px; margin-top: 3px; }
+                .notif-empty { padding: 16px; text-align: center; color: #555577; font-size: 12px; }
+
                 .sidebar-footer {
                     margin-top: auto;
                     padding: 14px 16px;
@@ -215,23 +249,19 @@
 
             <script>
                 (function () {
+                    var ctx = '${pageContext.request.contextPath}';
                     var badge = document.getElementById('admin-notif-badge');
-                    if (!badge) return;
                     var wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
-                    var wsUrl = wsProtocol + '://' + location.host + '${pageContext.request.contextPath}/notifications';
                     var ws;
                     function connect() {
-                        ws = new WebSocket(wsUrl);
+                        ws = new WebSocket(wsProtocol + '://' + location.host + ctx + '/notifications');
                         ws.onmessage = function (e) {
                             try {
                                 var data = JSON.parse(e.data);
-                                var count = parseInt(data.unreadCount || data.count || 0);
-                                if (count > 0) {
-                                    badge.textContent = count > 99 ? '99+' : count;
-                                    badge.style.display = '';
-                                } else {
-                                    badge.style.display = 'none';
-                                }
+                                var count = parseInt(data.unreadCount || 0);
+                                if (!badge) return;
+                                if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = ''; }
+                                else { badge.style.display = 'none'; }
                             } catch (ex) {}
                         };
                         ws.onclose = function () { setTimeout(connect, 5000); };

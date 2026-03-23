@@ -143,6 +143,62 @@
         100% { transform: scale(1);   opacity: 1; }
     }
 
+    /* ===== NOTIFICATION DROPDOWN ===== */
+    .notif-toggle-btn {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: var(--sidebar-text);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        margin: 4px 16px;
+        border-radius: 12px;
+        gap: 12px;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+    .notif-toggle-btn:hover { background: var(--sidebar-hover); color: #fff; }
+    .notif-toggle-btn.active { background: var(--primary); color: #fff; }
+
+    .notif-panel {
+        display: none;
+        background: #1e293b;
+        border-radius: 12px;
+        margin: 0 8px 8px 8px;
+        overflow: hidden;
+        max-height: 340px;
+        overflow-y: auto;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .notif-panel.open { display: block; }
+    .notif-panel::-webkit-scrollbar { width: 4px; }
+    .notif-panel::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    .notif-item {
+        padding: 10px 14px;
+        border-bottom: 1px solid #263045;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item.unread { background: rgba(99,102,241,0.08); }
+    .notif-item-title {
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .notif-item-body {
+        color: #94a3b8;
+        white-space: pre-line;
+        font-size: 11px;
+    }
+    .notif-item-time { color: #475569; font-size: 10px; margin-top: 4px; }
+    .notif-empty { padding: 20px 14px; text-align: center; color: #475569; font-size: 12px; }
+
     .sidebar-footer {
         padding: 24px;
         border-top: 1px solid #1e293b;
@@ -243,6 +299,8 @@
            class="${currentPage == 'manager_dashboard' && empty param.tab ? 'active' : ''}">
             <span class="nav-icon">📊</span> Dashboard
         </a>
+
+        <%-- Thông báo --%>
         <a href="${pageContext.request.contextPath}/notifications"
            class="${currentPage == 'notifications' ? 'active' : ''}" id="mgr-notif-link">
             <span class="nav-icon">🔔</span>
@@ -310,29 +368,31 @@
 </aside>
 
 <script>
-    (function () {
-        var badge = document.getElementById('mgr-notif-badge');
-        if (!badge) return;
-        var wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
-        var wsUrl = wsProtocol + '://' + location.host + '${pageContext.request.contextPath}/notifications';
-        var ws;
-        function connect() {
-            ws = new WebSocket(wsUrl);
-            ws.onmessage = function (e) {
-                try {
-                    var data = JSON.parse(e.data);
-                    var count = parseInt(data.unreadCount || data.count || 0);
-                    if (count > 0) {
-                        badge.textContent = count > 99 ? '99+' : count;
-                        badge.style.display = '';
-                    } else {
-                        badge.style.display = 'none';
-                    }
-                } catch (ex) {}
-            };
-            ws.onclose = function () { setTimeout(connect, 5000); };
-            ws.onerror = function () { ws.close(); };
-        }
-        connect();
-    })();
+(function () {
+    var ctx = '${pageContext.request.contextPath}';
+    var badge = document.getElementById('mgr-notif-badge');
+
+    // ---- WebSocket for badge count ----
+    var wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+    var ws;
+    function connect() {
+        ws = new WebSocket(wsProtocol + '://' + location.host + ctx + '/notifications');
+        ws.onmessage = function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                var count = parseInt(data.unreadCount || 0);
+                if (!badge) return;
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = '';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (ex) {}
+        };
+        ws.onclose = function () { setTimeout(connect, 5000); };
+        ws.onerror = function () { ws.close(); };
+    }
+    connect();
+})();
 </script>
