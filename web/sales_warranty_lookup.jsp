@@ -1,6 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page import="java.util.List" %>
-<%@ page import="model.WarrantyClaim" %>
+<%@ page import="model.WarrantyLookupResult" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -37,40 +37,61 @@
 
         <div class="toolbar">
             <form action="sales-warranty-lookup" method="get">
-                <input type="text" name="q" placeholder="Tìm theo mã yêu cầu / SKU / khách hàng / SĐT"
+                <input type="text" name="q" placeholder="Nhập StockOutID (mã phiếu xuất)"
                        value="<%= request.getAttribute("q") == null ? "" : request.getAttribute("q") %>">
                 <button class="btn btn-primary" type="submit">Tìm</button>
             </form>
-            <a class="btn btn-secondary" href="sales-warranty-create">Tạo yêu cầu bảo hành</a>
         </div>
 
         <%
-            List<WarrantyClaim> claims = (List<WarrantyClaim>) request.getAttribute("claims");
-            if (claims == null || claims.isEmpty()) {
+            String error = (String) request.getAttribute("error");
+            if (error != null && !error.isBlank()) {
         %>
-            <div class="muted">Chưa có yêu cầu bảo hành nào.</div>
+                <div class="muted" style="color:#b42318; background:#fef3f2; border:1px solid #fecdca; padding:10px; border-radius:6px; margin-bottom:12px;">
+                    <%= error %>
+                </div>
+        <%
+            }
+
+            List<WarrantyLookupResult> warrantyResults = (List<WarrantyLookupResult>) request.getAttribute("warrantyResults");
+            Object stockOutIdObj = request.getAttribute("stockOutId");
+            String stockOutIdStr = stockOutIdObj == null ? "" : String.valueOf(stockOutIdObj);
+
+            if (warrantyResults == null || warrantyResults.isEmpty()) {
+        %>
+            <div class="muted">Chưa có kết quả. Vui lòng nhập StockOutID để tra cứu.</div>
         <%
             } else {
         %>
             <table>
                 <tr>
-                    <th>Mã yêu cầu</th>
+                    <th>StockOutID</th>
                     <th>SKU</th>
                     <th>Sản phẩm</th>
                     <th>Khách hàng</th>
                     <th>SĐT</th>
+                    <th>Ngày bán</th>
+                    <th>Hết hạn</th>
                     <th>Trạng thái</th>
-                    <th>Cập nhật</th>
+                    <th>Thao tác</th>
                 </tr>
-                <% for (WarrantyClaim c : claims) { %>
+                <% for (WarrantyLookupResult r : warrantyResults) { %>
                     <tr>
-                        <td><%= c.getClaimCode() %></td>
-                        <td><%= c.getSku() == null ? "" : c.getSku() %></td>
-                        <td><%= c.getProductName() == null ? "" : c.getProductName() %></td>
-                        <td><%= c.getCustomerName() == null ? "" : c.getCustomerName() %></td>
-                        <td><%= c.getCustomerPhone() == null ? "" : c.getCustomerPhone() %></td>
-                        <td><%= c.getStatus() == null ? "" : c.getStatus().name() %></td>
-                        <td><%= c.getUpdatedAt() == null ? "" : c.getUpdatedAt() %></td>
+                        <td><%= stockOutIdStr %></td>
+                        <td><%= r.getProductCode() == null ? "" : r.getProductCode() %></td>
+                        <td><%= r.getProductName() == null ? "" : r.getProductName() %></td>
+                        <td><%= r.getCustomerName() == null ? "" : r.getCustomerName() %></td>
+                        <td><%= r.getCustomerPhone() == null ? "" : r.getCustomerPhone() %></td>
+                        <td><%= r.getPurchaseDate() == null ? "" : r.getPurchaseDate() %></td>
+                        <td><%= r.getWarrantyEndDate() == null ? "" : r.getWarrantyEndDate() %></td>
+                        <td><%= r.getStatus() == null ? "" : r.getStatus() %></td>
+                        <td>
+                            <% if ("Còn bảo hành".equals(r.getStatus())) { %>
+                                <a class="btn btn-primary" style="padding:6px 10px; border-radius:6px;" href="sales-warranty-create?stockOutId=<%= stockOutIdStr %>&sku=<%= r.getProductCode() %>">Tạo</a>
+                            <% } else { %>
+                                <span style="color:#999;">Không còn</span>
+                            <% } %>
+                        </td>
                     </tr>
                 <% } %>
             </table>

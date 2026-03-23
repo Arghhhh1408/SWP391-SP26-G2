@@ -90,8 +90,14 @@ public class StaffController extends HttpServlet {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 WarrantyClaimDAO dao = new WarrantyClaimDAO();
-                dao.updateStatus(id, WarrantyClaimStatus.COMPLETED,
-                        "Staff xác nhận đã bảo hành", getActor(request));
+                var claim = dao.getById(id);
+                if (claim != null
+                        && claim.getStatus() != WarrantyClaimStatus.COMPLETED
+                        && claim.getStatus() != WarrantyClaimStatus.REJECTED
+                        && claim.getStatus() != WarrantyClaimStatus.CANCELLED) {
+                    dao.updateStatus(id, WarrantyClaimStatus.COMPLETED,
+                            "Staff xác nhận đã bảo hành", getActor(request));
+                }
             }
             response.sendRedirect("staff_dashboard?tab=warranty");
             return;
@@ -101,8 +107,14 @@ public class StaffController extends HttpServlet {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 WarrantyClaimDAO dao = new WarrantyClaimDAO();
-                dao.updateStatus(id, WarrantyClaimStatus.REJECTED,
-                        "Staff từ chối yêu cầu bảo hành", getActor(request));
+                var claim = dao.getById(id);
+                if (claim != null
+                        && claim.getStatus() != WarrantyClaimStatus.COMPLETED
+                        && claim.getStatus() != WarrantyClaimStatus.REJECTED
+                        && claim.getStatus() != WarrantyClaimStatus.CANCELLED) {
+                    dao.updateStatus(id, WarrantyClaimStatus.REJECTED,
+                            "Staff từ chối yêu cầu bảo hành", getActor(request));
+                }
             }
             response.sendRedirect("staff_dashboard?tab=warranty");
             return;
@@ -112,8 +124,21 @@ public class StaffController extends HttpServlet {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 ReturnDAO dao = new ReturnDAO();
-                dao.updateStatus(id, ReturnStatus.COMPLETED,
-                        "Staff xác nhận đã trả hàng", getActor(request));
+                var rr = dao.getById(id);
+                if (rr != null
+                        && rr.getStatus() != ReturnStatus.COMPLETED
+                        && rr.getStatus() != ReturnStatus.REJECTED
+                        && rr.getStatus() != ReturnStatus.REFUNDED
+                        && rr.getStatus() != ReturnStatus.CANCELLED) {
+                    boolean updated = dao.updateStatus(id, ReturnStatus.COMPLETED,
+                            "Staff xác nhận đã trả hàng", getActor(request));
+
+                    // Khi hoàn tất trả hàng, cộng lại tồn kho sản phẩm.
+                    if (updated && rr.getSku() != null && !rr.getSku().isBlank()) {
+                        ProductDAO productDAO = new ProductDAO();
+                        productDAO.increaseQuantityBySku(rr.getSku(), 1);
+                    }
+                }
             }
             response.sendRedirect("staff_dashboard?tab=returns");
             return;
@@ -134,8 +159,15 @@ public class StaffController extends HttpServlet {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 ReturnDAO dao = new ReturnDAO();
-                dao.updateStatus(id, ReturnStatus.REJECTED,
-                        "Staff từ chối yêu cầu trả hàng", getActor(request));
+                var rr = dao.getById(id);
+                if (rr != null
+                        && rr.getStatus() != ReturnStatus.COMPLETED
+                        && rr.getStatus() != ReturnStatus.REJECTED
+                        && rr.getStatus() != ReturnStatus.REFUNDED
+                        && rr.getStatus() != ReturnStatus.CANCELLED) {
+                    dao.updateStatus(id, ReturnStatus.REJECTED,
+                            "Staff từ chối yêu cầu trả hàng", getActor(request));
+                }
             }
             response.sendRedirect("staff_dashboard?tab=returns");
             return;
