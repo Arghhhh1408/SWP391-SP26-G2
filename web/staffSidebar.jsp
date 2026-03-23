@@ -229,29 +229,27 @@
                 </nav>
             </aside>
 
+            </aside>
+
             <script>
                 (function () {
+                    var ctx = '${pageContext.request.contextPath}';
                     var badge = document.getElementById('staff-notif-badge');
-                    if (!badge) return;
                     var wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
-                    var wsUrl = wsProtocol + '://' + location.host + '${pageContext.request.contextPath}/notifications';
                     var ws;
                     function connect() {
-                        ws = new WebSocket(wsUrl);
+                        ws = new WebSocket(wsProtocol + '://' + location.host + ctx + '/notifications');
                         ws.onmessage = function (e) {
                             try {
                                 var data = JSON.parse(e.data);
-                                var count = parseInt(data.unreadCount || data.count || 0);
-                                if (count > 0) {
-                                    badge.textContent = count > 99 ? '99+' : count;
-                                    badge.style.display = '';
-                                } else {
-                                    badge.style.display = 'none';
-                                }
+                                var count = parseInt(data.unreadCount || 0);
+                                if (!badge) return;
+                                if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = ''; }
+                                else { badge.style.display = 'none'; }
                             } catch (ex) {}
                         };
-                        ws.onclose = function () { setTimeout(connect, 5000); };
-                        ws.onerror = function () { ws.close(); };
+                        ws.onclose = function() { setTimeout(connect, 5000); };
+                        ws.onerror = function() { ws.close(); };
                     }
                     connect();
                 })();

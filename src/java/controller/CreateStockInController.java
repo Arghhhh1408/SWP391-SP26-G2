@@ -8,6 +8,7 @@ import dao.ProductDAO;
 import dao.StockInDAO;
 import dao.SupplierDAO;
 import dao.SystemLogDAO;
+import dao.NotificationDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import model.Notification;
 import model.Product;
 import model.StockIn;
 import model.StockInDetail;
@@ -27,6 +29,7 @@ import model.StockInDraftItem;
 import model.Supplier;
 import model.SystemLog;
 import model.User;
+import websocket.NotificationEndpoint;
 
 @WebServlet(name = "CreateStockInController", urlPatterns = {"/createStockIn"})
 public class CreateStockInController extends HttpServlet {
@@ -432,6 +435,17 @@ public class CreateStockInController extends HttpServlet {
             clearDraft(session);
             session.setAttribute("flashMessage", "Tạo phiếu nhập thành công.");
             session.setAttribute("flashType", "success");
+
+            // ---- Notification dispatch ----
+            try {
+                SupplierDAO supplierDAO2 = new SupplierDAO();
+                Supplier supplier = supplierDAO2.getSupplierById(supplierId);
+                String supplierName = (supplier != null) ? supplier.getSupplierName() : "#" + supplierId;
+                sendStockInNotification(user, stockInId, supplierName, details, total, finalPaymentStatus);
+            } catch (Exception notifEx) {
+                notifEx.printStackTrace(); // notification failure must NOT break the main flow
+            }
+
             response.sendRedirect("stockinList");
         } else {
             forwardForm(request, response, "Tạo phiếu nhập thất bại.", "error");
@@ -441,5 +455,56 @@ public class CreateStockInController extends HttpServlet {
     @Override
     public String getServletInfo() {
         return "Create StockIn Controller";
+    }
+
+    // -----------------------------------------------------------------------
+    // Notification helper
+    // -----------------------------------------------------------------------
+    private void sendStockInNotification(User staff, int stockInId, String supplierName,
+            List<StockInDetail> details, double total, String paymentStatus) {
+
+        // Build human-readable message
+        StringBuilder msg = new StringBuilder();
+        msg.append("Nhân viên ").append(staff.getFullName() != null ? staff.getFullName() : staff.getUsername())
+           .append(" đã tạo phiếu nhập thành công.\n")
+           .append("Nhà cung cấp: ").append(supplierName).append("\n")
+           .append("Chi tiết sản phẩm:\n");
+
+        for (StockInDetail d : details) {
+            String pName = d.getProductName() != null ? d.getProductName() : "SP#" + d.getProductId();
+            msg.append("  - ").append(pName)
+               .append(" | Số lượng: ").append(d.getQuantity())
+               .append(" | Đơn giá: ").append(String.format("%,.0f đ", d.getUnitCost()))
+               .append(" | Thành tiền: ").append(String.format("%,.0f đ", d.getQuantity() * d.getUnitCost()))
+               .append("\n");
+        }
+        msg.append("Tổng tiền: ").append(String.format("%,.0f đ", total)).append("\n");
+        String ps;
+        switch (paymentStatus) {
+            case StockIn.PAYMENT_STATUS_PAID:    ps = "Đã thanh toán"; break;
+            case StockIn.PAYMENT_STATUS_PARTIAL: ps = "Thanh toán một phần"; break;
+            default:                             ps = "Chưa thanh toán";
+        }
+        msg.append("Trạng thái thanh toán: ").append(ps);
+
+        String title = "Phiếu nhập #" + stockInId + " mới từ " +
+                       (staff.getFullName() != null ? staff.getFullName() : staff.getUsername());
+
+        NotificationDAO notifDAO = new NotificationDAO();
+        List<Integer> managerIds = notifDAO.getManagerIds();
+
+        for (int managerId : managerIds) {
+            Notification n = new Notification();
+            n.setUserId(managerId);
+            n.setTitle(title);
+            n.setMessage(msg.toString());
+            n.setType("STOCKIN_CREATED");
+            notifDAO.insert(n);
+
+            // Push WebSocket badge update to this manager
+            int unread = notifDAO.countUnread(managerId);
+            NotificationEndpoint.sendToUser(managerId,
+                    "{\"unreadCount\":" + unread + "}");
+        }
     }
 }
