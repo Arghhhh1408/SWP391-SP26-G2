@@ -188,8 +188,11 @@ public class CheckoutController extends HttpServlet {
 
             // BƯỚC 5: Cập nhật công nợ nếu khách trả thiếu (Chỉ áp dụng khách có ID khác khách lẻ)
             if (totalAmount > amountPaid && finalCustomerId != 1) {
+                // 1. Tính số tiền khách còn thiếu
                 double debtIncrement = totalAmount - amountPaid;
-                customerDAO.updateCustomerDebt(finalCustomerId, debtIncrement);
+
+                // 2. Gọi hàm CỘNG NỢ (không phải trừ nợ) và truyền vào 'debtIncrement'
+                customerDAO.addDebtFromOrder(finalCustomerId, debtIncrement);
             }
 
             con.commit(); // Hoàn tất Transaction
@@ -197,7 +200,7 @@ public class CheckoutController extends HttpServlet {
             response.sendRedirect("sales_dashboard?tab=pos&success=1");
 
         } catch (Exception e) {
-            
+
             response.sendRedirect("sales_dashboard?tab=pos&error=" + e.getMessage());
         } finally {
             try {

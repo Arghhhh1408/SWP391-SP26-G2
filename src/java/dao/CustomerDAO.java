@@ -78,16 +78,56 @@ public class CustomerDAO extends DBContext {
     }
 
     // 3. Hàm mới: Cập nhật công nợ (Dùng khi thanh toán nợ hoặc thu nợ)
-    public boolean updateCustomerDebt(int customerId, double amountChange) {
-        String sql = "UPDATE dbo.Customers SET Debt = Debt + ? WHERE CustomerID = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setDouble(1, amountChange);
-            ps.setInt(2, customerId);
-            return ps.executeUpdate() > 0;
+    public boolean updateCustomerDebt(int customerId, double amount, int staffId, String note) {
+        String sqlUpdateCustomer = "UPDATE Customers SET Debt = Debt - ? WHERE CustomerID = ?";
+        String sqlInsertHistory = "INSERT INTO DebtPayments (customerId, amount, staffId, note, paymentDate) VALUES (?, ?, ?, ?, GETDATE())";
+
+        try {
+            // Sử dụng biến 'connection' có sẵn từ DBContext (lớp cha)
+            if (connection == null || connection.isClosed()) {
+                // Nếu mất kết nối thì thử lấy lại (phụ thuộc vào file DBContext của bạn)
+                // Nếu DBContext chưa có hàm này, hãy xem bước 2 bên dưới
+            }
+
+            connection.setAutoCommit(false); // Bắt đầu Transaction
+
+            // 1. Thực hiện trừ nợ
+            try (PreparedStatement ps1 = connection.prepareStatement(sqlUpdateCustomer)) {
+                ps1.setDouble(1, amount);
+                ps1.setInt(2, customerId);
+                ps1.executeUpdate();
+            }
+
+            // 2. Thực hiện ghi lịch sử vào bảng DebtPayments
+            try (PreparedStatement ps2 = connection.prepareStatement(sqlInsertHistory)) {
+                ps2.setInt(1, customerId);
+                ps2.setDouble(2, amount);
+                ps2.setInt(3, staffId);
+                ps2.setString(4, note);
+                ps2.executeUpdate();
+            }
+
+            connection.commit(); // Lưu thay đổi
+            return true;
         } catch (Exception e) {
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            System.out.println("LỖI THU NỢ: " + e.getMessage());
             e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                connection.setAutoCommit(true); // Trả lại trạng thái mặc định
+                // KHÔNG đóng connection ở đây vì nó dùng chung cho cả class DAO
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
-        return false;
     }
 
     // Lấy CustomerID của khách lẻ (Phone = 0000000000)
@@ -211,5 +251,55 @@ public class CustomerDAO extends DBContext {
         }
         return null;
     }
-    
+
+    public List<model.DebtPayment> getDebtPaymentHistory(int customerId) {
+        List<model.DebtPayment> list = new ArrayList<>();
+        // Join với bảng User để lấy tên người thu tiền (Username)
+        String sql = """
+        SELECT h.*, u.Username as StaffName 
+        FROM DebtPaymentHistory h
+        JOIN [User] u ON h.staffId = u.UserID
+        WHERE h.customerId = ?
+        ORDER BY h.paymentDate DESC
+    """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, customerId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                model.DebtPayment p = new model.DebtPayment();
+                p.setPaymentDate(rs.getTimestamp("paymentDate"));
+                p.setAmount(rs.getDouble("amount"));
+                p.setStaffName(rs.getString("StaffName"));
+                p.setNote(rs.getString("note"));
+                list.add(p);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    public boolean addCustomerDebt(int customerId, double newDebt) {
+    // Dùng dấu + để tăng tiền nợ khi khách mua thiếu
+    String sql = "UPDATE Customers SET Debt = Debt + ? WHERE CustomerID = ?";
+    try {
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setDouble(1, newDebt);
+        ps.setInt(2, customerId);
+        return ps.executeUpdate() > 0;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+    public void addDebtFromOrder(int customerId, double newDebt) {
+    // Dùng dấu + để tăng tiền nợ
+    String sql = "UPDATE Customers SET Debt = Debt + ? WHERE CustomerID = ?";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        ps.setDouble(1, newDebt);
+        ps.setInt(2, customerId);
+        ps.executeUpdate();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
 }
