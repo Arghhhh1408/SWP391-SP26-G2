@@ -78,6 +78,37 @@
                     text-align: center;
                 }
 
+                /* ===== NOTIFICATION BADGE ===== */
+                .nav-link-wrap {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    width: 100%;
+                }
+
+                .notif-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #e74c3c;
+                    color: #fff;
+                    font-size: 11px;
+                    font-weight: 700;
+                    min-width: 18px;
+                    height: 18px;
+                    border-radius: 9px;
+                    padding: 0 5px;
+                    margin-left: auto;
+                    line-height: 1;
+                    animation: badgePop 0.3s ease;
+                }
+
+                @keyframes badgePop {
+                    0%   { transform: scale(0.5); opacity: 0; }
+                    70%  { transform: scale(1.2); }
+                    100% { transform: scale(1);   opacity: 1; }
+                }
+
                 .sidebar-footer {
                     margin-top: auto;
                     padding: 14px 16px;
@@ -148,6 +179,13 @@
                     <a href="admin" class="${currentPage == 'dashboard' ? 'active' : ''}">
                         <span class="nav-icon">&#128202;</span> Dashboard
                     </a>
+                    <a href="notifications" class="${currentPage == 'notifications' ? 'active' : ''}" id="admin-notif-link">
+                        <span class="nav-icon">&#128276;</span>
+                        <span class="nav-link-wrap">
+                            Thông báo
+                            <span class="notif-badge" id="admin-notif-badge" style="display:none;">0</span>
+                        </span>
+                    </a>
 
                     <div class="sidebar-section-title">Quản lý người dùng</div>
                     <a href="userList" class="${currentPage == 'userList' ? 'active' : ''}">
@@ -174,3 +212,31 @@
                     <a href="logout">&#8592; Đăng xuất</a>
                 </div>
             </aside>
+
+            <script>
+                (function () {
+                    var badge = document.getElementById('admin-notif-badge');
+                    if (!badge) return;
+                    var wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+                    var wsUrl = wsProtocol + '://' + location.host + '${pageContext.request.contextPath}/notifications';
+                    var ws;
+                    function connect() {
+                        ws = new WebSocket(wsUrl);
+                        ws.onmessage = function (e) {
+                            try {
+                                var data = JSON.parse(e.data);
+                                var count = parseInt(data.unreadCount || data.count || 0);
+                                if (count > 0) {
+                                    badge.textContent = count > 99 ? '99+' : count;
+                                    badge.style.display = '';
+                                } else {
+                                    badge.style.display = 'none';
+                                }
+                            } catch (ex) {}
+                        };
+                        ws.onclose = function () { setTimeout(connect, 5000); };
+                        ws.onerror = function () { ws.close(); };
+                    }
+                    connect();
+                })();
+            </script>
