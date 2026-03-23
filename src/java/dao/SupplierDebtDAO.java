@@ -8,7 +8,9 @@ package dao;
  *
  * @author dotha
  */
-import java.sql.*;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import model.SupplierDebt;

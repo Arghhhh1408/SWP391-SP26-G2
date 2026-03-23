@@ -94,12 +94,11 @@ public class SupplierDebtController extends HttpServlet {
         String fromDateRaw = request.getParameter("fromDate");
         String toDateRaw = request.getParameter("toDate");
 
-        Integer supplierId = null;
+        Integer supplierId;
         Date fromDate = null;
         Date toDate = null;
 
         try {
-            // supplierId bắt buộc
             if (supplierIdRaw == null || supplierIdRaw.trim().isEmpty()) {
                 response.sendRedirect("supplierList");
                 return;
@@ -120,7 +119,6 @@ public class SupplierDebtController extends HttpServlet {
         }
 
         String supplierName = supplierDAO.getSupplierNameById(supplierId);
-
         List<SupplierDebt> list = debtDAO.searchDebts(supplierId, status, fromDate, toDate);
 
         try {

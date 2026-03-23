@@ -164,26 +164,26 @@ public class StockInDAO extends DBContext {
 
     public int insertStockInWithDetailsAndDebt(StockIn stockIn, List<StockInDetail> details, double paidNow) {
         String insertStockIn = """
-            INSERT INTO StockIn (SupplierID, TotalAmount, CreatedBy, Note, StockStatus, PaymentStatus)
-            OUTPUT INSERTED.StockInID
-            VALUES (?, ?, ?, ?, ?, ?)
-            """;
+        INSERT INTO StockIn (SupplierID, TotalAmount, CreatedBy, Note, StockStatus, PaymentStatus)
+        OUTPUT INSERTED.StockInID
+        VALUES (?, ?, ?, ?, ?, ?)
+        """;
 
         String insertDetail = """
-            INSERT INTO StockInDetails (StockInID, ProductID, Quantity, ReceivedQuantity, UnitCost)
-            VALUES (?, ?, ?, 0, ?)
-            """;
+        INSERT INTO StockInDetails (StockInID, ProductID, Quantity, ReceivedQuantity, UnitCost)
+        VALUES (?, ?, ?, 0, ?)
+        """;
 
         String insertDebt = """
-            INSERT INTO SupplierDebts (SupplierID, StockInID, Amount, DueDate, Status)
-            OUTPUT INSERTED.DebtID
-            VALUES (?, ?, ?, ?, ?)
-            """;
+        INSERT INTO SupplierDebts (SupplierID, StockInID, Amount, DueDate, Status)
+        OUTPUT INSERTED.DebtID
+        VALUES (?, ?, ?, DATEADD(DAY, 45, CAST(GETDATE() AS DATE)), ?)
+        """;
 
         String insertDebtPayment = """
-            INSERT INTO SupplierDebtPayment (DebtID, Amount, PaymentDate, Note, CreatedBy)
-            VALUES (?, ?, GETDATE(), ?, ?)
-            """;
+        INSERT INTO SupplierDebtPayment (DebtID, Amount, PaymentDate, Note, CreatedBy)
+        VALUES (?, ?, GETDATE(), ?, ?)
+        """;
 
         int stockInId = -1;
 
@@ -197,6 +197,7 @@ public class StockInDAO extends DBContext {
                 paid = total;
             }
 
+            // 1. Insert StockIn
             try (PreparedStatement ps = connection.prepareStatement(insertStockIn)) {
                 ps.setInt(1, stockIn.getSupplierId());
                 ps.setBigDecimal(2, total);
@@ -214,6 +215,7 @@ public class StockInDAO extends DBContext {
                 }
             }
 
+            // 2. Insert StockInDetails
             try (PreparedStatement ps = connection.prepareStatement(insertDetail)) {
                 for (StockInDetail d : details) {
                     ps.setInt(1, stockInId);
@@ -225,6 +227,7 @@ public class StockInDAO extends DBContext {
                 ps.executeBatch();
             }
 
+            // 3. Insert SupplierDebts
             String debtStatus = paid.compareTo(BigDecimal.ZERO) <= 0
                     ? "Pending"
                     : (paid.compareTo(total) < 0 ? "Partial" : "Paid");
@@ -234,8 +237,7 @@ public class StockInDAO extends DBContext {
                 ps.setInt(1, stockIn.getSupplierId());
                 ps.setInt(2, stockInId);
                 ps.setBigDecimal(3, total);
-                ps.setNull(4, java.sql.Types.DATE);
-                ps.setString(5, debtStatus);
+                ps.setString(4, debtStatus);
 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
@@ -244,6 +246,7 @@ public class StockInDAO extends DBContext {
                 }
             }
 
+            // 4. Insert lịch sử thanh toán nếu có
             if (debtId > 0 && paid.compareTo(BigDecimal.ZERO) > 0) {
                 try (PreparedStatement ps = connection.prepareStatement(insertDebtPayment)) {
                     ps.setInt(1, debtId);
