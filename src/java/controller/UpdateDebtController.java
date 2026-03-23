@@ -23,7 +23,7 @@ public class UpdateDebtController extends HttpServlet {
             // 2. Gọi DAO để trừ nợ (Số tiền khách trả nên truyền vào dạng số âm để cộng vào cột Debt)
             // Ví dụ: Nợ 500k, trả 200k -> Debt = 500 + (-200) = 300k
             CustomerDAO dao = new CustomerDAO();
-            boolean success = dao.updateCustomerDebt(customerId, -payAmount);
+            boolean success = dao.updateCustomerDebt(customerId, payAmount, customerId, LEGACY_DO_HEAD);
 
             // 3. Quay lại trang chi tiết khách hàng sau khi cập nhật thành công
             if (success) {
