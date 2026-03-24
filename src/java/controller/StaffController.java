@@ -193,6 +193,12 @@ public class StaffController extends HttpServlet {
         request.setAttribute("unreadNotificationCount",
                 user == null ? 0 : dashboardDAO.countUnreadNotifications(user.getUserID()));
         request.setAttribute("recentLogs", systemLogDAO.getWarehouseStaffLogs(5));
+
+        request.setAttribute("staffProductCatalogCount", dashboardDAO.countActiveProductsInCatalog());
+        request.setAttribute("staffTotalSalesRevenueFormatted",
+                formatCurrencyVi(dashboardDAO.getTotalCompletedStockOutRevenue()));
+        request.setAttribute("staffTotalSoldUnits", dashboardDAO.getTotalSoldUnitsFromStockOut());
+        request.setAttribute("staffHomeFeed", dashboardDAO.getWarrantyAndReturnFeed(80));
     }
 
     private String formatCurrencyVi(double amount) {

@@ -1,5 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib uri="jakarta.tags.core" prefix="c" %>
+<%@taglib uri="jakarta.tags.fmt" prefix="fmt" %>
 <!DOCTYPE html>
 <html lang="vi">
     <head>
@@ -282,6 +283,174 @@
                     grid-template-columns: 1fr;
                 }
             }
+
+            /* --- Staff dashboard overview (thống kê + feed) --- */
+            .st-overview {
+                margin-bottom: 28px;
+            }
+            .st-stat-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                margin-bottom: 22px;
+            }
+            @media (max-width: 1024px) {
+                .st-stat-grid { grid-template-columns: 1fr; }
+            }
+            .st-stat-card {
+                background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+                border: 1px solid #bae6fd;
+                border-radius: 20px;
+                padding: 22px 24px;
+                box-shadow: 0 8px 24px rgba(14, 116, 144, 0.08);
+                position: relative;
+                overflow: hidden;
+            }
+            .st-stat-card::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 4px;
+                background: linear-gradient(180deg, #0ea5e9, #0369a1);
+                border-radius: 4px 0 0 4px;
+            }
+            .st-stat-label {
+                font-size: 13px;
+                font-weight: 700;
+                color: #0369a1;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                margin-bottom: 10px;
+            }
+            .st-stat-value {
+                font-size: 30px;
+                font-weight: 800;
+                color: #0c4a6e;
+                line-height: 1.15;
+                word-break: break-word;
+            }
+            .st-stat-hint {
+                margin-top: 10px;
+                font-size: 12px;
+                color: #64748b;
+                line-height: 1.45;
+            }
+            .st-subbar {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 12px 20px;
+                padding: 14px 18px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 14px;
+                margin-bottom: 22px;
+                font-size: 13px;
+                color: #475569;
+            }
+            .st-subbar a {
+                color: #0284c7;
+                font-weight: 700;
+            }
+            .st-subbar a:hover { text-decoration: underline; }
+            .st-feed-panel {
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+            }
+            .st-feed-head {
+                padding: 22px 24px;
+                border-bottom: 1px solid #e2e8f0;
+                background: linear-gradient(90deg, #f8fafc, #fff);
+            }
+            .st-feed-head h2 {
+                font-size: 18px;
+                color: #0f172a;
+                margin: 0 0 6px 0;
+            }
+            .st-feed-head p {
+                margin: 0;
+                font-size: 13px;
+                color: #64748b;
+            }
+            .st-feed-table-wrap {
+                overflow-x: auto;
+            }
+            .st-feed-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            .st-feed-table th {
+                text-align: left;
+                padding: 14px 18px;
+                background: #f8fafc;
+                color: #475569;
+                font-weight: 700;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                border-bottom: 1px solid #e2e8f0;
+                white-space: nowrap;
+            }
+            .st-feed-table td {
+                padding: 14px 18px;
+                border-bottom: 1px solid #f1f5f9;
+                vertical-align: middle;
+                color: #334155;
+            }
+            .st-feed-table tr:hover td {
+                background: #f8fafc;
+            }
+            .st-type-pill {
+                display: inline-flex;
+                align-items: center;
+                padding: 5px 12px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+            }
+            .st-type-warranty {
+                background: #dbeafe;
+                color: #1d4ed8;
+            }
+            .st-type-return {
+                background: #ffedd5;
+                color: #c2410c;
+            }
+            .st-code {
+                font-family: ui-monospace, monospace;
+                font-weight: 700;
+                color: #0f172a;
+                font-size: 13px;
+            }
+            .st-status-pill {
+                display: inline-block;
+                padding: 4px 10px;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 700;
+                background: #f1f5f9;
+                color: #475569;
+            }
+            .st-link {
+                font-size: 13px;
+                font-weight: 700;
+                color: #0284c7;
+            }
+            .st-link:hover { text-decoration: underline; }
+            .st-empty-feed {
+                padding: 40px 24px;
+                text-align: center;
+                color: #94a3b8;
+                font-size: 14px;
+            }
         </style>
     </head>
     <body>
@@ -304,162 +473,94 @@
 
             <c:choose>
                 <c:when test="${tab == 'dashboard'}">
-                    <div class="stats">
-                        <div class="card">
-                            <div class="card-label">Low stock items</div>
-                            <div class="card-value">${triggeredCount}</div>
-                            <span class="pill pill-orange">From LowStockAlerts</span>
+                    <div class="st-overview">
+                        <div class="st-stat-grid">
+                            <div class="st-stat-card">
+                                <div class="st-stat-label">Sản phẩm trong danh mục</div>
+                                <div class="st-stat-value">${staffProductCatalogCount}</div>
+                                <div class="st-stat-hint">Số dòng sản phẩm đang hoạt động (Active) trong hệ thống.</div>
+                            </div>
+                            <div class="st-stat-card">
+                                <div class="st-stat-label">Tổng tiền bán hàng</div>
+                                <div class="st-stat-value">${staffTotalSalesRevenueFormatted}</div>
+                                <div class="st-stat-hint">Tổng giá trị các phiếu xuất kho đã hoàn thành (Completed).</div>
+                            </div>
+                            <div class="st-stat-card">
+                                <div class="st-stat-label">Tổng số lượng đã bán</div>
+                                <div class="st-stat-value"><fmt:formatNumber value="${staffTotalSoldUnits}" pattern="#,##0"/></div>
+                                <div class="st-stat-hint">Cộng dồn số lượng trên tất cả dòng chi tiết phiếu xuất đã hoàn thành.</div>
+                            </div>
                         </div>
-                        <div class="card">
-                            <div class="card-label">Pending supplier debt</div>
-                            <div class="card-value">${pendingSupplierDebtAmount}</div>
-                            <span class="pill pill-red">SupplierDebts</span>
+
+                        <div class="st-subbar">
+                            <span><strong>Tồn thấp:</strong> ${triggeredCount} cảnh báo</span>
+                            <span>·</span>
+                            <a href="createStockIn">Nhập kho</a>
+                            <span>·</span>
+                            <a href="staff_dashboard?tab=products">Sản phẩm &amp; tồn</a>
+                            <span>·</span>
+                            <a href="staff_dashboard?tab=warranty">Bảo hành</a>
+                            <span>·</span>
+                            <a href="staff_dashboard?tab=returns">Đổi / trả</a>
                         </div>
-                        <div class="card">
-                            <div class="card-label">Open RTV cases</div>
-                            <div class="card-value">${openRTVCount}</div>
-                            <span class="pill pill-purple">ReturnToVendors</span>
-                        </div>
-                        <div class="card">
-                            <div class="card-label">Unread notifications</div>
-                            <div class="card-value">${unreadNotificationCount}</div>
-                            <span class="pill pill-blue">Notifications</span>
-                        </div>
-                    </div>
 
-                    <div class="layout-grid">
-                        <section class="panel">
-                            <div class="panel-header">
-                                <div>
-                                    <h3>Operational Alerts</h3>
-                                    <p>Tổng hợp từ LowStockAlerts, SupplierDebts và hệ thống kho.</p>
-                                </div>
-                                <span class="pill pill-orange">Live summary</span>
+                        <section class="st-feed-panel">
+                            <div class="st-feed-head">
+                                <h2>Hoạt động gần đây — bảo hành &amp; đổi trả</h2>
+                                <p>Danh sách gộp, sắp xếp theo thời gian cập nhật mới nhất trước.</p>
                             </div>
-                            <div class="panel-body">
-                                <c:forEach items="${triggeredAlerts}" var="item" end="2">
-                                    <div class="alert-item">
-                                        <div>
-                                            <h4>${item.sku} - ${item.productName}</h4>
-                                            <p>Stock hiện tại ${item.stockQuantity} thấp hơn min level ${item.minStockLevel}.</p>
-                                        </div>
-                                        <div style="display:flex; gap:10px; align-items:center;">
-                                            <span class="status-chip">Low stock</span>
-                                            <form action="staff_dashboard" method="post">
-                                                <input type="hidden" name="action" value="toggleLowStockNotified">
-                                                <input type="hidden" name="alertId" value="${item.alertId}">
-                                                <input type="hidden" name="notified" value="${item.notified}">
-                                                <button type="submit" class="btn btn-light">
-                                                    ${item.notified ? 'Đã thông báo' : 'Thông báo'}
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </c:forEach>
-
-                                <c:if test="${empty triggeredAlerts}">
-                                    <div class="empty-box">Hiện chưa có sản phẩm nào dưới mức tồn kho tối thiểu.</div>
-                                </c:if>
-
-                                <c:if test="${pendingSupplierDebtCount > 0}">
-                                    <div class="alert-item">
-                                        <div>
-                                            <h4>Công nợ nhà cung cấp</h4>
-                                            <p>Hiện có ${pendingSupplierDebtCount} khoản công nợ cần theo dõi.</p>
-                                        </div>
-                                        <span class="status-chip" style="background:#fbe1e1;color:#ef3f33;">Pending debt</span>
-                                    </div>
-                                </c:if>
-                            </div>
-                        </section>
-
-                        <section class="panel">
-                            <div class="panel-header">
-                                <div>
-                                    <h3>Quick Actions</h3>
-                                    <p>Điều hướng nhanh theo use case của Warehouse Staff.</p>
-                                </div>
-                            </div>
-                            <div class="panel-body">
-                                <div class="quick-grid">
-                                    <div class="quick-card">
-                                        <h4>Create Stock-In</h4>
-                                        <p>Tạo StockIn và StockInDetails khi nhập hàng từ nhà cung cấp.</p>
-                                        <a class="btn" href="createStockIn">Open</a>
-                                    </div>
-                                    <div class="quick-card">
-                                        <h4>Inventory Check</h4>
-                                        <p>Xem nhanh danh sách tồn kho để đối chiếu số lượng sản phẩm.</p>
-                                        <a class="btn" href="staff_dashboard?tab=products">Open</a>
-                                    </div>
-                                    <div class="quick-card">
-                                        <h4>Supplier Requests</h4>
-                                        <p>Theo dõi các yêu cầu trả hàng về nhà cung cấp và các nghiệp vụ liên quan.</p>
-                                        <a class="btn" href="staff_dashboard?tab=returns">Open</a>
-                                    </div>
-                                    <div class="quick-card">
-                                        <h4>Warranty Claims</h4>
-                                        <p>Kiểm tra và xử lý các yêu cầu bảo hành đang chờ xử lý.</p>
-                                        <a class="btn" href="staff_dashboard?tab=warranty">Open</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-
-                    <div class="lower-grid">
-                        <section class="panel">
-                            <div class="panel-header">
-                                <div>
-                                    <h3>Low Stock Watchlist</h3>
-                                    <p>Kết hợp Products.StockQuantity với LowStockAlerts.MinStockLevel.</p>
-                                </div>
-                            </div>
-                            <div class="panel-body" style="padding-top:0;">
-                                <table>
-                                    <tr>
-                                        <th>SKU</th>
-                                        <th>PRODUCT</th>
-                                        <th>CATEGORY</th>
-                                        <th>STOCK</th>
-                                        <th>MIN LEVEL</th>
-                                        <th>STATUS</th>
-                                    </tr>
-                                    <c:forEach items="${dashboardWatchlist}" var="item">
-                                        <tr>
-                                            <td>${item.sku}</td>
-                                            <td>${item.productName}</td>
-                                            <td>${empty item.categoryName ? '-' : item.categoryName}</td>
-                                            <td>${item.stockQuantity}</td>
-                                            <td>${item.minStockLevel}</td>
-                                            <td><span class="badge-danger">Below minimum</span></td>
-                                        </tr>
-                                    </c:forEach>
-                                    <c:if test="${empty dashboardWatchlist}">
-                                        <tr><td colspan="6">Chưa có dữ liệu low stock alert.</td></tr>
-                                    </c:if>
-                                </table>
-                            </div>
-                        </section>
-
-                        <section class="panel">
-                            <div class="panel-header">
-                                <div>
-                                    <h3>Recent Warehouse Activities</h3>
-                                    <p>Dữ liệu gần nhất từ SystemLog.</p>
-                                </div>
-                            </div>
-                            <div class="panel-body">
-                                <c:forEach items="${recentLogs}" var="log">
-                                    <div class="activity-item">
-                                        <div class="activity-date">${log.logDate}</div>
-                                        <div class="activity-title">${empty log.action ? 'SYSTEM_EVENT' : log.action}</div>
-                                        <div class="activity-desc">${empty log.description ? log.targetObject : log.description}</div>
-                                    </div>
-                                </c:forEach>
-                                <c:if test="${empty recentLogs}">
-                                    <div class="empty-box">Chưa có hoạt động kho gần đây.</div>
-                                </c:if>
+                            <div class="st-feed-table-wrap">
+                                <c:choose>
+                                    <c:when test="${empty staffHomeFeed}">
+                                        <div class="st-empty-feed">Chưa có yêu cầu bảo hành hoặc đổi trả nào.</div>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <table class="st-feed-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Loại</th>
+                                                    <th>Mã</th>
+                                                    <th>Sản phẩm</th>
+                                                    <th>Khách hàng</th>
+                                                    <th>Trạng thái</th>
+                                                    <th>Thời gian</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach items="${staffHomeFeed}" var="row">
+                                                    <tr>
+                                                        <td>
+                                                            <c:choose>
+                                                                <c:when test="${row.warranty}">
+                                                                    <span class="st-type-pill st-type-warranty">${row.typeLabelVi}</span>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <span class="st-type-pill st-type-return">${row.typeLabelVi}</span>
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                        </td>
+                                                        <td><span class="st-code">${row.code}</span></td>
+                                                        <td>${empty row.productLine ? '—' : row.productLine}</td>
+                                                        <td>${empty row.customerLine ? '—' : row.customerLine}</td>
+                                                        <td><span class="st-status-pill">${row.statusLabel}</span></td>
+                                                        <td>${row.activityTimeVi}</td>
+                                                        <td>
+                                                            <c:choose>
+                                                                <c:when test="${row.warranty}">
+                                                                    <a class="st-link" href="staff_dashboard?tab=warranty">Mở tab</a>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <a class="st-link" href="staff_dashboard?tab=returns">Mở tab</a>
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
                         </section>
                     </div>
