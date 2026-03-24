@@ -351,4 +351,28 @@ public class UserDAO extends DBContext {
         }
         return null;
     }
+
+    public User getUserByUsername(String username) {
+        String sql = "SELECT * FROM [User] WHERE Username = ? AND IsActive = 1";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, username);
+            ResultSet rs = stm.executeQuery();
+            if (rs.next()) {
+                User u = new User();
+                u.setUserID(rs.getInt("UserID"));
+                u.setUsername(rs.getString("Username"));
+                u.setFullName(rs.getString("FullName"));
+                u.setRoleID(rs.getInt("RoleID"));
+                u.setEmail(rs.getString("Email"));
+                u.setPhone(rs.getString("Phone"));
+                u.setPasswordHash(rs.getString("PasswordHash"));
+                u.setCreateDate(rs.getDate("CreateDate"));
+                return u;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

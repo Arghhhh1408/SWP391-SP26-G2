@@ -101,4 +101,42 @@ public class NotificationDAO extends DBContext {
         }
         return ids;
     }
+
+    /** Get all active admin user IDs (RoleID = 0) */
+    public List<Integer> getAdminIds() {
+        List<Integer> ids = new ArrayList<>();
+        String sql = "SELECT UserID FROM [User] WHERE RoleID = 0 AND IsActive = 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery()) {
+            while (rs.next())
+                ids.add(rs.getInt("UserID"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return ids;
+    }
+
+    /** Get a single notification by ID */
+    public Notification getNotificationById(int id) {
+        String sql = "SELECT * FROM Notifications WHERE NotificationID = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Notification n = new Notification();
+                    n.setNotificationId(rs.getInt("NotificationID"));
+                    n.setUserId(rs.getInt("UserID"));
+                    n.setTitle(rs.getString("Title"));
+                    n.setMessage(rs.getString("Message"));
+                    n.setRead(rs.getBoolean("IsRead"));
+                    n.setCreatedAt(rs.getTimestamp("CreatedAt"));
+                    n.setType(rs.getString("Type"));
+                    return n;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

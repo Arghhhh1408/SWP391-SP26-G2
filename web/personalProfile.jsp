@@ -315,10 +315,16 @@
                                     <div class="profile-info-icon">&#128274;</div>
                                     <h3 style="margin: 0; font-size: 18px; color: #1a1a2e;">Đổi mật khẩu</h3>
                                 </div>
-                                <button type="button" id="togglePasswordBtn" onclick="togglePasswordSection()"
-                                        style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                                    Đổi mật khẩu
-                                </button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" id="resetPasswordBtn" onclick="requestResetPassword()"
+                                            style="background: #ffc107; color: #1a1a2e; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                                        Reset mật khẩu
+                                    </button>
+                                    <button type="button" id="togglePasswordBtn" onclick="togglePasswordSection()"
+                                            style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                                        Đổi mật khẩu
+                                    </button>
+                                </div>
                             </div>
 
                             <%-- Password change notifications --%>
@@ -371,7 +377,7 @@
                                      style="display: none; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 6px; padding: 10px 16px; margin-bottom: 16px;">
                                 </div>
 
-                                <div style="display: flex; gap: 10px;">
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                     <button type="submit"
                                             style="background: #28a745; color: white; border: none; padding: 10px 24px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 500;">
                                         Xác nhận đổi mật khẩu
@@ -383,6 +389,10 @@
                                 </div>
                             </form>
                         </div>
+                        
+                        <form id="resetRequestForm" action="personalProfile" method="POST" style="display:none;">
+                            <input type="hidden" name="action" value="requestResetPassword" />
+                        </form>
 
                         <script>
                             let isEditing = false;
@@ -413,6 +423,7 @@
                                 isPasswordOpen = !isPasswordOpen;
                                 document.getElementById('passwordForm').style.display = isPasswordOpen ? 'block' : 'none';
                                 document.getElementById('togglePasswordBtn').style.display = isPasswordOpen ? 'none' : 'inline-block';
+                                document.getElementById('resetPasswordBtn').style.display = isPasswordOpen ? 'none' : 'inline-block';
                                 if (!isPasswordOpen) {
                                     document.getElementById('passwordForm').reset();
                                     document.getElementById('passwordValidationError').style.display = 'none';
@@ -433,6 +444,16 @@
                                 errorDiv.style.display = 'none';
                                 return true;
                             }
+                            
+                             function requestResetPassword() {
+                                 var isAdmin = ${sessionScope.acc.roleID == 0};
+                                 var msg = isAdmin 
+                                     ? "Bạn có chắc chắn muốn reset mật khẩu của mình về '123' không?" 
+                                     : "Bạn có chắc chắn muốn gửi yêu cầu Reset mật khẩu cho Admin không?";
+                                 if (confirm(msg)) {
+                                     document.getElementById('resetRequestForm').submit();
+                                 }
+                             }
 
                             // If there was an error submitting, keep edit mode open
                             var hasError = "${not empty error}";
