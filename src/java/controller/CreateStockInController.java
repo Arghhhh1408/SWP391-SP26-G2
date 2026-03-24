@@ -420,7 +420,9 @@ public class CreateStockInController extends HttpServlet {
                 SystemLog log = new SystemLog();
                 log.setUserID(user.getUserID());
                 log.setAction("CREATE_STOCKIN");
-                log.setTargetObject("StockIn");
+                String actorName = (user.getFullName() != null && !user.getFullName().trim().isEmpty()) 
+                                    ? user.getFullName() : user.getUsername();
+                log.setTargetObject("User: " + actorName);
                 log.setDescription("Tạo phiếu nhập | StockInID: " + stockInId
                         + " | SupplierID: " + supplierId
                         + " | Total: " + total
