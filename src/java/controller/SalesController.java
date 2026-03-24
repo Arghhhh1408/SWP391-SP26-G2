@@ -54,12 +54,23 @@ public class SalesController extends HttpServlet {
                 request.setAttribute("lowStockProducts", pDao.getLowStockProducts(5));
             } else if ("pos".equals(tab)) {
                 try {
-                    List<Product> list = pDao.getAllProducts();
-                    request.setAttribute("products", list);
+                    // 1. Lấy tham số tìm kiếm và lọc từ JSP gửi lên
+                    String keyword = safeTrim(request.getParameter("keyword"));
+                    String sort = safeTrim(request.getParameter("sort"));
+                    String range = safeTrim(request.getParameter("range"));
 
-                    // THÊM ĐOẠN NÀY:
+                    // 2. Gọi hàm tìm kiếm sản phẩm (keyword, sort, range)
+                    List<Product> list = pDao.searchProducts(keyword, sort, range);
+
+                    // 3. Gửi lại dữ liệu cho JSP hiển thị
+                    request.setAttribute("products", list);
+                    request.setAttribute("keyword", keyword);
+                    request.setAttribute("sort", sort);
+                    request.setAttribute("range", range);
+
+                    // Lấy danh sách khách hàng để hỗ trợ JS tìm SĐT
                     dao.CustomerDAO cDao = new dao.CustomerDAO();
-                    request.setAttribute("customers", cDao.getAllCustomers("")); // Lấy hết khách để JS tìm kiếm
+                    request.setAttribute("customers", cDao.getAllCustomers(""));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
