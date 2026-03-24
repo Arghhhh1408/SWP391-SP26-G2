@@ -93,10 +93,9 @@ public class OrderController extends HttpServlet {
             request.setAttribute("range", range);
             request.setAttribute("sort", sort);
             request.setAttribute("keyword", keyword);
-
-            request.setAttribute("activeTab", "orders"); 
-
-request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
+            request.setAttribute("activeTab", "orders");
+            request.setAttribute("tab", request.getParameter("tab"));
+            request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
             return;
 
         } catch (Exception e) {

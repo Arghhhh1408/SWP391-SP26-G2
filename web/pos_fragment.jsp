@@ -117,40 +117,71 @@
         <div class="admin-main" style="margin-left: 10px; padding: 10px;">
             <div class="pos-container">
                 <div class="product-column">
-                    <div class="box">
-                        <div style="padding: 15px 20px; background: #fcfcfc; border-bottom: 1px solid #f1f5f9;">
-                            <h3 style="margin:0; font-size: 18px; color: #1e293b;">🛒 Danh mục Sản phẩm</h3>
-                        </div>
-                        <div style="padding: 0;">
-                            <table style="width:100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background: #f8fafc;">
-                                        <th style="padding:15px; text-align:left; color: #64748b; font-size: 13px;">Sản phẩm</th>
-                                        <th style="padding:15px; text-align:left; color: #64748b; font-size: 13px;">Đơn giá</th>
-                                        <th style="padding:15px; text-align:center; color: #64748b; font-size: 13px;">Kho</th>
-                                        <th style="padding:15px; text-align:center; color: #64748b; font-size: 13px;">Thao tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <c:forEach items="${products}" var="p">
-                                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                                            <td style="padding:15px;">
-                                                <strong style="color: #1e293b;">${p.name}</strong><br>
-                                                <small style="color:#94a3b8;">SKU: ${p.sku}</small>
-                                            </td>
-                                            <td style="padding:15px; color: #475569; font-weight: 600;">
-                                                <fmt:formatNumber value="${p.price}" type="number"/>đ
-                                            </td>
-                                            <td style="padding:15px; text-align:center;">
-                                                <span style="padding: 2px 8px; background: #f1f5f9; border-radius: 4px;">${p.quantity}</span>
-                                            </td>
-                                            <td style="padding:15px; text-align:center;">
-                                                <button onclick="updateCartAjax('${p.id}', 'add')" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight: bold;">Thêm</button>
-                                            </td>
+                    <div class="product-column">
+                        <div class="box">
+                            <div style="padding: 15px 20px; background: #fcfcfc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <h3 style="margin:0; font-size: 18px; color: #1e293b;">🛒 Danh mục Sản phẩm</h3>
+
+                                <form action="sales_dashboard" method="get" style="display: flex; gap: 8px; flex: 1; justify-content: flex-end; min-width: 300px;">
+                                    <input type="hidden" name="tab" value="pos">
+
+                                    <select name="range" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
+                                        <option value="all" ${range == 'all' ? 'selected' : ''}>Tất cả nhóm</option>
+                                        <option value="available" ${range == 'available' ? 'selected' : ''}>Còn hàng</option>
+                                    </select>
+
+                                    <select name="sort" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
+                                        <option value="new" ${sort == 'new' ? 'selected' : ''}>Mới nhập</option>
+                                        <option value="total_desc" ${sort == 'total_desc' ? 'selected' : ''}>Giá cao nhất</option>
+                                        <option value="total_asc" ${sort == 'total_asc' ? 'selected' : ''}>Giá thấp nhất</option>
+                                    </select>
+
+                                    <input type="text" name="keyword" value="${keyword}" 
+                                           placeholder="Tìm tên sản phẩm, SKU..." 
+                                           style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 180px; font-size: 13px;">
+
+                                    <button type="submit" class="btn" style="background: #3b82f6; color: white; padding: 8px 15px; font-size: 13px;">
+                                        🔍 Tìm
+                                    </button>
+                                </form>
+                            </div>
+
+                            <div style="padding: 0;">
+                                <table style="width:100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #f8fafc;">
+                                            <th style="padding:15px; text-align:left; color: #64748b; font-size: 13px;">Sản phẩm</th>
+                                            <th style="padding:15px; text-align:left; color: #64748b; font-size: 13px;">Đơn giá</th>
+                                            <th style="padding:15px; text-align:center; color: #64748b; font-size: 13px;">Kho</th>
+                                            <th style="padding:15px; text-align:center; color: #64748b; font-size: 13px;">Thao tác</th>
                                         </tr>
-                                    </c:forEach>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach items="${products}" var="p">
+                                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                <td style="padding:15px;">
+                                                    <strong style="color: #1e293b;">${p.name}</strong><br>
+                                                    <small style="color:#94a3b8;">SKU: ${p.sku}</small>
+                                                </td>
+                                                <td style="padding:15px; color: #475569; font-weight: 600;">
+                                                    <fmt:formatNumber value="${p.price}" type="number"/>đ
+                                                </td>
+                                                <td style="padding:15px; text-align:center;">
+                                                    <span style="padding: 2px 8px; background: #f1f5f9; border-radius: 4px;">${p.quantity}</span>
+                                                </td>
+                                                <td style="padding:15px; text-align:center;">
+                                                    <button onclick="updateCartAjax('${p.id}', 'add')" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight: bold;">Thêm</button>
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                        <c:if test="${empty products}">
+                                            <tr>
+                                                <td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">Không tìm thấy sản phẩm nào.</td>
+                                            </tr>
+                                        </c:if>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

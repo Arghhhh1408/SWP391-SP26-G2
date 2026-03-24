@@ -19,6 +19,8 @@ public class OrderHistoryDAO extends DBContext {
         String orderBy;
         if ("total_desc".equalsIgnoreCase(sort)) {
             orderBy = " ORDER BY so.TotalAmount DESC, so.Date DESC ";
+        } else if ("total_asc".equalsIgnoreCase(sort)) { // THÊM MỚI DÒNG NÀY CHO GIÁ THẤP
+            orderBy = " ORDER BY so.TotalAmount ASC, so.Date DESC ";
         } else if ("old".equalsIgnoreCase(sort)) {
             orderBy = " ORDER BY so.Date ASC ";
         } else {
@@ -153,6 +155,8 @@ public class OrderHistoryDAO extends DBContext {
         // Thêm logic sắp xếp
         if ("total_desc".equalsIgnoreCase(sort)) {
             sql.append(" ORDER BY so.TotalAmount DESC, so.Date DESC ");
+        } else if ("total_asc".equalsIgnoreCase(sort)) { // THÊM MỚI DÒNG NÀY CHO GIÁ THẤP
+            sql.append(" ORDER BY so.TotalAmount ASC, so.Date DESC ");
         } else if ("old".equalsIgnoreCase(sort)) {
             sql.append(" ORDER BY so.Date ASC, so.StockOutID ASC ");
         } else {
@@ -298,40 +302,108 @@ public class OrderHistoryDAO extends DBContext {
     }
 
     public static class DailyReport {
+
         private java.util.Date date;
         private int orderCount;
         private double revenue, cost, profit;
+
         // Getters/Setters
-        public java.util.Date getDate() { return date; }
-        public void setDate(java.util.Date date) { this.date = date; }
-        public int getOrderCount() { return orderCount; }
-        public void setOrderCount(int orderCount) { this.orderCount = orderCount; }
-        public double getRevenue() { return revenue; }
-        public void setRevenue(double revenue) { this.revenue = revenue; }
-        public double getCost() { return cost; }
-        public void setCost(double cost) { this.cost = cost; }
-        public double getProfit() { return profit; }
-        public void setProfit(double profit) { this.profit = profit; }
+        public java.util.Date getDate() {
+            return date;
+        }
+
+        public void setDate(java.util.Date date) {
+            this.date = date;
+        }
+
+        public int getOrderCount() {
+            return orderCount;
+        }
+
+        public void setOrderCount(int orderCount) {
+            this.orderCount = orderCount;
+        }
+
+        public double getRevenue() {
+            return revenue;
+        }
+
+        public void setRevenue(double revenue) {
+            this.revenue = revenue;
+        }
+
+        public double getCost() {
+            return cost;
+        }
+
+        public void setCost(double cost) {
+            this.cost = cost;
+        }
+
+        public double getProfit() {
+            return profit;
+        }
+
+        public void setProfit(double profit) {
+            this.profit = profit;
+        }
     }
 
     public static class StockOrderDetail {
+
         private java.sql.Timestamp date;
         private int orderId;
         private String productName;
         private int quantity;
         private double price, total;
+
         // Getters/Setters
-        public java.sql.Timestamp getDate() { return date; }
-        public void setDate(java.sql.Timestamp date) { this.date = date; }
-        public int getOrderId() { return orderId; }
-        public void setOrderId(int orderId) { this.orderId = orderId; }
-        public String getProductName() { return productName; }
-        public void setProductName(String productName) { this.productName = productName; }
-        public int getQuantity() { return quantity; }
-        public void setQuantity(int quantity) { this.quantity = quantity; }
-        public double getPrice() { return price; }
-        public void setPrice(double price) { this.price = price; }
-        public double getTotal() { return total; }
-        public void setTotal(double total) { this.total = total; }
+        public java.sql.Timestamp getDate() {
+            return date;
+        }
+
+        public void setDate(java.sql.Timestamp date) {
+            this.date = date;
+        }
+
+        public int getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(int orderId) {
+            this.orderId = orderId;
+        }
+
+        public String getProductName() {
+            return productName;
+        }
+
+        public void setProductName(String productName) {
+            this.productName = productName;
+        }
+
+        public int getQuantity() {
+            return quantity;
+        }
+
+        public void setQuantity(int quantity) {
+            this.quantity = quantity;
+        }
+
+        public double getPrice() {
+            return price;
+        }
+
+        public void setPrice(double price) {
+            this.price = price;
+        }
+
+        public double getTotal() {
+            return total;
+        }
+
+        public void setTotal(double total) {
+            this.total = total;
+        }
     }
 }
