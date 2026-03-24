@@ -7,7 +7,15 @@ public class CartItem {
     private double price;
     private int qty;
     private String unit;
+private int stockQuantity;
 
+    public int getStockQuantity() {
+        return stockQuantity;
+    }
+
+    public void setStockQuantity(int stockQuantity) {
+        this.stockQuantity = stockQuantity;
+    }
     public double getLineTotal() {
         return price * qty;
     }
