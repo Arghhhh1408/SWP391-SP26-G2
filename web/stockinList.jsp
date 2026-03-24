@@ -93,9 +93,17 @@
                 margin-bottom: 16px;
                 padding: 12px 16px;
                 border-radius: 8px;
+                border: 1px solid;
+            }
+            .message-success {
                 background: #e8f5e9;
                 color: #2e7d32;
-                border: 1px solid #c8e6c9;
+                border-color: #c8e6c9;
+            }
+            .message-error {
+                background: #ffebee;
+                color: #c62828;
+                border-color: #ef9a9a;
             }
             .table-wrapper {
                 overflow-x: auto;
@@ -127,7 +135,7 @@
                 color: #0f766e;
             }
             .note-cell {
-                max-width: 220px;
+                max-width: 240px;
                 white-space: normal;
                 color: #555;
             }
@@ -201,17 +209,17 @@
                 padding: 10px 14px;
                 font-size: 14px;
             }
-            .receive-box input {
-                width: 90px;
-                padding: 8px;
-                border-radius: 6px;
-                border: 1px solid #ccc;
-            }
-            .receive-box form {
+            .inline-form {
                 display: flex;
                 gap: 8px;
                 flex-wrap: wrap;
                 align-items: center;
+            }
+            .inline-form input[type="text"] {
+                padding: 8px 10px;
+                border-radius: 6px;
+                border: 1px solid #ccc;
+                min-width: 180px;
             }
             @media (max-width: 768px) {
                 body {
@@ -224,6 +232,13 @@
                 .action-group {
                     flex-direction: column;
                 }
+                .inline-form {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .inline-form input[type="text"] {
+                    min-width: 100%;
+                }
             }
         </style>
     </head>
@@ -234,10 +249,10 @@
             <div class="top-bar">
                 <div>
                     <c:if test="${sessionScope.acc.roleID == 1}">
-                        <a class="back-link" href="staff_dashboard">← Quay lại bảng điều khiển của nhân viên</a>
+                        <a class="back-link" href="staff_dashboard?action=clear&redirect=1">← Quay lại bảng điều khiển của nhân viên</a>
                     </c:if>
                     <c:if test="${sessionScope.acc.roleID == 2}">
-                        <a class="back-link" href="category">← Quay lại bảng điều khiển của quản lý</a>
+                        <a class="back-link" href="category?action=clear&redirect=1">← Quay lại bảng điều khiển của quản lý</a>
                     </c:if>
                 </div>
 
@@ -247,7 +262,9 @@
             </div>
 
             <c:if test="${not empty message}">
-                <div class="message">${message}</div>
+                <div class="message ${messageType == 'error' ? 'message-error' : 'message-success'}">
+                    ${message}
+                </div>
             </c:if>
 
             <div class="card">
@@ -273,6 +290,7 @@
                                 <th>Nhà cung cấp</th>
                                 <th>Nhân viên tạo</th>
                                 <th class="text-center">Đặt / Đã nhận / Còn</th>
+                                <th>Thanh toán ban đầu</th>
                                 <th>Giá trị phiếu</th>
                                 <th>Trạng thái</th>
                                 <th>Ghi chú</th>
@@ -301,6 +319,10 @@
 
                                         <td class="text-center">
                                             ${s.totalOrderedQuantity} / ${s.totalReceivedQuantity} / ${s.totalRemainingQuantity}
+                                        </td>
+
+                                        <td class="money">
+                                            <fmt:formatNumber value="${s.initialPaidAmount}" type="number" groupingUsed="true"/>
                                         </td>
 
                                         <td class="money">
@@ -366,10 +388,20 @@
 
                                         <td>
                                             <div class="action-group">
-                                                <c:if test="${sessionScope.acc.roleID == 1 && s.stockStatus == 'Pending'}">
-                                                    <a href="stockinList?action=requestCancel&id=${s.stockInId}" class="btn btn-danger">
-                                                        Yêu cầu hủy
-                                                    </a>
+                                                <a href="stockinDetail?id=${s.stockInId}" class="btn btn-primary">
+                                                    Chi tiết
+                                                </a>
+
+                                                <c:if test="${sessionScope.acc.roleID == 1 
+                                                              && s.stockStatus == 'Pending'
+                                                              && s.totalReceivedQuantity == 0
+                                                              && s.paymentStatus == 'Unpaid'}">
+                                                      <form action="stockinList" method="get" class="inline-form">
+                                                          <input type="hidden" name="action" value="requestCancel">
+                                                          <input type="hidden" name="id" value="${s.stockInId}">
+                                                          <input type="text" name="reason" placeholder="Nhập lý do hủy" required>
+                                                          <button type="submit" class="btn btn-danger">Yêu cầu hủy</button>
+                                                      </form>
                                                 </c:if>
 
                                                 <c:if test="${sessionScope.acc.roleID == 2 && s.stockStatus == 'CancelRequested'}">

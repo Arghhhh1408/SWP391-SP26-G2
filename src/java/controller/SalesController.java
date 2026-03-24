@@ -40,24 +40,41 @@ public class SalesController extends HttpServlet {
 
         try {
             if ("dashboard".equals(tab)) {
-                // 1. Khởi tạo DashboardDAO để lấy số thật từ SQL
+                // 1. Khởi tạo các DAO cần thiết
                 dao.DashboardDAO ddao = new dao.DashboardDAO();
+                dao.BusinessReportDAO reportDao = new dao.BusinessReportDAO(); // Khởi tạo thêm cái này
 
-                // 2. Thay các con số 1.5M, 10.5M bằng kết quả từ Database
+                // 2. Lấy các con số doanh thu (Giữ nguyên của bạn)
                 request.setAttribute("revenueToday", ddao.getRevenueToday());
                 request.setAttribute("revenueWeek", ddao.getRevenueWeek());
                 request.setAttribute("revenueMonth", ddao.getRevenueMonth());
 
-                // 3. Lấy sản phẩm tồn kho thấp
+                // 3. LẤY DỮ LIỆU TOP BÁN CHẠY (MỚI)
+                // Gọi hàm từ BusinessReportDAO mà bạn vừa tạo, lấy top 5 sản phẩm
+                List<model.TopProductSales> topSelling = reportDao.topProductsLast30Days(5);
+                request.setAttribute("topSellingProducts", topSelling);
+
+                // 4. Lấy sản phẩm tồn kho thấp (Giữ nguyên của bạn)
                 request.setAttribute("lowStockProducts", pDao.getLowStockProducts(5));
             } else if ("pos".equals(tab)) {
                 try {
-                    List<Product> list = pDao.getAllProducts();
-                    request.setAttribute("products", list);
+                    // 1. Lấy tham số tìm kiếm và lọc từ JSP gửi lên
+                    String keyword = safeTrim(request.getParameter("keyword"));
+                    String sort = safeTrim(request.getParameter("sort"));
+                    String range = safeTrim(request.getParameter("range"));
 
-                    // THÊM ĐOẠN NÀY:
+                    // 2. Gọi hàm tìm kiếm sản phẩm (keyword, sort, range)
+                    List<Product> list = pDao.searchProducts(keyword, sort, range);
+
+                    // 3. Gửi lại dữ liệu cho JSP hiển thị
+                    request.setAttribute("products", list);
+                    request.setAttribute("keyword", keyword);
+                    request.setAttribute("sort", sort);
+                    request.setAttribute("range", range);
+
+                    // Lấy danh sách khách hàng để hỗ trợ JS tìm SĐT
                     dao.CustomerDAO cDao = new dao.CustomerDAO();
-                    request.setAttribute("customers", cDao.getAllCustomers("")); // Lấy hết khách để JS tìm kiếm
+                    request.setAttribute("customers", cDao.getAllCustomers(""));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

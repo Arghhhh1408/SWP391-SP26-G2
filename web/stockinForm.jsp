@@ -49,9 +49,17 @@
                 margin-bottom: 20px;
                 padding: 12px 16px;
                 border-radius: 8px;
+                border: 1px solid;
+            }
+            .message-success {
                 background: #e8f5e9;
                 color: #2e7d32;
-                border: 1px solid #c8e6c9;
+                border-color: #c8e6c9;
+            }
+            .message-error {
+                background: #ffebee;
+                color: #c62828;
+                border-color: #ef9a9a;
             }
             .card {
                 background: #fff;
@@ -176,6 +184,8 @@
                 gap: 12px;
                 padding: 12px 14px;
                 border-bottom: 1px solid #eef2f7;
+                text-decoration: none;
+                color: inherit;
             }
             .dropdown-item:last-child {
                 border-bottom: none;
@@ -277,21 +287,25 @@
             </c:if>
 
             <c:if test="${not empty message}">
-                <div class="message">${message}</div>
+                <div class="message ${messageType == 'error' ? 'message-error' : 'message-success'}">
+                    ${message}
+                </div>
             </c:if>
 
-            <form action="createStockIn" method="get" id="searchForm">
+            <form action="createStockIn" method="get" id="draftForm">
+                <input type="hidden" name="showDropdown" id="showDropdown" value="${showDropdown ? 'true' : 'false'}">
+
                 <div class="card">
                     <h3>Thông tin phiếu nhập</h3>
 
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Nhà cung cấp</label>
-                            <select name="supplierId" onchange="document.getElementById('searchForm').submit()" required>
+                            <select name="supplierId" onchange="submitDraft(false)" required>
                                 <option value="">-- Chọn nhà cung cấp --</option>
                                 <c:forEach var="sup" items="${supplierList}">
                                     <option value="${sup.id}"
-                                            <c:if test="${supplierIdDraft == sup.id}">selected="selected"</c:if>>
+                                            <c:if test="${supplierIdDraft == sup.id or supplierIdDraft == sup.id.toString()}">selected="selected"</c:if>>
                                         ${sup.supplierName}
                                     </option>
                                 </c:forEach>
@@ -312,11 +326,11 @@
                             <label>Trạng thái thanh toán dự kiến</label>
                             <div class="readonly-box">
                                 <c:choose>
-                                    <c:when test="${empty paidNowDraft or paidNowDraft == '0' or paidNowDraft == '0.0' or paidNowDraft == '0.00'}">
-                                        Unpaid
+                                    <c:when test="${paymentStatusDraft == 'AUTO'}">
+                                        Tự động tính sau khi chọn hàng nhập
                                     </c:when>
                                     <c:otherwise>
-                                        Tự động tính khi tạo phiếu
+                                        ${paymentStatusDraft}
                                     </c:otherwise>
                                 </c:choose>
                             </div>
@@ -324,12 +338,13 @@
 
                         <div class="form-group">
                             <label>Thanh toán ban đầu</label>
-                            <input type="number" name="paidNow" min="0" step="0.01" value="${paidNowDraft}">
+                            <input type="number" name="paidNow" id="paidNowInput" min="0" step="0.01"
+                                   value="${paidNowDraft}" onchange="submitDraft(false)" oninput="updateDraftSummary()">
                         </div>
 
                         <div class="form-group full-width">
                             <label>Ghi chú</label>
-                            <textarea name="note">${noteDraft}</textarea>
+                            <textarea name="note" onchange="submitDraft(false)">${noteDraft}</textarea>
                         </div>
                     </div>
                 </div>
@@ -338,26 +353,32 @@
                     <h3>Tìm và thêm sản phẩm</h3>
 
                     <div class="section-actions">
-                        <div class="search-wrapper">
+                        <div class="search-wrapper" id="productPicker">
                             <div class="search-row">
                                 <input type="text"
                                        name="keyword"
                                        id="keywordInput"
                                        value="${keyword}"
-                                       placeholder="Nhập tên hoặc SKU sản phẩm..."
+                                       placeholder="Bấm để chọn sản phẩm theo nhà cung cấp..."
+                                       onclick="openDropdown()"
+                                       onkeyup="submitDraft(true)"
+                                       autocomplete="off"
                                        ${empty supplierIdDraft ? 'disabled' : ''}>
 
-                                <button type="submit" class="btn btn-primary" ${empty supplierIdDraft ? 'disabled' : ''}>
-                                    Tìm
+                                <button type="button" class="btn btn-primary"
+                                        onclick="openDropdown()"
+                                        ${empty supplierIdDraft ? 'disabled' : ''}>
+                                    Chọn hàng
                                 </button>
 
                                 <a href="createStockIn?action=clear" class="btn btn-danger">Xóa danh sách</a>
                             </div>
 
-                            <c:if test="${not empty productList}">
-                                <div class="dropdown-results">
+                            <c:if test="${showDropdown and not empty productList}">
+                                <div class="dropdown-results" id="dropdownResults">
                                     <c:forEach var="p" items="${productList}">
-                                        <div class="dropdown-item">
+                                        <a class="dropdown-item"
+                                           href="createStockIn?action=add&pid=${p.id}&supplierId=${supplierIdDraft}&paidNow=${paidNowDraft}&note=${noteDraft}&showDropdown=true&keyword=${keyword}">
                                             <div class="dropdown-info">
                                                 <div class="dropdown-name">${p.name}</div>
                                                 <div class="dropdown-meta">
@@ -368,10 +389,7 @@
                                                     <fmt:formatNumber value="${p.cost}" type="number" groupingUsed="true"/>
                                                 </div>
                                             </div>
-                                            <button type="submit" name="addPid" value="${p.id}" class="btn btn-primary">
-                                                Chọn
-                                            </button>
-                                        </div>
+                                        </a>
                                     </c:forEach>
                                 </div>
                             </c:if>
@@ -379,21 +397,20 @@
                     </div>
 
                     <c:if test="${empty supplierIdDraft}">
-                        <div class="empty-state">Vui lòng chọn nhà cung cấp trước khi tìm sản phẩm.</div>
+                        <div class="empty-state">Vui lòng chọn nhà cung cấp trước khi chọn sản phẩm.</div>
                     </c:if>
 
-                    <c:if test="${not empty supplierIdDraft and not empty keyword and empty productList}">
+                    <c:if test="${not empty supplierIdDraft and showDropdown and not empty keyword and empty productList}">
                         <div class="empty-state">Không tìm thấy sản phẩm phù hợp với nhà cung cấp đã chọn.</div>
                     </c:if>
 
                     <div class="helper-text">
-                        Chỉ hiển thị các sản phẩm đang được cung cấp bởi nhà cung cấp đã chọn.
+                        Danh sách sản phẩm chỉ hiện khi bạn bấm vào vùng chọn hàng. Bấm ra ngoài để đóng danh sách.
                     </div>
                 </div>
             </form>
 
             <form action="createStockIn" method="post">
-                <input type="hidden" name="keyword" value="${keyword}">
                 <input type="hidden" name="supplierId" value="${supplierIdDraft}">
                 <input type="hidden" name="note" value="${noteDraft}">
                 <input type="hidden" name="paidNow" value="${paidNowDraft}">
@@ -404,7 +421,7 @@
                     <div class="summary-box">
                         <p><strong>Nhà cung cấp:</strong>
                             <c:forEach var="sup" items="${supplierList}">
-                                <c:if test="${supplierIdDraft == sup.id}">
+                                <c:if test="${supplierIdDraft == sup.id or supplierIdDraft == sup.id.toString()}">
                                     ${sup.supplierName}
                                 </c:if>
                             </c:forEach>
@@ -414,6 +431,23 @@
                         <p><strong>Thanh toán ban đầu:</strong>
                             <span class="badge">
                                 <fmt:formatNumber value="${empty paidNowDraft ? 0 : paidNowDraft}" type="number" groupingUsed="true"/>
+                            </span>
+                        </p>
+                        <p><strong>Tổng tiền tạm tính:</strong>
+                            <span class="badge" id="totalDraftText">
+                                <fmt:formatNumber value="${totalDraft}" type="number" groupingUsed="true"/>
+                            </span>
+                        </p>
+                        <p><strong>Trạng thái thanh toán:</strong>
+                            <span class="badge" id="paymentStatusText">
+                                <c:choose>
+                                    <c:when test="${paymentStatusDraft == 'AUTO'}">
+                                        Tự động tính sau khi chọn hàng nhập
+                                    </c:when>
+                                    <c:otherwise>
+                                        ${paymentStatusDraft}
+                                    </c:otherwise>
+                                </c:choose>
                             </span>
                         </p>
                         <p><strong>Ghi chú:</strong> ${noteDraft}</p>
@@ -441,20 +475,24 @@
 
                                 <c:if test="${not empty cart}">
                                     <c:forEach var="entry" items="${cart}">
-                                        <c:set var="p" value="${entry.value}" />
+                                        <c:set var="item" value="${entry.value}" />
                                         <tr>
-                                            <td>${p.id}</td>
-                                            <td>${p.name}</td>
-                                            <td>${p.sku}</td>
-                                            <td>${p.unit}</td>
+                                            <td>${item.productId}</td>
+                                            <td>${item.productName}</td>
+                                            <td>${item.sku}</td>
+                                            <td>${item.unit}</td>
                                             <td>
-                                                <input type="number" name="qty_${p.id}" min="1" value="1" required style="width: 100px;">
+                                                <input type="number" name="qty_${item.productId}" min="1"
+                                                       value="${item.quantity}" required style="width: 100px;"
+                                                       class="qty-input" oninput="updateDraftSummary()">
                                             </td>
                                             <td>
-                                                <input type="number" name="cost_${p.id}" min="0" step="0.01" value="${p.cost}" required style="width: 140px;">
+                                                <input type="number" name="cost_${item.productId}" min="0" step="0.01"
+                                                       value="${item.unitCost}" required style="width: 140px;"
+                                                       class="cost-input" oninput="updateDraftSummary()">
                                             </td>
                                             <td>
-                                                <a href="createStockIn?removePid=${p.id}&supplierId=${supplierIdDraft}&note=${noteDraft}&paidNow=${paidNowDraft}&keyword=${keyword}"
+                                                <a href="createStockIn?action=remove&pid=${item.productId}&supplierId=${supplierIdDraft}&paidNow=${paidNowDraft}&note=${noteDraft}"
                                                    class="btn btn-danger">
                                                     Xóa
                                                 </a>
@@ -472,5 +510,71 @@
                 </div>
             </form>
         </div>
+
+        <script>
+            function submitDraft(showDropdown) {
+                document.getElementById('showDropdown').value = showDropdown ? 'true' : 'false';
+                document.getElementById('draftForm').submit();
+            }
+
+            function openDropdown() {
+                if (document.getElementById('keywordInput').disabled) {
+                    return;
+                }
+                document.getElementById('showDropdown').value = 'true';
+                document.getElementById('draftForm').submit();
+            }
+
+            function formatNumber(value) {
+                return new Intl.NumberFormat('vi-VN').format(value);
+            }
+
+            function updateDraftSummary() {
+                const qtyInputs = document.querySelectorAll('.qty-input');
+                const costInputs = document.querySelectorAll('.cost-input');
+                const paidNowInput = document.getElementById('paidNowInput');
+                const totalText = document.getElementById('totalDraftText');
+                const paymentStatusText = document.getElementById('paymentStatusText');
+
+                let total = 0;
+
+                for (let i = 0; i < qtyInputs.length; i++) {
+                    const qty = parseFloat(qtyInputs[i].value) || 0;
+                    const cost = parseFloat(costInputs[i].value) || 0;
+                    total += qty * cost;
+                }
+
+                if (totalText) {
+                    totalText.textContent = formatNumber(total);
+                }
+
+                const paidNow = paidNowInput ? (parseFloat(paidNowInput.value) || 0) : 0;
+
+                if (!paymentStatusText)
+                    return;
+
+                if (total <= 0) {
+                    paymentStatusText.textContent = 'Tự động tính sau khi chọn hàng nhập';
+                } else if (paidNow <= 0) {
+                    paymentStatusText.textContent = 'Unpaid';
+                } else if (paidNow < total) {
+                    paymentStatusText.textContent = 'Partial';
+                } else {
+                    paymentStatusText.textContent = 'Paid';
+                }
+            }
+
+            document.addEventListener('click', function (e) {
+                const picker = document.getElementById('productPicker');
+                const results = document.getElementById('dropdownResults');
+                if (picker && !picker.contains(e.target) && results) {
+                    results.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('DOMContentLoaded', function () {
+                updateDraftSummary();
+            });
+        </script>
     </body>
 </html>

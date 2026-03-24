@@ -18,7 +18,9 @@ import utils.DBContext;
 public class StaffDashboardDAO extends DBContext {
 
     public double getPendingSupplierDebtAmount() {
-        String sql = "SELECT ISNULL(SUM(CAST(Amount AS float)), 0) FROM dbo.SupplierDebts WHERE Status = 'Pending'";
+        String sql = "SELECT ISNULL(SUM(Amount), 0) "
+                + "FROM dbo.SupplierDebts "
+                + "WHERE Status IN ('Partial', 'Pending')";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             ResultSet rs = stm.executeQuery();
@@ -29,7 +31,9 @@ public class StaffDashboardDAO extends DBContext {
     }
 
     public int countPendingSupplierDebts() {
-        String sql = "SELECT COUNT(*) FROM dbo.SupplierDebts WHERE Status = 'Pending'";
+        String sql = "SELECT COUNT(*) "
+                + "FROM dbo.SupplierDebts "
+                + "WHERE Status IN ('Partial', 'Pending')";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             ResultSet rs = stm.executeQuery();

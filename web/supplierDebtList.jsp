@@ -4,8 +4,16 @@
     Author     : dotha
 --%>
 
+<%-- 
+    Document   : supplierDebtList
+    Created on : 22 thg 3, 2026, 16:17:06
+    Author     : dotha
+--%>
+
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@taglib prefix="c" uri="jakarta.tags.core"%>
+<%@taglib prefix="fmt" uri="jakarta.tags.fmt"%>
+
 <!DOCTYPE html>
 <html>
     <head>
@@ -103,7 +111,7 @@
             table {
                 width: 100%;
                 border-collapse: collapse;
-                min-width: 800px;
+                min-width: 900px;
             }
             thead {
                 background: #1f3c88;
@@ -133,6 +141,10 @@
                 color: #dc2626;
                 font-weight: bold;
             }
+            .status-cancelled {
+                color: #7f1d1d;
+                font-weight: bold;
+            }
             .empty-row {
                 text-align: center;
                 color: #777;
@@ -146,13 +158,7 @@
     <body>
         <div class="container">
             <h1>Công nợ nhà cung cấp</h1>
-
-            <c:if test="${sessionScope.acc.roleID == 1}">
-                <a class="top-link" href="staff_dashboard">← Quay lại bảng điều khiển của nhân viên</a>
-            </c:if>
-            <c:if test="${sessionScope.acc.roleID == 2}">
                 <a class="top-link" href="supplierList">← Quay lại danh sách nhà cung cấp</a>
-            </c:if>
 
             <c:if test="${not empty requestScope.error}">
                 <div class="error">${requestScope.error}</div>
@@ -172,7 +178,6 @@
 
             <h3>Tìm kiếm công nợ</h3>
             <form action="supplierDebt" method="get" class="search-box">
-                <!-- Giữ cố định supplierId -->
                 <input type="hidden" name="supplierId" value="${selectedSupplierId}">
 
                 <div class="search-grid">
@@ -184,6 +189,7 @@
                             <option value="Partial" ${param.status == 'Partial' ? 'selected' : ''}>Partial</option>
                             <option value="Paid" ${param.status == 'Paid' ? 'selected' : ''}>Paid</option>
                             <option value="Overdue" ${param.status == 'Overdue' ? 'selected' : ''}>Overdue</option>
+                            <option value="Cancelled" ${param.status == 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                         </select>
                     </div>
 
@@ -222,33 +228,40 @@
                                     <tr>
                                         <td>${d.debtID}</td>
                                         <td>${d.stockInID}</td>
-                                        <td>${d.amount}</td>
-                                        <td>${d.dueDate}</td>
                                         <td>
-                                            <c:choose>
-                                                <c:when test="${d.status == 'Pending'}">
-                                                    <span class="status-pending">Pending</span>
-                                                </c:when>
-                                                <c:when test="${d.status == 'Partial'}">
-                                                    <span class="status-partial">Partial</span>
-                                                </c:when>
-                                                <c:when test="${d.status == 'Paid'}">
-                                                    <span class="status-paid">Paid</span>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="status-overdue">Overdue</span>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
-                            </c:when>
-                            <c:otherwise>
-                                <tr>
-                                    <td colspan="5" class="empty-row">Không có dữ liệu công nợ.</td>
+                                <fmt:formatNumber value="${d.amount}" type="number" groupingUsed="true"/>
+                                </td>
+                                <td>
+                                <fmt:formatDate value="${d.dueDate}" pattern="dd/MM/yyyy"/>
+                                </td>
+                                <td>
+                                    <c:choose>
+                                        <c:when test="${d.status == 'Pending'}">
+                                            <span class="status-pending">Pending</span>
+                                        </c:when>
+                                        <c:when test="${d.status == 'Partial'}">
+                                            <span class="status-partial">Partial</span>
+                                        </c:when>
+                                        <c:when test="${d.status == 'Paid'}">
+                                            <span class="status-paid">Paid</span>
+                                        </c:when>
+                                        <c:when test="${d.status == 'Cancelled'}">
+                                            <span class="status-cancelled">Cancelled</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="status-overdue">Overdue</span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </td>
                                 </tr>
-                            </c:otherwise>
-                        </c:choose>
+                            </c:forEach>
+                        </c:when>
+                        <c:otherwise>
+                            <tr>
+                                <td colspan="5" class="empty-row">Không có dữ liệu công nợ.</td>
+                            </tr>
+                        </c:otherwise>
+                    </c:choose>
                     </tbody>
                 </table>
             </div>

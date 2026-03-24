@@ -23,6 +23,7 @@ public class StockIn {
     private int supplierId;
     private Date date;
     private double totalAmount;
+    private double initialPaidAmount;
     private int createdBy;
     private String note;
     private String stockStatus;
@@ -86,6 +87,14 @@ public class StockIn {
         this.totalAmount = totalAmount;
     }
 
+    public double getInitialPaidAmount() {
+        return initialPaidAmount;
+    }
+
+    public void setInitialPaidAmount(double initialPaidAmount) {
+        this.initialPaidAmount = initialPaidAmount;
+    }
+    
     public int getCreatedBy() {
         return createdBy;
     }

@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import model.Customer;
+import model.DebtPayment;
 import model.OrderHistory;
 
 /**
@@ -80,8 +81,15 @@ public class CustomerDetailController extends HttpServlet {
         Customer customer = dao.getCustomerById(customerId);
         List<OrderHistory> orders = dao.getPurchaseHistoryByCustomer(customerId);
 
+// THÊM DÒNG NÀY: Lấy lịch sử thu nợ
+        List<DebtPayment> payHistory = dao.getDebtPaymentHistory(customerId);
+
         request.setAttribute("customer", customer);
         request.setAttribute("history", orders);
+
+// THÊM DÒNG NÀY: Gửi dữ liệu sang JSP
+        request.setAttribute("paymentHistory", payHistory);
+
         request.getRequestDispatcher("/customer_detail.jsp").forward(request, response);
     }
 

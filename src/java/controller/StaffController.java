@@ -68,7 +68,7 @@ public class StaffController extends HttpServlet {
                 }
                 request.setAttribute("categories", dao.getHierarchicalList());
             } catch (Exception e) {
-                request.setAttribute("error", "Khong the tai danh sach san pham.");
+                request.setAttribute("error", "Không thể tải danh sách sản phẩm.");
             }
         } else {
             WarrantyClaimDAO dao = new WarrantyClaimDAO();
@@ -191,7 +191,7 @@ public class StaffController extends HttpServlet {
         request.setAttribute("openRTVCount", dashboardDAO.countOpenRTVCases());
         request.setAttribute("unreadNotificationCount",
                 user == null ? 0 : dashboardDAO.countUnreadNotifications(user.getUserID()));
-        request.setAttribute("recentLogs", systemLogDAO.getStaffDashboardLogs(5));
+        request.setAttribute("recentLogs", systemLogDAO.getWarehouseStaffLogs(5));
     }
 
     private String formatCurrencyVi(double amount) {

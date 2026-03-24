@@ -103,10 +103,12 @@ public class ProductDAO extends DBContext {
     // Lấy product theo ID (add vào cart)
     public Product getById(int id) {
         String sql = """
-            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status
-            FROM dbo.Products
-            WHERE ProductID = ? AND Status = 'Active'
-        """;
+                 SELECT ProductID, Name, SKU, Cost, Price, StockQuantity, Unit, 
+                        Status, Description, ImageURL, WarrantyPeriod, CategoryID, 
+                        CreatedDate, UpdatedDate
+                 FROM dbo.Products
+                 WHERE ProductID = ? AND Status = 'Active'
+                 """;
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
@@ -430,7 +432,49 @@ public class ProductDAO extends DBContext {
         }
         return false;
     }
+public List<Product> searchProducts(String keyword, String sort, String range) {
+    List<Product> list = new ArrayList<>();
+    // 1. Dùng SELECT * để đảm bảo hàm map(rs) có đủ cột dữ liệu
+    StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE Status = 'Active' ");
 
+    // Lọc theo tên hoặc SKU
+    if (keyword != null && !keyword.trim().isEmpty()) {
+        sql.append(" AND (Name LIKE ? OR SKU LIKE ?) ");
+    }
+    
+    // Lọc chỉ sản phẩm còn hàng
+    if ("available".equals(range)) {
+        sql.append(" AND StockQuantity > 0 ");
+    }
+
+    // Sắp xếp giá
+    if ("total_desc".equals(sort)) {
+        sql.append(" ORDER BY Price DESC ");
+    } else if ("total_asc".equals(sort)) {
+        sql.append(" ORDER BY Price ASC ");
+    } else {
+        sql.append(" ORDER BY ProductID DESC "); 
+    }
+
+    try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String p = "%" + keyword.trim() + "%";
+            ps.setString(1, p);
+            ps.setString(2, p);
+        }
+
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                // Tận dụng hàm map(rs) đã có sẵn của Mạnh Lý ở dòng 156
+                list.add(map(rs));
+            }
+        }
+    } catch (Exception e) {
+        System.out.println("Lỗi searchProducts POS: " + e.getMessage());
+        e.printStackTrace();
+    }
+    return list;
+}
     public List<Product> searchProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status)
             throws Exception {
         List<Product> list = new ArrayList<>();

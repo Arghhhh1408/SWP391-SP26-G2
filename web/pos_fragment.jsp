@@ -1,160 +1,430 @@
 <%@page contentType="text/html" pageEncoding="UTF-8" %>
 <%@taglib uri="jakarta.tags.core" prefix="c" %>
 <%@taglib uri="jakarta.tags.fmt" prefix="fmt" %>
-
-<div class="pos-wrapper" style="display: flex; gap: 20px; align-items: flex-start;">
-    <%-- Danh sách sản phẩm bên trái --%>
-    <div style="flex: 2;">
-        <div class="box">
-            <div class="box-header"><h3>🛒 Danh mục Sản phẩm</h3></div>
-            <div class="box-body">
-                <table style="width:100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #f8fafc;">
-                            <th style="padding:12px; border-bottom:2px solid #e2e8f0; text-align:left;">Sản phẩm</th>
-                            <th style="padding:12px; border-bottom:2px solid #e2e8f0; text-align:left;">Đơn giá</th>
-                            <th style="padding:12px; border-bottom:2px solid #e2e8f0; text-align:left;">Kho</th>
-                            <th style="padding:12px; border-bottom:2px solid #e2e8f0; text-align:left;">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <c:forEach items="${products}" var="p">
-                            <tr>
-                                <td style="padding:12px; border-bottom:1px solid #eee;">
-                                    <strong>${p.name}</strong><br><small style="color:#888;">SKU: ${p.sku}</small>
-                                </td>
-                                <td style="padding:12px; border-bottom:1px solid #eee;">
-                                    <fmt:formatNumber value="${p.price}" type="number"/>đ
-                                </td>
-                                <td style="padding:12px; border-bottom:1px solid #eee;">${p.quantity}</td>
-                                <td style="padding:12px; border-bottom:1px solid #eee;">
-                                    <button class="btn" style="background:#3b82f6; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;" 
-                                            onclick="updateCartAjax('${p.id}', 'add')">Thêm</button>
-                                </td>
-                            </tr>
-                        </c:forEach>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <%-- Đơn hàng bên phải --%>
-    <div style="flex: 1; position: sticky; top: 20px;">
-        <div class="cart-box" style="background:white; border:1px solid #3b82f6; border-radius:8px; padding:20px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0; border-bottom:2px solid #3b82f6; padding-bottom:10px;">📋 Đơn hàng</h3>
-
-            <div id="cart-ajax-container">
-                <jsp:include page="_cart_content.jsp" />
-            </div>
-
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-top:15px;">
-                <form action="checkout" method="post" id="checkout-form">
-                    <div style="margin-bottom:10px;">
-                        <label style="font-size:12px; font-weight:bold;">Số điện thoại:</label>
-                        <input type="text" name="phone" id="cusPhone" oninput="findCustomerByPhone(this.value)" placeholder="Nhập SĐT..." required style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
-                    </div>
-                    <div style="margin-bottom:10px;">
-                        <label style="font-size:12px; font-weight:bold;">Tên khách:</label>
-                        <input type="text" name="customerName" id="cusName" placeholder="Tên khách..." style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
-                    </div>
-                    <div style="margin-bottom:10px;">
-                        <label style="font-size:12px; font-weight:bold;">Ghi chú:</label>
-                        <textarea name="note" style="width:100%; padding:8px; height:50px; border:1px solid #ddd; border-radius:4px;"></textarea>
-                    </div>
-                    <div style="margin-bottom:15px; border-top:1px solid #ddd; padding-top:10px;">
-                        <label style="font-size:12px; color:#ef4444; font-weight:bold;">Khách trả (đ):</label>
-                        <input type="number" id="amountPaid" name="amountPaid" oninput="calculateDebt()" 
-                               style="width:100%; padding:8px; border:1px solid #ef4444; font-weight:bold; outline:none; border-radius:4px;">
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                        <span>Công nợ:</span>
-                        <span id="debt-amount" style="color:#ef4444; font-weight:bold;">0 đ</span>
-                    </div>
-                    <button type="submit" style="width:100%; background:#3b82f6; color:white; padding:12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">XÁC NHẬN THANH TOÁN</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // 1. Hàm CỐT LÕI: Tự động lấy tiền từ giỏ hàng điền vào ô "Khách trả"
-    function autoFillAmount() {
-        // Đợi 100ms để chắc chắn Ajax đã nạp xong HTML vào giỏ hàng
-        setTimeout(() => {
-            const hiddenTotal = document.getElementById('hidden-total-val');
-            const amountPaidInput = document.getElementById('amountPaid');
-
-            if (hiddenTotal && amountPaidInput) {
-                // Lấy giá trị tổng tiền, xóa bỏ dấu chấm, phẩy nếu có để ra số nguyên
-                const rawValue = hiddenTotal.value.replace(/[^0-9]/g, '');
-
-                if (rawValue && rawValue !== "0") {
-                    amountPaidInput.value = rawValue; // Đổ số vào ô nhập
-                    console.log("Đã tự động điền tiền: " + rawValue);
-
-                    // Gọi hàm tính nợ để cập nhật dòng "Công nợ: 0 đ"
-                    calculateDebt();
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <title>Bán hàng POS - S.I.M</title>
+        <style>
+            #invoiceModal {
+                display: none;
+                position: fixed;
+                z-index: 10000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.6);
+                backdrop-filter: blur(3px);
+            }
+            .modal-content {
+                background: white;
+                margin: 2% auto;
+                width: 450px;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                position: relative;
+            }
+            .invoice-card {
+                padding: 30px;
+                font-family: 'Courier New', Courier, monospace;
+                color: #000;
+            }
+            .invoice-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+            }
+            .invoice-table th {
+                border-bottom: 1px solid #000;
+                padding: 8px 0;
+                text-align: left;
+            }
+            .invoice-table td {
+                padding: 8px 0;
+                border-bottom: 1px solid #f5f5f5;
+                font-size: 14px;
+            }
+            .total-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                font-weight: bold;
+                font-size: 16px;
+            }
+            .modal-footer {
+                display: flex;
+                gap: 10px;
+                padding: 15px 30px 25px;
+                background: #f8fafc;
+                border-bottom-left-radius: 12px;
+                border-bottom-right-radius: 12px;
+            }
+            .pos-container {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: flex-start !important;
+                gap: 20px !important;
+                width: 100% !important;
+                margin-top: 10px;
+            }
+            .product-column {
+                flex: 1.6 !important;
+                min-width: 0;
+            }
+            .cart-column {
+                width: 400px !important;
+                position: sticky !important;
+                top: 20px;
+            }
+            .box {
+                background: white;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            }
+            .cart-box {
+                background: white;
+                border: 1px solid #3b82f6;
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            }
+            @media print {
+                .no-print {
+                    display: none !important;
+                }
+                body * {
+                    visibility: hidden;
+                }
+                #invoice-print-area, #invoice-print-area * {
+                    visibility: visible;
+                }
+                #invoice-print-area {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
                 }
             }
-        }, 100);
-    }
+        </style>
+    </head>
+    <body>
+        <c:set var="tab" value="pos" scope="request" />
+        <jsp:include page="saleSidebar.jsp" />
 
-    // 2. Hàm Ajax khi nhấn Thêm/Cộng/Trừ
-    function updateCartAjax(productId, action) {
-        fetch('cart?productId=' + productId + '&action=' + action)
-                .then(res => res.text())
-                .then(html => {
-                    document.getElementById('cart-ajax-container').innerHTML = html;
-                    autoFillAmount(); // Cứ nạp giỏ hàng xong là tự điền tiền
-                });
-    }
+        <div class="admin-main" style="margin-left: 10px; padding: 10px;">
+            <div class="pos-container">
+                <div class="product-column">
+                    <div class="product-column">
+                        <div class="box">
+                            <div style="padding: 15px 20px; background: #fcfcfc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <h3 style="margin:0; font-size: 18px; color: #1e293b;">🛒 Danh mục Sản phẩm</h3>
 
-    // 3. Hàm Ajax khi gõ số lượng trực tiếp vào ô Input
-    function updateCartQuantityAjax(productId, qty) {
-        if (qty < 1) {
-            updateCartAjax(productId, 'sub');
-            return;
-        }
+                                <form action="sales_dashboard" method="get" style="display: flex; gap: 8px; flex: 1; justify-content: flex-end; min-width: 300px;">
+                                    <input type="hidden" name="tab" value="pos">
 
-        fetch('cart?productId=' + productId + '&action=update&qty=' + qty)
-                .then(res => res.text())
-                .then(html => {
-                    document.getElementById('cart-ajax-container').innerHTML = html;
-                    autoFillAmount(); // Cập nhật lại tiền sau khi đổi số lượng
-                });
-    }
+                                    <select name="range" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
+                                        <option value="all" ${range == 'all' ? 'selected' : ''}>Tất cả nhóm</option>
+                                        <option value="available" ${range == 'available' ? 'selected' : ''}>Còn hàng</option>
+                                    </select>
 
-    // 4. Hàm tính nợ (Dùng khi khách trả thiếu và bạn tự sửa ô Khách trả)
-    function calculateDebt() {
-        const totalInput = document.getElementById('hidden-total-val');
-        const paidInput = document.getElementById('amountPaid');
+                                    <select name="sort" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
+                                        <option value="new" ${sort == 'new' ? 'selected' : ''}>Mới nhập</option>
+                                        <option value="total_desc" ${sort == 'total_desc' ? 'selected' : ''}>Giá cao nhất</option>
+                                        <option value="total_asc" ${sort == 'total_asc' ? 'selected' : ''}>Giá thấp nhất</option>
+                                    </select>
 
-        if (totalInput && paidInput) {
-            const total = parseFloat(totalInput.value.replace(/[^0-9]/g, '')) || 0;
-            const paid = parseFloat(paidInput.value) || 0;
-            const debt = total - paid;
+                                    <input type="text" name="keyword" value="${keyword}" 
+                                           placeholder="Tìm tên sản phẩm, SKU..." 
+                                           style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 180px; font-size: 13px;">
 
-            document.getElementById('debt-amount').innerText =
-                    (debt > 0 ? debt : 0).toLocaleString() + " đ";
-        }
-    }
+                                    <button type="submit" class="btn" style="background: #3b82f6; color: white; padding: 8px 15px; font-size: 13px;">
+                                        🔍 Tìm
+                                    </button>
+                                </form>
+                            </div>
 
-    // 5. Tìm khách theo SĐT
-    function findCustomerByPhone(phone) {
-        const input = phone.trim();
-        if (input.length < 9)
-            return;
-        if (typeof customerList !== 'undefined') {
-            const customer = customerList.find(c => c.phone === input);
-            if (customer) {
-                document.getElementById('cusName').value = customer.name;
-                document.getElementById('cusName').style.backgroundColor = "#dcfce7";
+                            <div style="padding: 0;">
+                                <table style="width:100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #f8fafc;">
+                                            <th style="padding:15px; text-align:left; color: #64748b; font-size: 13px;">Sản phẩm</th>
+                                            <th style="padding:15px; text-align:left; color: #64748b; font-size: 13px;">Đơn giá</th>
+                                            <th style="padding:15px; text-align:center; color: #64748b; font-size: 13px;">Kho</th>
+                                            <th style="padding:15px; text-align:center; color: #64748b; font-size: 13px;">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach items="${products}" var="p">
+                                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                <td style="padding:15px;">
+                                                    <strong style="color: #1e293b;">${p.name}</strong><br>
+                                                    <small style="color:#94a3b8;">SKU: ${p.sku}</small>
+                                                </td>
+                                                <td style="padding:15px; color: #475569; font-weight: 600;">
+                                                    <fmt:formatNumber value="${p.price}" type="number"/>đ
+                                                </td>
+                                                <td style="padding:15px; text-align:center;">
+                                                    <span style="padding: 2px 8px; background: #f1f5f9; border-radius: 4px;">${p.quantity}</span>
+                                                </td>
+                                                <td style="padding:15px; text-align:center;">
+                                                    <button onclick="updateCartAjax('${p.id}', 'add')" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight: bold;">Thêm</button>
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                        <c:if test="${empty products}">
+                                            <tr>
+                                                <td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">Không tìm thấy sản phẩm nào.</td>
+                                            </tr>
+                                        </c:if>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cart-column">
+                    <div class="cart-box">
+                        <h3 style="margin-top:0; border-bottom:2px solid #3b82f6; padding-bottom:12px; font-size: 18px; color: #1e293b;">📋 Đơn hàng</h3>
+                        <div id="cart-ajax-container">
+                            <jsp:include page="_cart_content.jsp" />
+                        </div>
+                        <form action="checkout" method="post" id="checkout-form" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:12px; font-weight:bold; color:#64748b;">SĐT:</label>
+                                <input type="text" name="phone" id="cusPhone" 
+                                       oninput="findCustomerByPhone(this.value)" 
+                                       placeholder="Bỏ trống nếu là khách lẻ"
+                                       style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:12px; font-weight:bold; color:#64748b;">Tên khách:</label>
+                                <input type="text" name="customerName" id="cusName" 
+                                       value="Khách lẻ"
+                                       style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="font-size:12px; color:#ef4444; font-weight:bold;">Khách trả (đ):</label>
+                                <input type="number" id="amountPaid" name="amountPaid" oninput="calculateDebt()" style="width:100%; padding:10px; border:2px solid #ef4444; border-radius:8px; font-size: 18px; font-weight: bold; color: #ef4444;">
+                            </div>
+                            <button type="submit" style="width:100%; background:#3b82f6; color:white; padding:15px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">XÁC NHẬN THANH TOÁN</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="invoiceModal">
+            <div class="modal-content">
+                <span onclick="closeModal()" class="no-print" style="position:absolute; right:15px; top:10px; font-size:28px; cursor:pointer;">&times;</span>
+                <div class="invoice-card" id="invoice-print-area">
+                    <div style="text-align: center; border-bottom: 1px dashed #ddd; padding-bottom: 10px;">
+                        <h2 style="margin:0;">HÓA ĐƠN BÁN LẺ</h2>
+                        <p style="margin:5px 0;">Ngày: <span id="display-date"></span></p>
+                    </div>
+                    <div style="margin: 15px 0; font-size: 14px;">
+                        <p><strong>Khách:</strong> <span id="display-cusName"></span></p>
+                        <p><strong>SĐT:</strong> <span id="display-cusPhone"></span></p>
+                    </div>
+                    <table class="invoice-table">
+                        <thead><tr><th>Sản phẩm</th><th style="text-align:center">SL</th><th style="text-align:right">T.Tiền</th></tr></thead>
+                        <tbody id="invoice-items-list"></tbody>
+                    </table>
+                    <div style="border-top: 2px solid #000; padding-top: 10px;">
+                        <div class="total-row"><span>Tổng cộng:</span><span id="display-totalPrice">0 đ</span></div>
+                        <div class="total-row"><span>Khách trả:</span><span id="display-amountPaid">0 đ</span></div>
+                        <div class="total-row"><span id="label-debt-change">Công nợ:</span><span id="display-debt-change">0 đ</span></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-around; align-items: flex-end; margin-top: 20px; border-top: 1px dashed #ddd; padding-top: 15px;">
+                        <div style="text-align: center;">
+                            <p style="font-size: 10px; margin-bottom: 5px; font-weight: bold;">THANH TOÁN QR</p>
+                            <img id="display-qr-pay" src="" style="width: 120px; height: 120px; border: 1px solid #eee; padding: 5px;" />
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 10px; margin-bottom: 5px; font-weight: bold;">MÃ ĐƠN HÀNG</p>
+                            <img id="display-barcode" src="" style="width: 150px; height: 50px;" />
+                            <p id="display-order-id" style="font-size: 10px; margin-top: 5px; letter-spacing: 2px;"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer no-print">
+                    <button onclick="window.print()" style="flex:1; background:#10b981; color:white; padding:12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">🖨️ IN</button>
+                    <button onclick="submitFinalOrder()" style="flex:1; background:#3b82f6; color:white; padding:12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">✅ HOÀN TẤT</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // 1. Tự động tìm khách hàng theo SĐT
+            function findCustomerByPhone(phone) {
+                const input = phone.trim();
+                if (input.length < 9)
+                    return;
+                if (typeof customerList !== 'undefined') {
+                    const customer = customerList.find(c => c.phone === input);
+                    if (customer) {
+                        document.getElementById('cusName').value = customer.name;
+                        document.getElementById('cusName').style.backgroundColor = "#dcfce7";
+                    }
+                }
             }
-        }
-    }
 
-    // Khi vừa load trang POS, nếu giỏ có hàng sẵn thì điền luôn
-    document.addEventListener("DOMContentLoaded", autoFillAmount);
-</script>
+            // 2. Hàm tạo Barcode (Fix lỗi nối chuỗi)
+            function generateBarcode(orderId) {
+                const barcodeUrl = "https://bwipjs-api.metafloor.com/?bcid=code128&text=" + orderId + "&scale=2&rotate=N&includetext=false";
+                document.getElementById('display-barcode').src = barcodeUrl;
+                document.getElementById('display-order-id').innerText = orderId;
+            }
+
+            // 3. Hàm tạo QR (Nội dung chuyển khoản chuẩn)
+            function generateQR(amount, orderId) {
+                const qrUrl = "https://img.vietqr.io/image/MB-0338968962-compact2.jpg?amount=" + amount + "&addInfo=Thanh toan don " + orderId;
+                document.getElementById('display-qr-pay').src = qrUrl;
+            }
+
+            // 4. Tính toán Công nợ / Tiền thừa
+            function calculateDebt() {
+                const totalEl = document.getElementById('hidden-total-val');
+                const paidEl = document.getElementById('amountPaid');
+                if (!totalEl || !paidEl)
+                    return;
+
+                const total = parseInt(totalEl.value) || 0;
+                const paid = parseInt(paidEl.value) || 0;
+                const diff = total - paid;
+
+                const rowDebt = document.getElementById("row-debt");
+                const rowChange = document.getElementById("row-change");
+                const debtDisp = document.getElementById("debt-display");
+                const changeDisp = document.getElementById("change-display");
+
+                if (diff > 0) {
+                    if (rowDebt)
+                        rowDebt.style.display = "flex";
+                    if (rowChange)
+                        rowChange.style.display = "none";
+                    if (debtDisp)
+                        debtDisp.innerText = diff.toLocaleString() + " đ";
+                } else if (diff < 0) {
+                    if (rowDebt)
+                        rowDebt.style.display = "none";
+                    if (rowChange)
+                        rowChange.style.display = "flex";
+                    if (changeDisp)
+                        changeDisp.innerText = Math.abs(diff).toLocaleString() + " đ";
+                } else {
+                    if (rowDebt)
+                        rowDebt.style.display = "flex";
+                    if (rowChange)
+                        rowChange.style.display = "none";
+                    if (debtDisp)
+                        debtDisp.innerText = "0 đ";
+                }
+            }
+
+            // 5. HÀM SUBMIT CHÍNH (Đã sửa lỗi không hiện hóa đơn)
+            // 5. HÀM SUBMIT CHÍNH (Đã tích hợp Chặn khách lẻ nợ)
+            document.getElementById('checkout-form').addEventListener('submit', function (e) {
+                const totalVal = parseInt(document.getElementById('hidden-total-val').value) || 0;
+                const paidInput = document.getElementById('amountPaid').value;
+                const paidVal = parseInt(paidInput) || 0;
+                const phoneInput = document.getElementById('cusPhone').value.trim();
+                const diff = totalVal - paidVal;
+
+                // --- BẮT ĐẦU LOGIC CHẶN NỢ ---
+                if (phoneInput === "" || phoneInput === null) {
+                    if (paidVal < totalVal) {
+                        e.preventDefault(); // Dừng việc hiện hóa đơn
+                        alert("⚠️ KHÁCH LẺ KHÔNG ĐƯỢC NỢ!\nVui lòng nhập đủ số tiền: " + totalVal.toLocaleString() + " đ");
+
+                        // Tự động sửa lại số tiền cho đúng để nhân viên nhấn lại cho nhanh
+                        document.getElementById('amountPaid').value = totalVal;
+                        calculateDebt();
+                        return; // Thoát hàm, không chạy đoạn hiện Modal bên dưới
+                    }
+                }
+                // --- KẾT THÚC LOGIC CHẶN NỢ ---
+
+                // Nếu vượt qua kiểm tra (trả đủ hoặc là khách có SĐT) thì mới chạy đoạn dưới
+                e.preventDefault(); // Ngăn form gửi đi để hiện Modal trước
+
+                const tempOrderId = "SIM" + Date.now();
+                let nameInput = document.getElementById('cusName').value.trim();
+                let finalPhone = (phoneInput === "") ? "---" : phoneInput;
+                let finalName = (phoneInput === "") ? "Khách lẻ" : (nameInput === "" ? "Khách vãng lai" : nameInput);
+
+                // Đổ dữ liệu lên Modal Hóa đơn
+                document.getElementById('display-cusName').innerText = finalName;
+                document.getElementById('display-cusPhone').innerText = finalPhone;
+                document.getElementById('display-date').innerText = new Date().toLocaleString('vi-VN');
+                document.getElementById('display-totalPrice').innerText = totalVal.toLocaleString() + " đ";
+                document.getElementById('display-amountPaid').innerText = paidVal.toLocaleString() + " đ";
+
+                const lbl = document.getElementById('label-debt-change');
+                const val = document.getElementById('display-debt-change');
+                if (diff > 0) {
+                    lbl.innerText = "Công nợ:";
+                    val.innerText = diff.toLocaleString() + " đ";
+                    val.style.color = "#ef4444";
+                } else {
+                    lbl.innerText = "Tiền thừa:";
+                    val.innerText = Math.abs(diff).toLocaleString() + " đ";
+                    val.style.color = "#10b981";
+                }
+
+                // Quét danh sách món hàng hiện lên Bill
+                let htmlItems = '';
+                document.querySelectorAll('#cart-list > div').forEach(item => {
+                    const name = item.querySelector('div div:first-child').innerText;
+                    // Chú ý: dùng item.qty như mình đã sửa ở file _cart_content
+                    const qty = item.querySelector('input[type="number"]').value;
+                    const price = item.querySelector('div[style*="font-weight:bold"]').innerText;
+                    htmlItems += "<tr><td>" + name + "</td><td style='text-align:center'>" + qty + "</td><td style='text-align:right'>" + price + "</td></tr>";
+                });
+                document.getElementById('invoice-items-list').innerHTML = htmlItems;
+
+                // Cập nhật QR và Barcode
+                const qrAmount = (paidVal > 0) ? paidVal : totalVal;
+                generateQR(qrAmount, tempOrderId);
+                generateBarcode(tempOrderId);
+
+                // Hiện Popup hóa đơn
+                document.getElementById('invoiceModal').style.display = 'block';
+            });
+
+            // 6. Các hàm bổ trợ khác
+            function updateCartAjax(id, act) {
+                fetch('cart?productId=' + id + '&action=' + act).then(r => r.text()).then(h => {
+                    document.getElementById('cart-ajax-container').innerHTML = h;
+                    const totalVal = document.getElementById('hidden-total-val').value;
+                    document.getElementById('amountPaid').value = totalVal;
+                    calculateDebt();
+                });
+            }
+
+            function closeModal() {
+                document.getElementById('invoiceModal').style.display = 'none';
+            }
+
+            function submitFinalOrder() {
+                document.getElementById('checkout-form').submit();
+            }
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === "F8") {
+                    e.preventDefault();
+                    document.getElementById('amountPaid').focus();
+                }
+                if (e.key === "Escape")
+                    closeModal();
+                if (e.key === "F9" && document.getElementById('invoiceModal').style.display === 'block') {
+                    submitFinalOrder();
+                }
+            });
+        </script>
+    </body>
+</html>

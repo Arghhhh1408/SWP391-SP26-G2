@@ -108,6 +108,37 @@
                     margin: 8px 0 14px 16px;
                 }
 
+                /* ===== NOTIFICATION BADGE ===== */
+                .nav-link-wrap {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    width: 100%;
+                }
+
+                .notif-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #e74c3c;
+                    color: #fff;
+                    font-size: 11px;
+                    font-weight: 700;
+                    min-width: 18px;
+                    height: 18px;
+                    border-radius: 9px;
+                    padding: 0 5px;
+                    margin-left: auto;
+                    line-height: 1;
+                    animation: badgePop 0.3s ease;
+                }
+
+                @keyframes badgePop {
+                    0%   { transform: scale(0.5); opacity: 0; }
+                    70%  { transform: scale(1.2); }
+                    100% { transform: scale(1);   opacity: 1; }
+                }
+
                 /* ===== MAIN CONTENT WRAPPER FOR PERSONAL PROFILE ===== */
                 .admin-main {
                     margin-left: 326px;
@@ -160,6 +191,14 @@
                     <a href="staff_dashboard?tab=dashboard"
                         class="${(tab == 'dashboard' || empty tab) && currentPage != 'personalProfile' ? 'active' : ''}">🏠
                         Dashboard</a>
+                    <a href="notifications" class="${currentPage == 'notifications' ? 'active' : ''}" id="staff-notif-link"
+                        style="display:flex; align-items:center; gap:10px;">
+                        🔔
+                        <span class="nav-link-wrap">
+                            Thông báo
+                            <span class="notif-badge" id="staff-notif-badge" style="display:none;">0</span>
+                        </span>
+                    </a>
                     <a href="#">📦 Stock Management</a>
                     <div class="submenu">
                         <a href="createStockIn">Create Stock-In</a>
@@ -189,3 +228,29 @@
                     </div>
                 </nav>
             </aside>
+
+            </aside>
+
+            <script>
+                (function () {
+                    var ctx = '${pageContext.request.contextPath}';
+                    var badge = document.getElementById('staff-notif-badge');
+                    var wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+                    var ws;
+                    function connect() {
+                        ws = new WebSocket(wsProtocol + '://' + location.host + ctx + '/notifications');
+                        ws.onmessage = function (e) {
+                            try {
+                                var data = JSON.parse(e.data);
+                                var count = parseInt(data.unreadCount || 0);
+                                if (!badge) return;
+                                if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = ''; }
+                                else { badge.style.display = 'none'; }
+                            } catch (ex) {}
+                        };
+                        ws.onclose = function() { setTimeout(connect, 5000); };
+                        ws.onerror = function() { ws.close(); };
+                    }
+                    connect();
+                })();
+            </script>

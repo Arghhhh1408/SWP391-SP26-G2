@@ -8,8 +8,8 @@ package model;
  *
  * @author dotha
  */
-
 import java.sql.Date;
+import java.sql.Timestamp;
 
 public class InventoryCheckItem {
 
@@ -24,6 +24,15 @@ public class InventoryCheckItem {
     private String status;
     private Integer approvedBy;
     private Date date;
+
+    // Added fields
+    private String reason;
+    private String sessionCode;
+    private int totalCheckTimes;
+    private Timestamp approvedAt;
+    private Integer createdBy;
+    private String createdByName;
+    private String approvedByName;
 
     public InventoryCheckItem() {
     }
@@ -130,5 +139,61 @@ public class InventoryCheckItem {
 
     public void setDate(Date date) {
         this.date = date;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public String getSessionCode() {
+        return sessionCode;
+    }
+
+    public void setSessionCode(String sessionCode) {
+        this.sessionCode = sessionCode;
+    }
+
+    public int getTotalCheckTimes() {
+        return totalCheckTimes;
+    }
+
+    public void setTotalCheckTimes(int totalCheckTimes) {
+        this.totalCheckTimes = totalCheckTimes;
+    }
+
+    public Timestamp getApprovedAt() {
+        return approvedAt;
+    }
+
+    public void setApprovedAt(Timestamp approvedAt) {
+        this.approvedAt = approvedAt;
+    }
+
+    public Integer getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Integer createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getCreatedByName() {
+        return createdByName;
+    }
+
+    public void setCreatedByName(String createdByName) {
+        this.createdByName = createdByName;
+    }
+
+    public String getApprovedByName() {
+        return approvedByName;
+    }
+
+    public void setApprovedByName(String approvedByName) {
+        this.approvedByName = approvedByName;
     }
 }
