@@ -235,8 +235,16 @@
                                             <a class="btn-view-detail"
                                                href="#"
                                                data-title="<c:out value='${n.title}'/>"
-                                               onclick="goToStockIn(this); return false;">
+                                               onclick="goToStockIn(this, ${n.notificationId}, ${n.read}); return false;">
                                                 🔍 Xem chi tiết phiếu nhập
+                                            </a>
+                                        </c:if>
+
+                                        <c:if test="${n.type == 'INVENTORY_CHECK_RESPONSE'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToInventoryCheck(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔍 Xem danh sách sản phẩm đã kiểm kê
                                             </a>
                                         </c:if>
 
@@ -263,7 +271,10 @@
                 <script>
                     var ctx = "${pageContext.request.contextPath}";
 
-                    function goToStockIn(link) {
+                    async function goToStockIn(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
                         var title = link.getAttribute('data-title') || '';
                         var match = title.match(/#(\d+)/);
                         if (match) {
@@ -271,20 +282,28 @@
                         }
                     }
 
+                    async function goToInventoryCheck(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/inventoryCheck';
+                    }
+
                     function markAsRead(notifId) {
-                        fetch(ctx + '/notifications', {
+                        return fetch(ctx + '/notifications', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: 'action=markRead&id=' + notifId
                         })
-                            .then(res => res.json())
-                            .then(data => {
-                                var item = document.getElementById('notif-item-' + notifId);
-                                var actionBox = document.getElementById('notif-action-' + notifId);
-                                if (item) item.classList.remove('unread');
-                                if (actionBox) actionBox.style.display = 'none';
-                            })
-                            .catch(err => console.error(err));
+                        .then(res => res.json())
+                        .then(data => {
+                            var item = document.getElementById('notif-item-' + notifId);
+                            var actionBox = document.getElementById('notif-action-' + notifId);
+                            if (item) item.classList.remove('unread');
+                            if (actionBox) actionBox.style.display = 'none';
+                            return data;
+                        })
+                        .catch(err => console.error(err));
                     }
                 </script>
             </body>

@@ -322,7 +322,7 @@ public class InventoryCheckDAO extends DBContext {
         return false;
     }
 
-    public boolean saveInventoryCounts(List<InventoryCheckItem> items, int createdBy) {
+    public boolean saveInventoryCounts(List<InventoryCheckItem> items, int createdBy, String sessionCode) {
         String sql = """
             INSERT INTO InventoryCounts
             (ProductID, PhysicalQuantity, SystemQuantity, Status, Date, SessionCode, Reason, CreatedBy)
@@ -332,8 +332,6 @@ public class InventoryCheckDAO extends DBContext {
         try {
             connection.setAutoCommit(false);
             PreparedStatement ps = connection.prepareStatement(sql);
-
-            String sessionCode = "IC" + System.currentTimeMillis();
 
             for (InventoryCheckItem item : items) {
                 if (item.getPhysicalQuantity() == null) {

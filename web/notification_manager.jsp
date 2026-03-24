@@ -261,6 +261,14 @@
                                             </a>
                                         </c:if>
 
+                                        <c:if test="${n.type == 'INVENTORY_CHECK_CREATED'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToInventoryApproval(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔍 Xem danh sách kiểm kê
+                                            </a>
+                                        </c:if>
+
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
                                                 <button class="btn-mark-read"
@@ -305,6 +313,13 @@
                         if (match) {
                             window.location.href = ctx + '/orderdetail?id=' + match[1];
                         }
+                    }
+
+                    async function goToInventoryApproval(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/inventoryCheck?mode=approval';
                     }
 
                     function markAsRead(notifId) {

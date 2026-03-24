@@ -19,6 +19,8 @@ import java.sql.Date;
 import java.util.List;
 import model.InventoryCheckItem;
 import model.User;
+import dao.NotificationDAO;
+import websocket.NotificationEndpoint;
 
 /**
  *
@@ -247,10 +249,27 @@ public class InventoryCheckController extends HttpServlet {
             }
 
             InventoryCheckDAO dao = new InventoryCheckDAO();
-            boolean ok = dao.saveInventoryCounts(items, user.getUserID());
+            String sessionCode = "IC" + System.currentTimeMillis();
+            boolean ok = dao.saveInventoryCounts(items, user.getUserID(), sessionCode);
 
             if (ok) {
                 session.setAttribute("message", "Lưu kiểm kê thành công.");
+
+                // Trigger notifications to all managers
+                try {
+                    NotificationDAO notiDao = new NotificationDAO();
+                    List<Integer> managerIds = notiDao.getManagerIds();
+                    String notiTitle = "Kiểm kê mới #" + sessionCode;
+                    String notiContent = user.getFullName() + " đã lưu kiểm kê (" + items.size() + " mặt hàng), hãy kiểm tra.";
+
+                    for (int mgrId : managerIds) {
+                        notiDao.insert(mgrId, notiTitle, notiContent, "INVENTORY_CHECK_CREATED");
+                        int unread = notiDao.countUnread(mgrId);
+                        NotificationEndpoint.sendToUser(mgrId, "{\"unreadCount\":" + unread + "}");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace(); // Notification failure should not break the main flow
+                }
             } else {
                 session.setAttribute("error", "Lưu kiểm kê thất bại.");
             }
@@ -559,6 +578,26 @@ public class InventoryCheckController extends HttpServlet {
 
         if (ok) {
             session.setAttribute("message", "Approve phiếu kiểm kho thành công.");
+
+            // Notify the staff member who created the session
+            try {
+                InventoryCheckDAO dao2 = new InventoryCheckDAO(); // Use new instance because dao is closed
+                List<InventoryCheckItem> items = dao2.getInventoryCountsBySessionCode(sessionCode);
+                if (items != null && !items.isEmpty()) {
+                    Integer staffId = items.get(0).getCreatedBy();
+                    if (staffId != null) {
+                        NotificationDAO notiDao = new NotificationDAO();
+                        String notiTitle = "Phản hồi kiểm kê #" + sessionCode;
+                        String notiContent = user.getFullName() + " đã Duyệt phiếu kiểm kê của bạn.";
+                        notiDao.insert(staffId, notiTitle, notiContent, "INVENTORY_CHECK_RESPONSE");
+                        
+                        int unread = notiDao.countUnread(staffId);
+                        NotificationEndpoint.sendToUser(staffId, "{\"unreadCount\":" + unread + "}");
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } else {
             session.setAttribute("error", "Approve phiếu kiểm kho thất bại.");
         }
@@ -597,6 +636,26 @@ public class InventoryCheckController extends HttpServlet {
 
         if (ok) {
             session.setAttribute("message", "Reject phiếu kiểm kho thành công.");
+
+            // Notify the staff member who created the session
+            try {
+                InventoryCheckDAO dao2 = new InventoryCheckDAO(); // Use new instance because dao is closed
+                List<InventoryCheckItem> items = dao2.getInventoryCountsBySessionCode(sessionCode);
+                if (items != null && !items.isEmpty()) {
+                    Integer staffId = items.get(0).getCreatedBy();
+                    if (staffId != null) {
+                        NotificationDAO notiDao = new NotificationDAO();
+                        String notiTitle = "Phản hồi kiểm kê #" + sessionCode;
+                        String notiContent = user.getFullName() + " đã Từ chối phiếu kiểm kê của bạn.";
+                        notiDao.insert(staffId, notiTitle, notiContent, "INVENTORY_CHECK_RESPONSE");
+                        
+                        int unread = notiDao.countUnread(staffId);
+                        NotificationEndpoint.sendToUser(staffId, "{\"unreadCount\":" + unread + "}");
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } else {
             session.setAttribute("error", "Reject phiếu kiểm kho thất bại.");
         }

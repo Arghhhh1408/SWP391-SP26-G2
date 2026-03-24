@@ -24,6 +24,16 @@ public class NotificationDAO extends DBContext {
         return false;
     }
 
+    /** Helper for inserting a notification with fields */
+    public boolean insert(int userId, String title, String message, String type) {
+        Notification n = new Notification();
+        n.setUserId(userId);
+        n.setTitle(title);
+        n.setMessage(message);
+        n.setType(type);
+        return insert(n);
+    }
+
     /** Get all notifications for a user (newest first, limit 50) */
     public List<Notification> getByReceiver(int userId) {
         List<Notification> list = new ArrayList<>();
