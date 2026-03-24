@@ -167,6 +167,57 @@
                         border-color: #94a3b8;
                     }
 
+                    .btn-view-detail {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        margin-top: 14px;
+                        padding: 8px 16px;
+                        background: #1f4e79;
+                        color: #fff;
+                        border-radius: 8px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        text-decoration: none;
+                        transition: background 0.2s ease;
+                    }
+
+                    .btn-view-detail:hover {
+                        background: #163a59;
+                    }
+
+                    .btn-reset {
+                        background: #f59e0b;
+                        color: white;
+                        border: none;
+                        padding: 6px 12px;
+                        border-radius: 6px;
+                        font-size: 13px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+
+                    .btn-reset:hover {
+                        background: #d97706;
+                    }
+
+                    .btn-reject {
+                        background: #ef4444;
+                        color: white;
+                        border: none;
+                        padding: 6px 12px;
+                        border-radius: 6px;
+                        font-size: 13px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+
+                    .btn-reject:hover {
+                        background: #dc2626;
+                    }
+
                     .notif-empty {
                         padding: 60px 40px;
                         text-align: center;
@@ -211,10 +262,28 @@
                                             <c:out value="${n.message}" escapeXml="false" />
                                         </div>
 
+                                        <c:if test="${n.type == 'PASSWORD_RESET_RESULT'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToProfile(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔐 Đổi mật khẩu ngay
+                                            </a>
+                                        </c:if>
+
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
-                                                <button class="btn-mark-read"
-                                                    onclick="markAsRead(${n.notificationId})">Đã đọc</button>
+                                                <c:choose>
+                                                    <c:when test="${n.type == 'PASSWORD_RESET_REQUEST'}">
+                                                        <button class="btn-reset"
+                                                            onclick="resetPassword(${n.notificationId})">Reset</button>
+                                                        <button class="btn-reject"
+                                                            onclick="rejectPassword(${n.notificationId})">Reject</button>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <button class="btn-mark-read"
+                                                            onclick="markAsRead(${n.notificationId})">Đã đọc</button>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </div>
                                         </c:if>
                                     </div>
@@ -239,6 +308,41 @@
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: 'action=markRead&id=' + notifId
+                        })
+                            .then(res => res.json())
+                            .then(data => {
+                                var item = document.getElementById('notif-item-' + notifId);
+                                var actionBox = document.getElementById('notif-action-' + notifId);
+                                if (item) item.classList.remove('unread');
+                                if (actionBox) actionBox.style.display = 'none';
+                            })
+                            .catch(err => console.error(err));
+                    }
+
+                    function resetPassword(notifId) {
+                        if (confirm("Bạn có chắc chắn muốn reset mật khẩu của người này về '123' không?")) {
+                            fetch(ctx + '/notifications', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'action=resetPassword&id=' + notifId
+                            })
+                                .then(res => res.json())
+                                .then(data => {
+                                    alert("Đã reset mật khẩu thành công!");
+                                    var item = document.getElementById('notif-item-' + notifId);
+                                    var actionBox = document.getElementById('notif-action-' + notifId);
+                                    if (item) item.classList.remove('unread');
+                                    if (actionBox) actionBox.style.display = 'none';
+                                })
+                                .catch(err => console.error(err));
+                        }
+                    }
+
+                    function rejectPassword(notifId) {
+                        fetch(ctx + '/notifications', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'action=rejectPassword&id=' + notifId
                         })
                             .then(res => res.json())
                             .then(data => {

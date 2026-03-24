@@ -245,7 +245,15 @@
                                             <a class="btn-view-detail"
                                                href="#"
                                                onclick="goToInventoryCheck(this, ${n.notificationId}, ${n.read}); return false;">
-                                                📊 Xem danh sách sản phẩm đã kiểm kê
+                                                📊 Xem danh sách kiểm kê
+                                            </a>
+                                        </c:if>
+
+                                        <c:if test="${n.type == 'PASSWORD_RESET_RESULT'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToProfile(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔐 Đổi mật khẩu ngay
                                             </a>
                                         </c:if>
 
@@ -288,6 +296,13 @@
                             await markAsRead(notifId);
                         }
                         window.location.href = ctx + '/inventoryCheck';
+                    }
+
+                    async function goToProfile(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/personalProfile';
                     }
 
                     function markAsRead(notifId) {
