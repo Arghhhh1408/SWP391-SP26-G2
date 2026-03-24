@@ -239,11 +239,20 @@
                                                 🔍 Xem chi tiết phiếu nhập
                                             </a>
                                         </c:if>
+                                        
+                                        <%-- Inventory Check notification button --%>
+                                        <c:if test="${n.type == 'INVENTORY_CHECK_APPROVED' || n.type == 'INVENTORY_CHECK_REJECTED'}">
+                                            <a class="btn-view-detail"
+                                               href="inventoryCheck"
+                                               onclick="markAsRead('${n.notificationId}')">
+                                                📊 Xem danh sách sản phẩm đã kiểm kê
+                                            </a>
+                                        </c:if>
 
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
                                                 <button class="btn-mark-read"
-                                                    onclick="markAsRead(${n.notificationId})">Đã đọc</button>
+                                                    onclick="markAsRead('${n.notificationId}')">Đã đọc</button>
                                             </div>
                                         </c:if>
                                     </div>

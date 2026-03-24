@@ -163,9 +163,14 @@ public class InventoryCheckDAO extends DBContext {
                    ic.Reason,
                    ic.SessionCode,
                    ic.CreatedBy,
+                   u1.FullName AS CreatedByName,
+                   ic.ApprovedBy,
+                   u2.FullName AS ApprovedByName,
                    ic.ApprovedAt
             FROM InventoryCounts ic
             JOIN Products p ON ic.ProductID = p.ProductID
+            LEFT JOIN [User] u1 ON ic.CreatedBy = u1.UserID
+            LEFT JOIN [User] u2 ON ic.ApprovedBy = u2.UserID
             WHERE ic.ProductID = ?
             ORDER BY ic.Date DESC, ic.CountID DESC
         """;
@@ -205,6 +210,8 @@ public class InventoryCheckDAO extends DBContext {
                 }
 
                 item.setApprovedAt(rs.getTimestamp("ApprovedAt"));
+                item.setCreatedByName(rs.getString("CreatedByName"));
+                item.setApprovedByName(rs.getString("ApprovedByName"));
                 list.add(item);
             }
 
@@ -232,9 +239,14 @@ public class InventoryCheckDAO extends DBContext {
                    ic.Reason,
                    ic.SessionCode,
                    ic.CreatedBy,
+                   u1.FullName AS CreatedByName,
+                   ic.ApprovedBy,
+                   u2.FullName AS ApprovedByName,
                    ic.ApprovedAt
             FROM InventoryCounts ic
             JOIN Products p ON ic.ProductID = p.ProductID
+            LEFT JOIN [User] u1 ON ic.CreatedBy = u1.UserID
+            LEFT JOIN [User] u2 ON ic.ApprovedBy = u2.UserID
             WHERE ic.CountID = ?
         """;
 
@@ -273,6 +285,8 @@ public class InventoryCheckDAO extends DBContext {
                 }
 
                 item.setApprovedAt(rs.getTimestamp("ApprovedAt"));
+                item.setCreatedByName(rs.getString("CreatedByName"));
+                item.setApprovedByName(rs.getString("ApprovedByName"));
                 return item;
             }
 
@@ -377,14 +391,16 @@ public class InventoryCheckDAO extends DBContext {
         String sql = """
             SELECT 
                 SessionCode,
-                MIN(Date) AS CreatedDate,
-                MIN(CreatedBy) AS CreatedBy,
+                MIN(ic.Date) AS CreatedDate,
+                MIN(ic.CreatedBy) AS CreatedBy,
+                MIN(u.FullName) AS CreatedByName,
                 COUNT(*) AS TotalItems,
-                MAX(Status) AS Status
-            FROM InventoryCounts
-            WHERE SessionCode IS NOT NULL
-              AND Status = 'Pending'
-            GROUP BY SessionCode
+                MAX(ic.Status) AS Status
+            FROM InventoryCounts ic
+            LEFT JOIN [User] u ON ic.CreatedBy = u.UserID
+            WHERE ic.SessionCode IS NOT NULL
+              AND ic.Status = 'Pending'
+            GROUP BY ic.SessionCode
             ORDER BY MIN(Date) DESC, SessionCode DESC
         """;
 
@@ -406,6 +422,7 @@ public class InventoryCheckDAO extends DBContext {
 
                 item.setTotalCheckTimes(rs.getInt("TotalItems"));
                 item.setStatus(rs.getString("Status"));
+                item.setCreatedByName(rs.getString("CreatedByName"));
                 list.add(item);
             }
         } catch (Exception e) {
@@ -434,9 +451,14 @@ public class InventoryCheckDAO extends DBContext {
                    ic.Reason,
                    ic.SessionCode,
                    ic.CreatedBy,
+                   u1.FullName AS CreatedByName,
+                   ic.ApprovedBy,
+                   u2.FullName AS ApprovedByName,
                    ic.ApprovedAt
             FROM InventoryCounts ic
             JOIN Products p ON ic.ProductID = p.ProductID
+            LEFT JOIN [User] u1 ON ic.CreatedBy = u1.UserID
+            LEFT JOIN [User] u2 ON ic.ApprovedBy = u2.UserID
             WHERE ic.SessionCode = ?
             ORDER BY p.Name, ic.CountID
         """;
@@ -476,6 +498,8 @@ public class InventoryCheckDAO extends DBContext {
                 }
 
                 item.setApprovedAt(rs.getTimestamp("ApprovedAt"));
+                item.setCreatedByName(rs.getString("CreatedByName"));
+                item.setApprovedByName(rs.getString("ApprovedByName"));
                 list.add(item);
             }
 
@@ -595,7 +619,24 @@ public class InventoryCheckDAO extends DBContext {
         } finally {
             closeConnection();
         }
-
         return false;
+    }
+
+    public Integer getCreatorIdBySessionCode(String sessionCode) {
+        String sql = "SELECT MIN(CreatedBy) as CreatedBy FROM InventoryCounts WHERE SessionCode = ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, sessionCode);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                int id = rs.getInt("CreatedBy");
+                return rs.wasNull() ? null : id;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            closeConnection();
+        }
+        return null;
     }
 }
