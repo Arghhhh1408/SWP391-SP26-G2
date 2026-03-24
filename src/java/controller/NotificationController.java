@@ -28,8 +28,17 @@ public class NotificationController extends HttpServlet {
         NotificationDAO dao = new NotificationDAO();
         List<Notification> list = dao.getByReceiver(user.getUserID());
 
+        String jspPage;
+        switch (user.getRoleID()) {
+            case 0: jspPage = "admin_notification.jsp"; break;
+            case 2: jspPage = "manager_notification.jsp"; break;
+            case 1: jspPage = "staff_notification.jsp"; break;
+            case 3: jspPage = "sales_notification.jsp"; break;
+            default: jspPage = "notifications.jsp"; // Fallback
+        }
+
         request.setAttribute("notifications", list);
-        request.getRequestDispatcher("notifications.jsp").forward(request, response);
+        request.getRequestDispatcher(jspPage).forward(request, response);
     }
 
     /**
