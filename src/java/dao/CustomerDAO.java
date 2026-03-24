@@ -254,22 +254,21 @@ public class CustomerDAO extends DBContext {
 
     public List<model.DebtPayment> getDebtPaymentHistory(int customerId) {
         List<model.DebtPayment> list = new ArrayList<>();
-        // Join với bảng User để lấy tên người thu tiền (Username)
-        String sql = """
-        SELECT h.*, u.Username as StaffName 
-        FROM DebtPaymentHistory h
-        JOIN [User] u ON h.staffId = u.UserID
-        WHERE h.customerId = ?
-        ORDER BY h.paymentDate DESC
-    """;
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, customerId);
-            ResultSet rs = ps.executeQuery();
+        // Lưu ý: Cột staffId phải join với bảng User để lấy tên nhân viên (staffName)
+        String sql = "SELECT p.*, u.fullName as staffName "
+                + "FROM DebtPayments p "
+                + "JOIN [User] u ON p.staffId = u.userID "
+                + "WHERE p.customerId = ? "
+                + "ORDER BY p.paymentDate DESC";
+        try {
+            PreparedStatement st = connection.prepareStatement(sql);
+            st.setInt(1, customerId);
+            ResultSet rs = st.executeQuery();
             while (rs.next()) {
                 model.DebtPayment p = new model.DebtPayment();
                 p.setPaymentDate(rs.getTimestamp("paymentDate"));
                 p.setAmount(rs.getDouble("amount"));
-                p.setStaffName(rs.getString("StaffName"));
+                p.setStaffName(rs.getString("staffName"));
                 p.setNote(rs.getString("note"));
                 list.add(p);
             }
@@ -278,28 +277,30 @@ public class CustomerDAO extends DBContext {
         }
         return list;
     }
+
     public boolean addCustomerDebt(int customerId, double newDebt) {
-    // Dùng dấu + để tăng tiền nợ khi khách mua thiếu
-    String sql = "UPDATE Customers SET Debt = Debt + ? WHERE CustomerID = ?";
-    try {
-        PreparedStatement ps = connection.prepareStatement(sql);
-        ps.setDouble(1, newDebt);
-        ps.setInt(2, customerId);
-        return ps.executeUpdate() > 0;
-    } catch (Exception e) {
-        e.printStackTrace();
-        return false;
+        // Dùng dấu + để tăng tiền nợ khi khách mua thiếu
+        String sql = "UPDATE Customers SET Debt = Debt + ? WHERE CustomerID = ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setDouble(1, newDebt);
+            ps.setInt(2, customerId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
-}
+
     public void addDebtFromOrder(int customerId, double newDebt) {
-    // Dùng dấu + để tăng tiền nợ
-    String sql = "UPDATE Customers SET Debt = Debt + ? WHERE CustomerID = ?";
-    try (PreparedStatement ps = connection.prepareStatement(sql)) {
-        ps.setDouble(1, newDebt);
-        ps.setInt(2, customerId);
-        ps.executeUpdate();
-    } catch (Exception e) {
-        e.printStackTrace();
+        // Dùng dấu + để tăng tiền nợ
+        String sql = "UPDATE Customers SET Debt = Debt + ? WHERE CustomerID = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, newDebt);
+            ps.setInt(2, customerId);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-}
 }
