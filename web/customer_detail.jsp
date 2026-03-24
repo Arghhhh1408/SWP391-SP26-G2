@@ -280,7 +280,10 @@
                                         <td>${o.createdByName}</td>
                                         <td><b style="color: #1e293b;"><fmt:formatNumber value="${o.totalAmount}" type="number"/> đ</b></td>
                                         <td><span class="status-badge">Hoàn thành</span></td>
-                                        <td><a href="order_detail?id=${o.stockOutId}" style="color: #8b5cf6; font-weight: 600; text-decoration: none;">Xem chi tiết</a></td>
+                                        <td><a href="orderdetail?id=${o.stockOutId}" 
+                                               style="padding: 5px 10px; background: #f1f5f9; color: #333; text-decoration: none; border-radius: 4px; font-size: 12px; border: 1px solid #ddd;">
+                                                Chi tiết
+                                            </a></td>
                                     </tr>
                                 </c:forEach>
                                 <c:if test="${empty history}">

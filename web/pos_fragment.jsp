@@ -7,7 +7,6 @@
         <meta charset="UTF-8">
         <title>Bán hàng POS - S.I.M</title>
         <style>
-            /* CSS Modal giữ nguyên */
             #invoiceModal {
                 display: none;
                 position: fixed;
@@ -62,28 +61,23 @@
                 border-bottom-left-radius: 12px;
                 border-bottom-right-radius: 12px;
             }
-
-            /* HỆ THỐNG GRID CHIA CỘT TUYỆT ĐỐI */
             .pos-container {
                 display: flex !important;
-                flex-direction: row !important; /* Ép nằm ngang */
+                flex-direction: row !important;
                 align-items: flex-start !important;
                 gap: 20px !important;
                 width: 100% !important;
                 margin-top: 10px;
             }
-
             .product-column {
-                flex: 1.6 !important; /* Cột sản phẩm rộng hơn */
+                flex: 1.6 !important;
                 min-width: 0;
             }
-
             .cart-column {
-                width: 400px !important; /* Cố định độ rộng giỏ hàng */
+                width: 400px !important;
                 position: sticky !important;
                 top: 20px;
             }
-
             .box {
                 background: white;
                 border-radius: 12px;
@@ -97,7 +91,6 @@
                 padding: 20px;
                 box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
             }
-
             @media print {
                 .no-print {
                     display: none !important;
@@ -121,10 +114,8 @@
         <c:set var="tab" value="pos" scope="request" />
         <jsp:include page="saleSidebar.jsp" />
 
-        <div class="admin-main" style="margin-left: 10px; padding: 10px;">
-
+        <div class="admin-main" style="margin-left: 240px; padding: 20px;">
             <div class="pos-container">
-
                 <div class="product-column">
                     <div class="box">
                         <div style="padding: 15px 20px; background: #fcfcfc; border-bottom: 1px solid #f1f5f9;">
@@ -167,11 +158,9 @@
                 <div class="cart-column">
                     <div class="cart-box">
                         <h3 style="margin-top:0; border-bottom:2px solid #3b82f6; padding-bottom:12px; font-size: 18px; color: #1e293b;">📋 Đơn hàng</h3>
-
                         <div id="cart-ajax-container">
                             <jsp:include page="_cart_content.jsp" />
                         </div>
-
                         <form action="checkout" method="post" id="checkout-form" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
                             <div style="margin-bottom:10px;">
                                 <label style="font-size:12px; font-weight:bold; color:#64748b;">SĐT:</label>
@@ -189,8 +178,10 @@
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
 
-            </div> </div> <div id="invoiceModal">
+        <div id="invoiceModal">
             <div class="modal-content">
                 <span onclick="closeModal()" class="no-print" style="position:absolute; right:15px; top:10px; font-size:28px; cursor:pointer;">&times;</span>
                 <div class="invoice-card" id="invoice-print-area">
@@ -211,6 +202,17 @@
                         <div class="total-row"><span>Khách trả:</span><span id="display-amountPaid">0 đ</span></div>
                         <div class="total-row"><span id="label-debt-change">Công nợ:</span><span id="display-debt-change">0 đ</span></div>
                     </div>
+                    <div style="display: flex; justify-content: space-around; align-items: flex-end; margin-top: 20px; border-top: 1px dashed #ddd; padding-top: 15px;">
+                        <div style="text-align: center;">
+                            <p style="font-size: 10px; margin-bottom: 5px; font-weight: bold;">THANH TOÁN QR</p>
+                            <img id="display-qr-pay" src="" style="width: 120px; height: 120px; border: 1px solid #eee; padding: 5px;" />
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 10px; margin-bottom: 5px; font-weight: bold;">MÃ ĐƠN HÀNG</p>
+                            <img id="display-barcode" src="" style="width: 150px; height: 50px;" />
+                            <p id="display-order-id" style="font-size: 10px; margin-top: 5px; letter-spacing: 2px;"></p>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer no-print">
                     <button onclick="window.print()" style="flex:1; background:#10b981; color:white; padding:12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">🖨️ IN</button>
@@ -220,9 +222,39 @@
         </div>
 
         <script>
+            // 1. Tự động tìm khách hàng theo SĐT (Tích hợp lại)
+            // Lưu ý: customerList phải được bạn truyền từ Controller sang bằng request.setAttribute
+            function findCustomerByPhone(phone) {
+                const input = phone.trim();
+                if (input.length < 9)
+                    return;
+                if (typeof customerList !== 'undefined') {
+                    const customer = customerList.find(c => c.phone === input);
+                    if (customer) {
+                        document.getElementById('cusName').value = customer.name;
+                        document.getElementById('cusName').style.backgroundColor = "#dcfce7";
+                    }
+                }
+            }
+
+            function generateBarcode(orderId) {
+                const barcodeUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=\${orderId}&scale=2&rotate=N&includetext=false`;
+                document.getElementById('display-barcode').src = barcodeUrl;
+                document.getElementById('display-order-id').innerText = orderId;
+            }
+
+            function generateQR(amount) {
+                const qrUrl = `https://img.vietqr.io/image/MB-0338968962-compact2.jpg?amount=\${amount}&addInfo=Thanh%20toan%20SIM`;
+                document.getElementById('display-qr-pay').src = qrUrl;
+            }
+
             function calculateDebt() {
-                const total = parseInt(document.getElementById('hidden-total-val').value) || 0;
-                const paid = parseInt(document.getElementById('amountPaid').value) || 0;
+                const totalEl = document.getElementById('hidden-total-val');
+                const paidEl = document.getElementById('amountPaid');
+                if (!totalEl || !paidEl)
+                    return;
+                const total = parseInt(totalEl.value) || 0;
+                const paid = parseInt(paidEl.value) || 0;
                 const diff = total - paid;
                 const rowDebt = document.getElementById("row-debt");
                 const rowChange = document.getElementById("row-change");
@@ -254,14 +286,16 @@
 
             document.getElementById('checkout-form').addEventListener('submit', function (e) {
                 e.preventDefault();
-                const total = parseInt(document.getElementById('hidden-total-val').value) || 0;
-                const paid = parseInt(document.getElementById('amountPaid').value) || 0;
-                const diff = total - paid;
+                const totalVal = parseInt(document.getElementById('hidden-total-val').value) || 0;
+                const paidVal = parseInt(document.getElementById('amountPaid').value) || 0;
+                const diff = totalVal - paidVal;
+
                 document.getElementById('display-cusName').innerText = document.getElementById('cusName').value || "Khách lẻ";
                 document.getElementById('display-cusPhone').innerText = document.getElementById('cusPhone').value || "Chưa có";
                 document.getElementById('display-date').innerText = new Date().toLocaleString('vi-VN');
-                document.getElementById('display-totalPrice').innerText = total.toLocaleString() + " đ";
-                document.getElementById('display-amountPaid').innerText = paid.toLocaleString() + " đ";
+                document.getElementById('display-totalPrice').innerText = totalVal.toLocaleString() + " đ";
+                document.getElementById('display-amountPaid').innerText = paidVal.toLocaleString() + " đ";
+
                 const lbl = document.getElementById('label-debt-change');
                 const val = document.getElementById('display-debt-change');
                 if (diff > 0) {
@@ -273,6 +307,7 @@
                     val.innerText = Math.abs(diff).toLocaleString() + " đ";
                     val.style.color = "#10b981";
                 }
+
                 let htmlItems = '';
                 document.querySelectorAll('#cart-list > div').forEach(item => {
                     const name = item.querySelector('div:first-child div:first-child').innerText;
@@ -281,6 +316,10 @@
                     htmlItems += `<tr><td>\${name}</td><td style="text-align:center">\${qty}</td><td style="text-align:right">\${price}</td></tr>`;
                 });
                 document.getElementById('invoice-items-list').innerHTML = htmlItems;
+
+                const tempOrderId = "SIM" + Date.now();
+                generateQR(totalVal);
+                generateBarcode(tempOrderId);
                 document.getElementById('invoiceModal').style.display = 'block';
             });
 
