@@ -114,7 +114,7 @@
         <c:set var="tab" value="pos" scope="request" />
         <jsp:include page="saleSidebar.jsp" />
 
-        <div class="admin-main" style="margin-left: 240px; padding: 20px;">
+        <div class="admin-main" style="margin-left: 10px; padding: 10px;">
             <div class="pos-container">
                 <div class="product-column">
                     <div class="box">
@@ -222,8 +222,7 @@
         </div>
 
         <script>
-            // 1. Tự động tìm khách hàng theo SĐT (Tích hợp lại)
-            // Lưu ý: customerList phải được bạn truyền từ Controller sang bằng request.setAttribute
+            // 1. Tự động tìm khách hàng theo SĐT
             function findCustomerByPhone(phone) {
                 const input = phone.trim();
                 if (input.length < 9)
@@ -237,29 +236,35 @@
                 }
             }
 
+            // 2. Hàm tạo Barcode (Fix lỗi nối chuỗi)
             function generateBarcode(orderId) {
-                const barcodeUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=\${orderId}&scale=2&rotate=N&includetext=false`;
+                const barcodeUrl = "https://bwipjs-api.metafloor.com/?bcid=code128&text=" + orderId + "&scale=2&rotate=N&includetext=false";
                 document.getElementById('display-barcode').src = barcodeUrl;
                 document.getElementById('display-order-id').innerText = orderId;
             }
 
-            function generateQR(amount) {
-                const qrUrl = `https://img.vietqr.io/image/MB-0338968962-compact2.jpg?amount=\${amount}&addInfo=Thanh%20toan%20SIM`;
+            // 3. Hàm tạo QR (Nội dung chuyển khoản chuẩn)
+            function generateQR(amount, orderId) {
+                const qrUrl = "https://img.vietqr.io/image/MB-0338968962-compact2.jpg?amount=" + amount + "&addInfo=Thanh toan don " + orderId;
                 document.getElementById('display-qr-pay').src = qrUrl;
             }
 
+            // 4. Tính toán Công nợ / Tiền thừa
             function calculateDebt() {
                 const totalEl = document.getElementById('hidden-total-val');
                 const paidEl = document.getElementById('amountPaid');
                 if (!totalEl || !paidEl)
                     return;
+
                 const total = parseInt(totalEl.value) || 0;
                 const paid = parseInt(paidEl.value) || 0;
                 const diff = total - paid;
+
                 const rowDebt = document.getElementById("row-debt");
                 const rowChange = document.getElementById("row-change");
                 const debtDisp = document.getElementById("debt-display");
                 const changeDisp = document.getElementById("change-display");
+
                 if (diff > 0) {
                     if (rowDebt)
                         rowDebt.style.display = "flex";
@@ -284,14 +289,25 @@
                 }
             }
 
+            // 5. HÀM SUBMIT CHÍNH (Đã sửa lỗi không hiện hóa đơn)
             document.getElementById('checkout-form').addEventListener('submit', function (e) {
                 e.preventDefault();
-                const totalVal = parseInt(document.getElementById('hidden-total-val').value) || 0;
-                const paidVal = parseInt(document.getElementById('amountPaid').value) || 0;
-                const diff = totalVal - paidVal;
 
-                document.getElementById('display-cusName').innerText = document.getElementById('cusName').value || "Khách lẻ";
-                document.getElementById('display-cusPhone').innerText = document.getElementById('cusPhone').value || "Chưa có";
+                const totalVal = parseInt(document.getElementById('hidden-total-val').value) || 0;
+                const paidInput = document.getElementById('amountPaid').value;
+                const paidVal = parseInt(paidInput) || 0;
+                const diff = totalVal - paidVal;
+                const tempOrderId = "SIM" + Date.now();
+
+                // Xử lý thông tin khách lẻ
+                let phoneInput = document.getElementById('cusPhone').value.trim();
+                let nameInput = document.getElementById('cusName').value.trim();
+                let finalPhone = (phoneInput === "") ? "---" : phoneInput;
+                let finalName = (phoneInput === "") ? "Khách lẻ" : (nameInput === "" ? "Khách vãng lai" : nameInput);
+
+                // Đổ dữ liệu lên Modal
+                document.getElementById('display-cusName').innerText = finalName;
+                document.getElementById('display-cusPhone').innerText = finalPhone;
                 document.getElementById('display-date').innerText = new Date().toLocaleString('vi-VN');
                 document.getElementById('display-totalPrice').innerText = totalVal.toLocaleString() + " đ";
                 document.getElementById('display-amountPaid').innerText = paidVal.toLocaleString() + " đ";
@@ -308,46 +324,50 @@
                     val.style.color = "#10b981";
                 }
 
+                // Quét danh sách món hàng để hiển thị lên Bill
                 let htmlItems = '';
                 document.querySelectorAll('#cart-list > div').forEach(item => {
-                    const name = item.querySelector('div:first-child div:first-child').innerText;
+                    const name = item.querySelector('div div:first-child').innerText;
                     const qty = item.querySelector('input[type="number"]').value;
-                    const price = item.querySelector('div:last-child').innerText;
-                    htmlItems += `<tr><td>\${name}</td><td style="text-align:center">\${qty}</td><td style="text-align:right">\${price}</td></tr>`;
+                    const price = item.querySelector('div[style*="font-weight:bold"]').innerText;
+                    htmlItems += "<tr><td>" + name + "</td><td style='text-align:center'>" + qty + "</td><td style='text-align:right'>" + price + "</td></tr>";
                 });
                 document.getElementById('invoice-items-list').innerHTML = htmlItems;
 
-                const tempOrderId = "SIM" + Date.now();
-                generateQR(totalVal);
+                // Cập nhật QR Code: Nếu khách trả một phần, QR hiện đúng số tiền đó. Trả 0đ thì hiện tổng bill.
+                const qrAmount = (paidVal > 0) ? paidVal : totalVal;
+                generateQR(qrAmount, tempOrderId);
                 generateBarcode(tempOrderId);
+
+                // Hiển thị Modal
                 document.getElementById('invoiceModal').style.display = 'block';
             });
 
+            // 6. Các hàm bổ trợ khác
             function updateCartAjax(id, act) {
                 fetch('cart?productId=' + id + '&action=' + act).then(r => r.text()).then(h => {
                     document.getElementById('cart-ajax-container').innerHTML = h;
+                    const totalVal = document.getElementById('hidden-total-val').value;
+                    document.getElementById('amountPaid').value = totalVal;
                     calculateDebt();
                 });
             }
+
             function closeModal() {
                 document.getElementById('invoiceModal').style.display = 'none';
             }
+
             function submitFinalOrder() {
                 document.getElementById('checkout-form').submit();
             }
+
             document.addEventListener('keydown', function (e) {
-                // Nhấn F8 để nhảy nhanh vào ô nhập tiền khách trả
                 if (e.key === "F8") {
                     e.preventDefault();
                     document.getElementById('amountPaid').focus();
                 }
-
-                // Nhấn Esc để đóng Modal hóa đơn nhanh
-                if (e.key === "Escape") {
+                if (e.key === "Escape")
                     closeModal();
-                }
-
-                // Nhấn F9 để xác nhận lưu hóa đơn (Khi modal đang mở)
                 if (e.key === "F9" && document.getElementById('invoiceModal').style.display === 'block') {
                     submitFinalOrder();
                 }

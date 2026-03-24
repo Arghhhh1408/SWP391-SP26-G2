@@ -47,4 +47,3 @@ public class TopProductSales {
         this.revenue = revenue;
     }
 }
-

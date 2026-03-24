@@ -14,11 +14,17 @@ public class OrderHistoryDAO extends DBContext {
     // 1. Danh sách TẤT CẢ đơn hàng
     public List<OrderHistory> getAllOrders(String sort) {
         List<OrderHistory> list = new ArrayList<>();
-        String orderBy = "old".equalsIgnoreCase(sort)
-                ? " ORDER BY so.Date ASC "
-                : " ORDER BY so.Date DESC ";
 
-        // Dùng c.Name và c.Phone vì bảng Customers của Mạnh Lý dùng tên này
+        // Thêm logic sắp xếp theo giá trị
+        String orderBy;
+        if ("total_desc".equalsIgnoreCase(sort)) {
+            orderBy = " ORDER BY so.TotalAmount DESC, so.Date DESC ";
+        } else if ("old".equalsIgnoreCase(sort)) {
+            orderBy = " ORDER BY so.Date ASC ";
+        } else {
+            orderBy = " ORDER BY so.Date DESC ";
+        }
+
         String sql = "SELECT so.StockOutID, so.Date, so.TotalAmount, so.Note, "
                 + "c.Name AS CustomerName, c.Phone AS CustomerPhone, "
                 + "u.Username AS CreatedByName "
@@ -34,7 +40,7 @@ public class OrderHistoryDAO extends DBContext {
                 o.setDate(rs.getTimestamp("Date"));
                 o.setTotalAmount(rs.getDouble("TotalAmount"));
                 o.setNote(rs.getString("Note"));
-                // Xử lý trường hợp khách vãng lai (null)
+                // Xử lý null để không hiện chữ "null" ra giao diện
                 o.setCustomerName(rs.getString("CustomerName") != null ? rs.getString("CustomerName") : "Khách lẻ");
                 o.setCustomerPhone(rs.getString("CustomerPhone") != null ? rs.getString("CustomerPhone") : "---");
                 o.setCreatedByName(rs.getString("CreatedByName"));
@@ -123,30 +129,35 @@ public class OrderHistoryDAO extends DBContext {
         List<OrderHistory> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder();
         sql.append("""
-        SELECT so.StockOutID,
-               so.Date,
-               so.TotalAmount,
-               so.Note,
-               c.Name AS CustomerName,
-               c.Phone AS CustomerPhone,
-               u.Username AS CreatedByName
-        FROM dbo.StockOut so
-        LEFT JOIN dbo.Customers c ON c.CustomerID = so.CustomerID
-        LEFT JOIN dbo.[User] u ON u.UserID = so.CreatedBy
-        """);
+    SELECT so.StockOutID, so.Date, so.TotalAmount, so.Note,
+           c.Name AS CustomerName, c.Phone AS CustomerPhone,
+           u.Username AS CreatedByName
+    FROM dbo.StockOut so
+    LEFT JOIN dbo.Customers c ON c.CustomerID = so.CustomerID
+    LEFT JOIN dbo.[User] u ON u.UserID = so.CreatedBy
+    """);
 
-        switch (range) {
-            case "day" ->
-                sql.append(" WHERE CAST(so.Date AS DATE) = CAST(GETDATE() AS DATE) ");
-            case "week" ->
-                sql.append(" WHERE DATEPART(YEAR, so.Date) = DATEPART(YEAR, GETDATE()) AND DATEPART(WEEK, so.Date) = DATEPART(WEEK, GETDATE()) ");
-            case "month" ->
-                sql.append(" WHERE YEAR(so.Date) = YEAR(GETDATE()) AND MONTH(so.Date) = MONTH(GETDATE()) ");
+        if (range != null) {
+            switch (range.toLowerCase()) {
+                case "today", "day" ->
+                    sql.append(" WHERE CAST(so.Date AS DATE) = CAST(GETDATE() AS DATE) ");
+                case "yesterday" ->
+                    sql.append(" WHERE CAST(so.Date AS DATE) = CAST(DATEADD(day, -1, GETDATE()) AS DATE) ");
+                case "this_week", "week" ->
+                    sql.append(" WHERE so.Date >= DATEADD(day, -7, GETDATE()) ");
+                case "this_month", "month" ->
+                    sql.append(" WHERE YEAR(so.Date) = YEAR(GETDATE()) AND MONTH(so.Date) = MONTH(GETDATE()) ");
+            }
         }
 
-        sql.append("old".equalsIgnoreCase(sort)
-                ? " ORDER BY so.Date ASC, so.StockOutID ASC "
-                : " ORDER BY so.Date DESC, so.StockOutID DESC ");
+        // Thêm logic sắp xếp
+        if ("total_desc".equalsIgnoreCase(sort)) {
+            sql.append(" ORDER BY so.TotalAmount DESC, so.Date DESC ");
+        } else if ("old".equalsIgnoreCase(sort)) {
+            sql.append(" ORDER BY so.Date ASC, so.StockOutID ASC ");
+        } else {
+            sql.append(" ORDER BY so.Date DESC, so.StockOutID DESC ");
+        }
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString()); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
@@ -155,8 +166,8 @@ public class OrderHistoryDAO extends DBContext {
                 o.setDate(rs.getTimestamp("Date"));
                 o.setTotalAmount(rs.getDouble("TotalAmount"));
                 o.setNote(rs.getString("Note"));
-                o.setCustomerName(rs.getString("CustomerName"));
-                o.setCustomerPhone(rs.getString("CustomerPhone"));
+                o.setCustomerName(rs.getString("CustomerName") != null ? rs.getString("CustomerName") : "Khách lẻ");
+                o.setCustomerPhone(rs.getString("CustomerPhone") != null ? rs.getString("CustomerPhone") : "---");
                 o.setCreatedByName(rs.getString("CreatedByName"));
                 list.add(o);
             }
@@ -169,14 +180,18 @@ public class OrderHistoryDAO extends DBContext {
     // 5. Tìm kiếm đơn hàng theo Mã hoặc Số điện thoại
     public List<OrderHistory> searchOrders(String keyword, String sort) {
         List<OrderHistory> list = new ArrayList<>();
-        String orderBy = "old".equalsIgnoreCase(sort)
-                ? " ORDER BY so.Date ASC, so.StockOutID ASC "
-                : " ORDER BY so.Date DESC, so.StockOutID DESC ";
-
-        // Kiểm tra xem keyword có phải là số (Mã HĐ hoặc SĐT) không
-        boolean isNumber = keyword != null && keyword.trim().matches("\\d+");
         String cleanKeyword = (keyword == null) ? "" : keyword.trim();
 
+        String orderBy;
+        if ("total_desc".equalsIgnoreCase(sort)) {
+            orderBy = " ORDER BY so.TotalAmount DESC ";
+        } else if ("old".equalsIgnoreCase(sort)) {
+            orderBy = " ORDER BY so.Date ASC ";
+        } else {
+            orderBy = " ORDER BY so.Date DESC ";
+        }
+
+        // Dùng CAST sang VARCHAR để tìm kiếm LIKE cho cả Mã HĐ và SĐT không bị lỗi kiểu dữ liệu
         String sql = """
     SELECT so.StockOutID, so.Date, so.TotalAmount, so.Note,
            c.Name AS CustomerName, c.Phone AS CustomerPhone,
@@ -184,26 +199,14 @@ public class OrderHistoryDAO extends DBContext {
     FROM dbo.StockOut so
     LEFT JOIN dbo.Customers c ON c.CustomerID = so.CustomerID
     LEFT JOIN dbo.[User] u ON u.UserID = so.CreatedBy
-    WHERE 
-    """;
-
-        // Sửa logic điều kiện WHERE cho khớp với tên cột thực tế
-        if (isNumber) {
-            // Tìm chính xác Mã HĐ hoặc tìm gần đúng theo Số điện thoại
-            sql += " (so.StockOutID = ? OR c.Phone LIKE ?) ";
-        } else {
-            // Tìm gần đúng theo Tên khách hàng
-            sql += " (c.Name LIKE ?) ";
-        }
-        sql += orderBy;
+    WHERE (CAST(so.StockOutID AS VARCHAR) LIKE ? OR c.Phone LIKE ? OR c.Name LIKE ?)
+    """ + orderBy;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            if (isNumber) {
-                ps.setInt(1, Integer.parseInt(cleanKeyword));
-                ps.setString(2, "%" + cleanKeyword + "%");
-            } else {
-                ps.setString(1, "%" + cleanKeyword + "%");
-            }
+            String p = "%" + cleanKeyword + "%";
+            ps.setString(1, p);
+            ps.setString(2, p);
+            ps.setString(3, p);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -211,8 +214,8 @@ public class OrderHistoryDAO extends DBContext {
                     o.setStockOutId(rs.getInt("StockOutID"));
                     o.setDate(rs.getTimestamp("Date"));
                     o.setTotalAmount(rs.getDouble("TotalAmount"));
-                    o.setCustomerName(rs.getString("CustomerName"));
-                    o.setCustomerPhone(rs.getString("CustomerPhone"));
+                    o.setCustomerName(rs.getString("CustomerName") != null ? rs.getString("CustomerName") : "Khách lẻ");
+                    o.setCustomerPhone(rs.getString("CustomerPhone") != null ? rs.getString("CustomerPhone") : "---");
                     o.setCreatedByName(rs.getString("CreatedByName"));
                     list.add(o);
                 }
