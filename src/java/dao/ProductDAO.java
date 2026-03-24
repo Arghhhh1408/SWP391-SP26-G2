@@ -100,10 +100,10 @@ public class ProductDAO extends DBContext {
     // Lấy product theo ID (add vào cart)
     public Product getById(int id) {
         String sql = """
-            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status
-            FROM dbo.Products
-            WHERE ProductID = ? AND Status = 'Active'
-        """;
+                 SELECT ProductID, Name, SKU, Cost, Price, StockQuantity, Unit, Status
+                 FROM dbo.Products
+                 WHERE ProductID = ? AND Status = 'Active'
+                 """;
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
