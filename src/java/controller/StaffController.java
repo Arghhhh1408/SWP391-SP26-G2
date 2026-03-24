@@ -130,13 +130,14 @@ public class StaffController extends HttpServlet {
                         && rr.getStatus() != ReturnStatus.REJECTED
                         && rr.getStatus() != ReturnStatus.REFUNDED
                         && rr.getStatus() != ReturnStatus.CANCELLED) {
+                    String skuBefore = rr.getSku() == null ? "" : rr.getSku().trim();
                     boolean updated = dao.updateStatus(id, ReturnStatus.COMPLETED,
                             "Staff xác nhận đã trả hàng", getActor(request));
 
-                    // Khi hoàn tất trả hàng, cộng lại tồn kho sản phẩm.
-                    if (updated && rr.getSku() != null && !rr.getSku().isBlank()) {
+                    // Nhận hàng trả về kho: tăng StockQuantity theo SKU (1 đơn vị / yêu cầu — bảng ReturnRequests chưa có cột số lượng).
+                    if (updated && !skuBefore.isEmpty()) {
                         ProductDAO productDAO = new ProductDAO();
-                        productDAO.increaseQuantityBySku(rr.getSku(), 1);
+                        productDAO.increaseQuantityBySku(skuBefore, 1);
                     }
                 }
             }
