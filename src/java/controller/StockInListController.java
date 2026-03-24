@@ -182,6 +182,7 @@ public class StockInListController extends HttpServlet {
 
                 try {
                     int id = Integer.parseInt(request.getParameter("id"));
+                    StockIn stockInForNotif = dao.getStockInByIdBasic(id);
                     boolean ok = dao.approveCancelStockIn(id, user.getUserID());
 
                     try {
@@ -195,6 +196,14 @@ public class StockInListController extends HttpServlet {
                         logDAO.insertLog(log);
                     } catch (Exception ex) {
                         ex.printStackTrace();
+                    }
+
+                    if (ok && stockInForNotif != null) {
+                        try {
+                            sendCancelResponseNotification(user, stockInForNotif, true);
+                        } catch (Exception notifEx) {
+                            notifEx.printStackTrace();
+                        }
                     }
 
                     loadList(request, response,
@@ -216,6 +225,7 @@ public class StockInListController extends HttpServlet {
 
                 try {
                     int id = Integer.parseInt(request.getParameter("id"));
+                    StockIn stockInForNotif = dao.getStockInByIdBasic(id);
                     boolean ok = dao.rejectCancelStockIn(id);
 
                     try {
@@ -229,6 +239,14 @@ public class StockInListController extends HttpServlet {
                         logDAO.insertLog(log);
                     } catch (Exception ex) {
                         ex.printStackTrace();
+                    }
+
+                    if (ok && stockInForNotif != null) {
+                        try {
+                            sendCancelResponseNotification(user, stockInForNotif, false);
+                        } catch (Exception notifEx) {
+                            notifEx.printStackTrace();
+                        }
                     }
 
                     loadList(request, response,
@@ -399,6 +417,41 @@ public class StockInListController extends HttpServlet {
             // Push WebSocket badge update
             int unread = notifDAO.countUnread(managerId);
             NotificationEndpoint.sendToUser(managerId, "{\"unreadCount\":" + unread + "}");
+        }
+    }
+
+    private void sendCancelResponseNotification(User manager, StockIn stockIn, boolean approved) {
+        if (stockIn == null) {
+            return;
+        }
+        int stockInId = stockIn.getStockInId();
+
+        // The person to notify is the one who created/requested the cancellation
+        Integer cancelBy = stockIn.getCancelRequestedBy();
+        int targetUserId = (cancelBy != null && cancelBy != 0) ? cancelBy : stockIn.getCreatedBy();
+
+        String managerName = (manager.getFullName() != null && !manager.getFullName().isEmpty())
+                ? manager.getFullName()
+                : manager.getUsername();
+
+        Notification n = new Notification();
+        n.setUserId(targetUserId);
+        
+        if (approved) {
+            n.setTitle("Phiếu nhập #" + stockInId + " đã được duyệt hủy");
+            n.setMessage("Manager " + managerName + " đã duyệt yêu cầu hủy phiếu nhập của bạn.");
+            n.setType("STOCKIN_CANCEL_APPROVED");
+        } else {
+            n.setTitle("Phiếu nhập #" + stockInId + " bị từ chối hủy");
+            n.setMessage("Manager " + managerName + " đã từ chối yêu cầu hủy phiếu nhập của bạn.");
+            n.setType("STOCKIN_CANCEL_REJECTED");
+        }
+
+        NotificationDAO notifDAO = new NotificationDAO();
+        if (notifDAO.insert(n)) {
+            // Push WebSocket badge update
+            int unread = notifDAO.countUnread(targetUserId);
+            NotificationEndpoint.sendToUser(targetUserId, "{\"unreadCount\":" + unread + "}");
         }
     }
 
