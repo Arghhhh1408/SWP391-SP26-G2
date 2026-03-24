@@ -335,6 +335,23 @@
             function submitFinalOrder() {
                 document.getElementById('checkout-form').submit();
             }
+            document.addEventListener('keydown', function (e) {
+                // Nhấn F8 để nhảy nhanh vào ô nhập tiền khách trả
+                if (e.key === "F8") {
+                    e.preventDefault();
+                    document.getElementById('amountPaid').focus();
+                }
+
+                // Nhấn Esc để đóng Modal hóa đơn nhanh
+                if (e.key === "Escape") {
+                    closeModal();
+                }
+
+                // Nhấn F9 để xác nhận lưu hóa đơn (Khi modal đang mở)
+                if (e.key === "F9" && document.getElementById('invoiceModal').style.display === 'block') {
+                    submitFinalOrder();
+                }
+            });
         </script>
     </body>
 </html>
