@@ -324,7 +324,9 @@ public class StockInDetailController extends HttpServlet {
 
         // Re-fetch StockIn to get updated status & remaining after SP ran
         StockIn updatedStockIn = dao.getStockInById(stockIn.getStockInId());
-        if (updatedStockIn == null) updatedStockIn = stockIn;
+        if (updatedStockIn == null) {
+            updatedStockIn = stockIn;
+        }
 
         // Re-fetch details so receivedQuantity is up-to-date
         List<StockInDetail> details = dao.getStockInDetailsByStockInId(stockIn.getStockInId());
@@ -340,10 +342,17 @@ public class StockInDetailController extends HttpServlet {
         // Payment status label (use updated stockIn)
         String ps;
         switch (updatedStockIn.getPaymentStatus() != null ? updatedStockIn.getPaymentStatus() : "") {
-            case StockIn.PAYMENT_STATUS_PAID:      ps = "Đã thanh toán"; break;
-            case StockIn.PAYMENT_STATUS_PARTIAL:   ps = "Thanh toán một phần"; break;
-            case StockIn.PAYMENT_STATUS_CANCELLED: ps = "Đã hủy"; break;
-            default:                               ps = "Chưa thanh toán";
+            case StockIn.PAYMENT_STATUS_PAID:
+                ps = "Đã thanh toán";
+                break;
+            case StockIn.PAYMENT_STATUS_PARTIAL:
+                ps = "Thanh toán một phần";
+                break;
+            case StockIn.PAYMENT_STATUS_CANCELLED:
+                ps = "Đã hủy";
+                break;
+            default:
+                ps = "Chưa thanh toán";
         }
 
         boolean isCompleted = StockIn.STOCK_STATUS_COMPLETED.equals(updatedStockIn.getStockStatus());
@@ -355,7 +364,6 @@ public class StockInDetailController extends HttpServlet {
         msg.append("Chi tiết sản phẩm:\n");
 
         if (isCompleted) {
-            // ── Completed: show ordered qty, unit cost, subtotal ──────────
             title = "Phiếu nhập #" + updatedStockIn.getStockInId()
                     + " đã nhập đủ số lượng từ " + staffName;
 
@@ -363,13 +371,12 @@ public class StockInDetailController extends HttpServlet {
                 String pName = (d.getProductName() != null && !d.getProductName().isEmpty())
                         ? d.getProductName() : "SP#" + d.getProductId();
                 msg.append("  - ").append(pName)
-                   .append(" | Số lượng: ").append(d.getQuantity())
-                   .append(" | Đơn giá: ").append(String.format("%,.0f đ", d.getUnitCost()))
-                   .append(" | Thành tiền: ").append(String.format("%,.0f đ", d.getSubTotal()))
-                   .append("\n");
+                        .append(" | Số lượng: ").append(d.getQuantity())
+                        .append(" | Đơn giá: ").append(String.format("%,.0f đ", d.getUnitCost()))
+                        .append(" | Thành tiền: ").append(String.format("%,.0f đ", d.getSubTotal()))
+                        .append("\n");
             }
         } else {
-            // ── Partial receive: show added / remaining ───────────────────
             title = "Phiếu nhập #" + updatedStockIn.getStockInId()
                     + " được cập nhật từ " + staffName;
 
@@ -379,10 +386,10 @@ public class StockInDetailController extends HttpServlet {
                 int remaining = d.getQuantity() - d.getReceivedQuantity();
                 int added = (d.getDetailId() == updatedDetailId) ? receiveQty : 0;
                 msg.append("  - ").append(pName)
-                   .append(" | Số lượng: ").append(d.getQuantity())
-                   .append(" | đã thêm: ").append(added)
-                   .append(" | còn lại: ").append(remaining)
-                   .append("\n");
+                        .append(" | Số lượng: ").append(d.getQuantity())
+                        .append(" | đã thêm: ").append(added)
+                        .append(" | còn lại: ").append(remaining)
+                        .append("\n");
             }
         }
 

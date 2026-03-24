@@ -97,7 +97,7 @@ public class StockInListController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
+        request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("acc") == null) {
             response.sendRedirect("login.jsp");
@@ -120,59 +120,59 @@ public class StockInListController extends HttpServlet {
 
         switch (action) {
             case "requestCancel":
-    try {
-                int id = Integer.parseInt(request.getParameter("id"));
-                String reason = request.getParameter("reason");
-
-                if (reason == null || reason.trim().isEmpty()) {
-                    loadList(request, response, "Vui lòng nhập lý do hủy phiếu.", "error");
-                    return;
-                }
-
-                // Rule mới:
-                // Không cho hủy nếu đã nhận hàng > 0 hoặc paymentStatus khác Unpaid
-                boolean canCancel = dao.canRequestCancelStockIn(id);
-
-                if (!canCancel) {
-                    loadList(request, response,
-                            "Không thể hủy phiếu vì đã có hàng nhận vào kho hoặc đã phát sinh thanh toán.",
-                            "error");
-                    return;
-                }
-
-                boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason.trim());
-
                 try {
-                    SystemLogDAO logDAO = new SystemLogDAO();
-                    SystemLog log = new SystemLog();
-                    log.setUserID(user.getUserID());
-                    log.setAction("REQUEST_CANCEL_STOCKIN");
-                    log.setTargetObject("StockIn");
-                    log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason.trim());
-                    log.setIpAddress(request.getRemoteAddr());
-                    logDAO.insertLog(log);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    String reason = request.getParameter("reason");
 
-                if (ok) {
-                    try {
-                        sendCancelRequestNotification(user, id, reason.trim());
-                    } catch (Exception notifEx) {
-                        notifEx.printStackTrace();
+                    if (reason == null || reason.trim().isEmpty()) {
+                        loadList(request, response, "Vui lòng nhập lý do hủy phiếu.", "error");
+                        return;
                     }
+
+                    // Rule mới:
+                    // Không cho hủy nếu đã nhận hàng > 0 hoặc paymentStatus khác Unpaid
+                    boolean canCancel = dao.canRequestCancelStockIn(id);
+
+                    if (!canCancel) {
+                        loadList(request, response,
+                                "Không thể hủy phiếu vì đã có hàng nhận vào kho hoặc đã phát sinh thanh toán.",
+                                "error");
+                        return;
+                    }
+
+                    boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason.trim());
+
+                    try {
+                        SystemLogDAO logDAO = new SystemLogDAO();
+                        SystemLog log = new SystemLog();
+                        log.setUserID(user.getUserID());
+                        log.setAction("REQUEST_CANCEL_STOCKIN");
+                        log.setTargetObject("StockIn");
+                        log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason.trim());
+                        log.setIpAddress(request.getRemoteAddr());
+                        logDAO.insertLog(log);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
+                    if (ok) {
+                        try {
+                            sendCancelRequestNotification(user, id, reason.trim());
+                        } catch (Exception notifEx) {
+                            notifEx.printStackTrace();
+                        }
+                    }
+
+                    loadList(request, response,
+                            ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.",
+                            ok ? "success" : "error");
+                    return;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    loadList(request, response, "Dữ liệu không hợp lệ.", "error");
+                    return;
                 }
-
-                loadList(request, response,
-                        ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.",
-                        ok ? "success" : "error");
-                return;
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                loadList(request, response, "Dữ liệu không hợp lệ.", "error");
-                return;
-            }
 
             case "approveCancel":
                 if (user.getRoleID() != 2) {

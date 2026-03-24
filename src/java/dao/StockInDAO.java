@@ -293,38 +293,36 @@ public class StockInDAO extends DBContext {
     public boolean canRequestCancelStockIn(int stockInId) {
         String sql = """
         SELECT 
-            ISNULL(SUM(ISNULL(d.ReceivedQuantity, 0)), 0) AS TotalReceived,
-            ISNULL(s.InitialPaidAmount, 0) AS InitialPaidAmount,
-            s.StockStatus
+        ISNULL(SUM(ISNULL(d.ReceivedQuantity, 0)), 0) AS TotalReceived,
+        ISNULL(s.InitialPaidAmount, 0) AS InitialPaidAmount,
+        s.StockStatus
         FROM StockIn s
         LEFT JOIN StockInDetails d ON s.StockInID = d.StockInID
         WHERE s.StockInID = ?
         GROUP BY s.InitialPaidAmount, s.StockStatus
-    """;
+        """;
 
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, stockInId);
-            ResultSet rs = ps.executeQuery();
 
-            if (rs.next()) {
-                int totalReceived = rs.getInt("TotalReceived");
-                double initialPaidAmount = rs.getDouble("InitialPaidAmount");
-                String stockStatus = rs.getString("StockStatus");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int totalReceived = rs.getInt("TotalReceived");
+                    double initialPaidAmount = rs.getDouble("InitialPaidAmount");
+                    String stockStatus = rs.getString("StockStatus");
 
-                if (stockStatus == null) {
-                    stockStatus = "";
+                    if (stockStatus == null) {
+                        stockStatus = "";
+                    }
+
+                    return totalReceived == 0
+                            && initialPaidAmount <= 0
+                            && "Pending".equalsIgnoreCase(stockStatus);
                 }
-
-                return totalReceived == 0
-                        && initialPaidAmount <= 0
-                        && "Pending".equalsIgnoreCase(stockStatus);
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            closeConnection();
         }
 
         return false;
