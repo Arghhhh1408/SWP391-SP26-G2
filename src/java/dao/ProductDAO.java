@@ -103,7 +103,9 @@ public class ProductDAO extends DBContext {
     // Lấy product theo ID (add vào cart)
     public Product getById(int id) {
         String sql = """
-                 SELECT ProductID, Name, SKU, Cost, Price, StockQuantity, Unit, Status
+                 SELECT ProductID, Name, SKU, Cost, Price, StockQuantity, Unit, 
+                        Status, Description, ImageURL, WarrantyPeriod, CategoryID, 
+                        CreatedDate, UpdatedDate
                  FROM dbo.Products
                  WHERE ProductID = ? AND Status = 'Active'
                  """;
