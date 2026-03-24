@@ -438,14 +438,7 @@
                         <a href="sales_dashboard?tab=customers" class="${tab == 'customers' ? 'active' : ''}">
                             <span class="nav-icon">👥</span> Khách hàng
                         </a>
-                        <a href="sales_dashboard?tab=warranty-create"
-                            class="${currentPage == 'sales_dashboard' && tab == 'warranty-create' ? 'active' : ''}">
-                            <span class="nav-icon">&#128736;</span> Tạo yêu cầu bảo hành
-                        </a>
-                        <a href="sales_dashboard?tab=return-create"
-                            class="${currentPage == 'sales_dashboard' && tab == 'return-create' ? 'active' : ''}">
-                            <span class="nav-icon">&#128260;</span> Tạo yêu cầu trả hàng
-                        </a>
+                        <%-- Ẩn tạo yêu cầu trực tiếp để người dùng tạo từ kết quả "Tra cứu" --%>
                         <a href="sales_dashboard?tab=warranty-lookup"
                             class="${currentPage == 'sales_dashboard' && tab == 'warranty-lookup' ? 'active' : ''}">
                             <span class="nav-icon">&#128269;</span> Tra cứu bảo hành

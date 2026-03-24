@@ -3,8 +3,11 @@ package controller;
 import dao.OrderHistoryDAO;
 import dao.ProductDAO;
 import dao.ReturnDAO;
+import dao.WarrantyLookupDAO;
+import model.ReturnLookupResult;
 import dao.WarrantyClaimDAO;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -17,6 +20,7 @@ import model.Product;
 import model.ReturnRequest;
 import model.User;
 import model.WarrantyClaim;
+import model.WarrantyLookupResult;
 
 @WebServlet(name = "SalesController", urlPatterns = {"/sales_dashboard"})
 public class SalesController extends HttpServlet {
@@ -80,18 +84,91 @@ public class SalesController extends HttpServlet {
                 request.setAttribute("salesProducts", pDao.getAllProducts());
 
             } else if ("warranty-lookup".equals(tab)) {
-                // PHẦN CỦA CƯỜNG: Phải lấy dữ liệu claims thì bảng mới hiện
-                WarrantyClaimDAO wDao = new WarrantyClaimDAO();
-                String q = safeTrim(request.getParameter("q"));
-                request.setAttribute("q", q);
-                request.setAttribute("claims", wDao.listByCreator(getActor(request), q));
+                HttpSession wSession = request.getSession(false);
+                if (wSession != null) {
+                    Object fe = wSession.getAttribute("lookupFlashError");
+                    if (fe != null) {
+                        request.setAttribute("error", fe.toString());
+                        wSession.removeAttribute("lookupFlashError");
+                    }
+                    Object fs = wSession.getAttribute("lookupFlashSuccess");
+                    if (fs != null) {
+                        request.setAttribute("lookupSuccess", fs.toString());
+                        wSession.removeAttribute("lookupFlashSuccess");
+                    }
+                }
+
+                WarrantyLookupServletHelper.applyLookup(request);
+
+                String created = safeTrim(request.getParameter("created"));
+                request.setAttribute("created", created);
+                String returnCreated = safeTrim(request.getParameter("returnCreated"));
+                request.setAttribute("returnCreated", returnCreated);
+
+                String showClaims = safeTrim(request.getParameter("showClaims"));
+                boolean showInProgressClaims = "1".equals(showClaims);
+                request.setAttribute("showInProgressClaims", showInProgressClaims);
+                if (showInProgressClaims) {
+                    WarrantyClaimDAO wcDao = new WarrantyClaimDAO();
+                    request.setAttribute("inProgressClaims", wcDao.listInProgressByCreator(getActor(request)));
+                }
+
+            } else if ("warranty-create".equals(tab)) {
+                // Prefill khi người dùng bấm "Chọn để tạo" trong bảng tra cứu
+                String stockOutIdStr = safeTrim(request.getParameter("stockOutId"));
+                String sku = safeTrim(request.getParameter("sku"));
+
+                request.setAttribute("stockOutId", stockOutIdStr);
+                request.setAttribute("sku", sku);
+
+                Integer stockOutId = tryParseInt(stockOutIdStr);
+                if (stockOutId != null && sku != null && !sku.isBlank()) {
+                    WarrantyLookupDAO wlDao = new WarrantyLookupDAO();
+                    WarrantyLookupResult r = wlDao.lookupItemByStockOutIdAndSku(stockOutId, sku);
+                    if (r != null) {
+                        request.setAttribute("productName", r.getProductName());
+                        request.setAttribute("customerName", r.getCustomerName());
+                        request.setAttribute("customerPhone", r.getCustomerPhone());
+                    }
+                }
+
+            } else if ("return-create".equals(tab)) {
+                // Prefill khi người dùng bấm "Tạo yêu cầu" từ bảng tra cứu
+                request.setAttribute("returnSku", safeTrim(request.getParameter("returnSku")));
+                request.setAttribute("returnProductName", safeTrim(request.getParameter("returnProductName")));
+                request.setAttribute("returnCustomerName", safeTrim(request.getParameter("returnCustomerName")));
+                request.setAttribute("returnCustomerPhone", safeTrim(request.getParameter("returnCustomerPhone")));
+                request.setAttribute("returnConditionNote", safeTrim(request.getParameter("returnConditionNote")));
 
             } else if ("return-lookup".equals(tab)) {
-                // PHẦN CỦA CƯỜNG: Phải lấy dữ liệu returns thì bảng mới hiện
-                ReturnDAO rDao = new ReturnDAO();
-                String rq = safeTrim(request.getParameter("rq"));
-                request.setAttribute("rq", rq);
-                request.setAttribute("returnClaims", rDao.listByCreator(getActor(request), rq));
+                HttpSession rlSession = request.getSession(false);
+                if (rlSession != null) {
+                    Object fe = rlSession.getAttribute("lookupFlashError");
+                    if (fe != null) {
+                        request.setAttribute("error", fe.toString());
+                        rlSession.removeAttribute("lookupFlashError");
+                    }
+                    Object fs = rlSession.getAttribute("lookupFlashSuccess");
+                    if (fs != null) {
+                        request.setAttribute("lookupSuccess", fs.toString());
+                        rlSession.removeAttribute("lookupFlashSuccess");
+                    }
+                }
+                String returnCreatedRl = safeTrim(request.getParameter("returnCreated"));
+                request.setAttribute("returnCreated", returnCreatedRl);
+
+                request.setAttribute("returnLookupFormAction", "sales_dashboard");
+                request.setAttribute("returnLookupTabValue", "return-lookup");
+                request.setAttribute("returnLookupCanCreate", Boolean.TRUE);
+                ReturnLookupServletHelper.applyReturnLookup(request);
+
+                String showReturns = safeTrim(request.getParameter("showReturns"));
+                boolean showReturnRequests = "1".equals(showReturns);
+                request.setAttribute("showReturnRequests", showReturnRequests);
+                if (showReturnRequests) {
+                    ReturnDAO rDao = new ReturnDAO();
+                    request.setAttribute("returnRequests", rDao.listVisibleByCreator(getActor(request)));
+                }
             } else if ("orders".equals(tab)) {
                 String keyword = request.getParameter("orderSearch"); // Lấy từ ô input trong JSP
                 OrderHistoryDAO dao = new OrderHistoryDAO();
@@ -155,6 +232,7 @@ public class SalesController extends HttpServlet {
         String customerName = safeTrim(request.getParameter("customerName"));
         String customerPhone = safeTrim(request.getParameter("customerPhone"));
         String issue = safeTrim(request.getParameter("issueDescription"));
+        String stockOutIdStr = safeTrim(request.getParameter("stockOutId"));
 
         request.setAttribute("tab", "warranty-create");
         request.setAttribute("sku", sku);
@@ -162,14 +240,23 @@ public class SalesController extends HttpServlet {
         request.setAttribute("customerName", customerName);
         request.setAttribute("customerPhone", customerPhone);
         request.setAttribute("issueDescription", issue);
+        request.setAttribute("stockOutId", stockOutIdStr);
 
-        if (sku == null || sku.isEmpty()) {
-            request.setAttribute("error", "SKU là bắt buộc.");
+        if (stockOutIdStr == null || stockOutIdStr.isEmpty()) {
+            request.setAttribute("error", "Vui lòng tra cứu bảo hành trước (nhập mã phiếu xuất).");
             request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
             return;
         }
-        if (customerName == null || customerName.isEmpty()) {
-            request.setAttribute("error", "Tên khách hàng là bắt buộc.");
+
+        Integer stockOutId = tryParseInt(stockOutIdStr);
+        if (stockOutId == null) {
+            request.setAttribute("error", "Mã phiếu xuất không hợp lệ.");
+            request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
+            return;
+        }
+
+        if (sku == null || sku.isEmpty()) {
+            request.setAttribute("error", "SKU là bắt buộc.");
             request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
             return;
         }
@@ -179,8 +266,31 @@ public class SalesController extends HttpServlet {
             return;
         }
 
+        WarrantyLookupDAO wlDao = new WarrantyLookupDAO();
+        WarrantyLookupResult lookup = wlDao.lookupItemByStockOutIdAndSku(stockOutId, sku);
+        if (lookup == null) {
+            request.setAttribute("error", "Không tìm thấy SKU trong đơn/phiếu xuất đã nhập.");
+            request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
+            return;
+        }
+        if (!wlDao.isItemInWarranty(stockOutId, sku)) {
+            request.setAttribute("error", "Sản phẩm đã hết hạn bảo hành. Không thể tạo yêu cầu.");
+            request.setAttribute("productName", lookup.getProductName());
+            request.setAttribute("customerName", lookup.getCustomerName());
+            request.setAttribute("customerPhone", lookup.getCustomerPhone());
+            request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
+            return;
+        }
+
         WarrantyClaimDAO dao = new WarrantyClaimDAO();
-        WarrantyClaim claim = dao.create(sku, productName, customerName, customerPhone, issue, getActor(request));
+        WarrantyClaim claim = dao.create(
+                sku,
+                lookup.getProductName(),
+                lookup.getCustomerName(),
+                lookup.getCustomerPhone(),
+                issue,
+                getActor(request)
+        );
         if (claim == null) {
             request.setAttribute("error", "Không thể tạo yêu cầu bảo hành, vui lòng kiểm tra dữ liệu hoặc DB.");
             request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
@@ -219,6 +329,28 @@ public class SalesController extends HttpServlet {
         }
         if (reason == null || reason.isEmpty()) {
             request.setAttribute("error", "Lý do trả hàng là bắt buộc.");
+            request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
+            return;
+        }
+
+        if (productName == null || productName.isBlank()) {
+            ProductDAO pDao = new ProductDAO();
+            Product p = pDao.getBySku(sku);
+            productName = p == null ? null : p.getName();
+            request.setAttribute("returnProductName", productName);
+        }
+        if (productName == null || productName.isBlank()) {
+            request.setAttribute("error", "Không tìm thấy sản phẩm theo SKU để tạo yêu cầu trả hàng.");
+            request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
+            return;
+        }
+
+        WarrantyLookupDAO wlDao = new WarrantyLookupDAO();
+        LocalDate latestPurchase = wlDao.getLatestPurchaseDateForSkuAndPhone(sku, customerPhone);
+        if (!ReturnLookupResult.isPurchaseWithinReturnWindow(latestPurchase)) {
+            request.setAttribute("error",
+                    "Chỉ được trả hàng trong vòng 7 ngày kể từ ngày mua. "
+                            + "Không tìm thấy giao dịch gần nhất trong thời hạn này (kiểm tra SKU và SĐT khách).");
             request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
             return;
         }
@@ -262,5 +394,16 @@ public class SalesController extends HttpServlet {
 
     private String safeTrim(String s) {
         return s == null ? null : s.trim();
+    }
+
+    private Integer tryParseInt(String s) {
+        if (s == null || s.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

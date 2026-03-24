@@ -4,8 +4,12 @@ import dao.CategoryDAO;
 import dao.ProductDAO;
 import dao.ReturnDAO;
 import dao.WarrantyClaimDAO;
+import dao.WarrantyLookupDAO;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import model.WarrantyClaim;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -36,8 +40,16 @@ public class ManagerController extends HttpServlet {
             ReturnDAO dao = new ReturnDAO();
             request.setAttribute("returns", dao.listAll());
         } else if ("warranty".equals(tab)) {
-            dao.WarrantyClaimDAO dao = new dao.WarrantyClaimDAO();
-            request.setAttribute("claims", dao.listAll());
+            WarrantyClaimDAO wcDao = new WarrantyClaimDAO();
+            List<WarrantyClaim> claims = wcDao.listAll();
+            request.setAttribute("claims", claims);
+            WarrantyLookupDAO wlDao = new WarrantyLookupDAO();
+            Map<Integer, Boolean> warrantyExpiredByClaimId = new HashMap<>();
+            for (WarrantyClaim c : claims) {
+                boolean expired = wlDao.isWarrantyExpiredBySkuAndPhone(c.getSku(), c.getCustomerPhone());
+                warrantyExpiredByClaimId.put(c.getId(), expired);
+            }
+            request.setAttribute("warrantyExpiredByClaimId", warrantyExpiredByClaimId);
         } else if ("orders".equals(tab)) {
             String keyword = request.getParameter("orderSearch");
             dao.OrderHistoryDAO oDao = new dao.OrderHistoryDAO();
@@ -97,27 +109,15 @@ public class ManagerController extends HttpServlet {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 WarrantyClaimDAO dao = new WarrantyClaimDAO();
-                dao.updateStatus(id, WarrantyClaimStatus.APPROVED, "Manager xác nhận yêu cầu", actor);
-            }
-            response.sendRedirect("manager_dashboard?tab=warranty");
-            return;
-        }
-
-        if ("rejectWarranty".equals(action)) {
-            Integer id = tryParseInt(request.getParameter("id"));
-            if (id != null) {
-                WarrantyClaimDAO dao = new WarrantyClaimDAO();
-                dao.updateStatus(id, WarrantyClaimStatus.REJECTED, "Manager từ chối yêu cầu", actor);
-            }
-            response.sendRedirect("manager_dashboard?tab=warranty");
-            return;
-        }
-        
-        if ("rejectWarranty".equals(action)) {
-            Integer id = tryParseInt(request.getParameter("id"));
-            if (id != null) {
-                WarrantyClaimDAO dao = new WarrantyClaimDAO();
-                dao.updateStatus(id, WarrantyClaimStatus.REJECTED, "Manager từ chối yêu cầu", actor);
+                WarrantyClaim claim = dao.getById(id);
+                if (claim != null) {
+                    WarrantyLookupDAO wlDao = new WarrantyLookupDAO();
+                    if (wlDao.isWarrantyExpiredBySkuAndPhone(claim.getSku(), claim.getCustomerPhone())) {
+                        response.sendRedirect("manager_dashboard?tab=warranty&err=warranty_expired");
+                        return;
+                    }
+                    dao.updateStatus(id, WarrantyClaimStatus.APPROVED, "Manager xác nhận yêu cầu", actor);
+                }
             }
             response.sendRedirect("manager_dashboard?tab=warranty");
             return;
@@ -128,26 +128,6 @@ public class ManagerController extends HttpServlet {
             if (id != null) {
                 ReturnDAO dao = new ReturnDAO();
                 dao.updateStatus(id, ReturnStatus.APPROVED, "Manager xác nhận yêu cầu", actor);
-            }
-            response.sendRedirect("manager_dashboard?tab=returns");
-            return;
-        }
-
-        if ("rejectReturn".equals(action)) {
-            Integer id = tryParseInt(request.getParameter("id"));
-            if (id != null) {
-                ReturnDAO dao = new ReturnDAO();
-                dao.updateStatus(id, ReturnStatus.REJECTED, "Manager từ chối yêu cầu", actor);
-            }
-            response.sendRedirect("manager_dashboard?tab=returns");
-            return;
-        }
-        
-        if ("rejectReturn".equals(action)) {
-            Integer id = tryParseInt(request.getParameter("id"));
-            if (id != null) {
-                ReturnDAO dao = new ReturnDAO();
-                dao.updateStatus(id, ReturnStatus.REJECTED, "Manager từ chối yêu cầu", actor);
             }
             response.sendRedirect("manager_dashboard?tab=returns");
             return;
@@ -167,6 +147,9 @@ public class ManagerController extends HttpServlet {
     }
 
     private Integer tryParseInt(String s) {
+        if (s == null || s.isEmpty()) {
+            return null;
+        }
         try {
             return Integer.parseInt(s);
         } catch (Exception e) {
@@ -175,19 +158,19 @@ public class ManagerController extends HttpServlet {
     }
 
     private String getActor(HttpServletRequest request) {
-    HttpSession session = request.getSession();
-    Object acc = session.getAttribute("acc");
+        HttpSession session = request.getSession();
+        Object acc = session.getAttribute("acc");
 
-    if (acc instanceof User) {
-        User u = (User) acc;
-        if (u.getUsername() != null && !u.getUsername().isBlank()) {
-            return u.getUsername();
+        if (acc instanceof User) {
+            User u = (User) acc;
+            if (u.getUsername() != null && !u.getUsername().isBlank()) {
+                return u.getUsername();
+            }
+            return "user#" + u.getUserID();
         }
-        return "user#" + u.getUserID();
-    }
 
-    return "unknown";
-}
+        return "unknown";
+    }
 
     private String safeTrim(String s) {
         return s == null ? null : s.trim();

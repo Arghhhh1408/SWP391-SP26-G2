@@ -689,27 +689,21 @@
                                                 <c:when test="${r.status == 'APPROVED'}"><span class="status-pill status-approved">Da xac nhan</span></c:when>
                                                 <c:when test="${r.status == 'REJECTED'}"><span class="status-pill status-rejected">Tu choi</span></c:when>
                                                 <c:when test="${r.status == 'NEW'}"><span class="status-pill status-new">Dang xu ly</span></c:when>
+                                                <c:when test="${r.status == 'REFUNDED'}"><span class="status-pill status-completed">Da hoan tien</span></c:when>
                                                 <c:otherwise><span class="status-pill">${r.status}</span></c:otherwise>
                                             </c:choose>
                                         </td>
                                         <td style="text-align: right;">
                                             <c:choose>
                                                 <c:when test="${r.status == 'NEW'}">
-                                                    <div class="action-group" style="justify-content: flex-end;">
-                                                        <form action="manager_dashboard" method="post" style="display:inline;">
-                                                            <input type="hidden" name="action" value="confirmReturn">
-                                                            <input type="hidden" name="id" value="${r.id}">
-                                                            <button type="submit" class="btn btn-confirm" onclick="return confirm('Xác nhận yêu cầu trả hàng này?');">Xác nhận</button>
-                                                        </form>
-                                                        <form action="manager_dashboard" method="post" style="display:inline;">
-                                                            <input type="hidden" name="action" value="rejectReturn">
-                                                            <input type="hidden" name="id" value="${r.id}">
-                                                            <button type="submit" class="btn btn-reject" onclick="return confirm('Từ chối yêu cầu trả hàng này?');">Từ chối</button>
-                                                        </form>
-                                                    </div>
+                                                    <form action="manager_dashboard" method="post" style="display:inline;">
+                                                        <input type="hidden" name="action" value="confirmReturn">
+                                                        <input type="hidden" name="id" value="${r.id}">
+                                                        <button type="submit" class="btn btn-confirm" onclick="return confirm('Xác nhận yêu cầu trả hàng này?');">Xác nhận</button>
+                                                    </form>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    <span style="color: var(--text-muted); font-size: 12px; font-style: italic;">No actions</span>
+                                                    <span style="color: var(--text-muted); font-size: 12px; font-style: italic;">Không có thao tác</span>
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
@@ -729,6 +723,11 @@
                         </table>
                     </c:when>
                     <c:otherwise>
+                        <c:if test="${param.err == 'warranty_expired'}">
+                            <div style="background:#fef3c7; border:1px solid #f59e0b; color:#92400e; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+                                Không thể xác nhận: sản phẩm đã <strong>quá thời hạn bảo hành 12 tháng</strong> kể từ ngày mua.
+                            </div>
+                        </c:if>
                         <table>
                             <thead>
                                 <tr>
@@ -737,6 +736,7 @@
                                     <th>Khách hàng</th>
                                     <th>Mô tả lỗi</th>
                                     <th>Trạng thái</th>
+                                    <th>Bảo hành</th>
                                     <th style="text-align: right;">Hành động</th>
                                 </tr>
                             </thead>
@@ -763,20 +763,30 @@
                                                 <c:otherwise><span class="status-pill">${c.status}</span></c:otherwise>
                                             </c:choose>
                                         </td>
+                                        <td>
+                                            <c:set var="exp" value="${warrantyExpiredByClaimId[c.id]}"/>
+                                            <c:choose>
+                                                <c:when test="${exp == true}"><span style="font-size:12px;color:#b91c1c;font-weight:600;">Hết hạn (12 tháng)</span></c:when>
+                                                <c:when test="${exp == false}"><span style="font-size:12px;color:#15803d;">Còn trong hạn</span></c:when>
+                                                <c:otherwise><span style="font-size:12px;color:#64748b;">—</span></c:otherwise>
+                                            </c:choose>
+                                        </td>
                                         <td style="text-align: right;">
                                             <c:choose>
                                                 <c:when test="${c.status == 'NEW'}">
                                                     <div class="action-group" style="justify-content: flex-end;">
-                                                        <form action="manager_dashboard" method="post" style="display:inline;">
-                                                            <input type="hidden" name="action" value="confirmWarranty">
-                                                            <input type="hidden" name="id" value="${c.id}">
-                                                            <button type="submit" class="btn btn-confirm" onclick="return confirm('Xác nhận yêu cầu bảo hành này?');">Xác nhận</button>
-                                                        </form>
-                                                        <form action="manager_dashboard" method="post" style="display:inline;">
-                                                            <input type="hidden" name="action" value="rejectWarranty">
-                                                            <input type="hidden" name="id" value="${c.id}">
-                                                            <button type="submit" class="btn btn-reject" onclick="return confirm('Từ chối yêu cầu bảo hành này?');">Từ chối</button>
-                                                        </form>
+                                                        <c:choose>
+                                                            <c:when test="${warrantyExpiredByClaimId[c.id] == true}">
+                                                                <span style="color: var(--text-muted); font-size: 12px;">Không thể xác nhận (đã hết hạn BH)</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <form action="manager_dashboard" method="post" style="display:inline;">
+                                                                    <input type="hidden" name="action" value="confirmWarranty">
+                                                                    <input type="hidden" name="id" value="${c.id}">
+                                                                    <button type="submit" class="btn btn-confirm" onclick="return confirm('Xác nhận yêu cầu bảo hành này?');">Xác nhận</button>
+                                                                </form>
+                                                            </c:otherwise>
+                                                        </c:choose>
                                                     </div>
                                                 </c:when>
                                                 <c:otherwise>
@@ -788,7 +798,7 @@
                                 </c:forEach>
                                 <c:if test="${empty claims}">
                                     <tr>
-                                        <td colspan="6">
+                                        <td colspan="7">
                                             <div class="empty-state">
                                                 <span class="icon">🛡️</span>
                                                 <p>Chưa có yêu cầu bảo hành nào cần xử lý.</p>

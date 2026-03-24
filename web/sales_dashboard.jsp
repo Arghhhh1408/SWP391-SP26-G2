@@ -1,4 +1,4 @@
-<%@page contentType="text/html" pageEncoding="UTF-8" %>
+<%@page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@taglib uri="jakarta.tags.core" prefix="c" %>
 <%@taglib uri="jakarta.tags.fmt" prefix="fmt" %>
 <!DOCTYPE html>
@@ -163,8 +163,11 @@
                             <div class="box-body">
                                 <form action="sales_dashboard" method="post">
                                     <input type="hidden" name="action" value="createWarranty">
+                                    <input type="hidden" name="stockOutId" value="${stockOutId}">
                                     <div style="margin-bottom:15px;"><label>SKU (*)</label><br><input name="sku" required value="${sku}" style="width:100%; padding:8px;"></div>
-                                    <div style="margin-bottom:15px;"><label>Tên khách hàng (*)</label><br><input name="customerName" required value="${customerName}" style="width:100%; padding:8px;"></div>
+                                    <div style="margin-bottom:15px;"><label>Sản phẩm</label><br><input name="productName" value="${productName}" readonly style="width:100%; padding:8px; background:#f8fafc;"></div>
+                                    <div style="margin-bottom:15px;"><label>Tên khách hàng</label><br><input name="customerName" value="${customerName}" readonly style="width:100%; padding:8px; background:#f8fafc;"></div>
+                                    <div style="margin-bottom:15px;"><label>SĐT khách hàng</label><br><input name="customerPhone" value="${customerPhone}" style="width:100%; padding:8px;"></div>
                                     <div style="margin-bottom:15px;"><label>Mô tả lỗi (*)</label><br><textarea name="issueDescription" required style="width:100%; padding:8px; height:100px;">${issueDescription}</textarea></div>
                                     <button type="submit" class="btn" style="background:#1a1a2e; color:white;">Gửi yêu cầu</button>
                                 </form>
@@ -172,24 +175,13 @@
                         </div>
                     </c:when>
 
-                    <%-- 3. TRA CỨU BẢO HÀNH (CỦA CƯỜNG) --%>
+                    <%-- 3. TRA CỨU BẢO HÀNH --%>
                     <c:when test="${tab == 'warranty-lookup'}">
                         <div class="box">
                             <div class="box-header"><h3>Tra cứu bảo hành</h3></div>
-                            <div class="box-body">
-                                <form action="sales_dashboard" method="get" style="margin-bottom:20px; display:flex; gap:10px;">
-                                    <input type="hidden" name="tab" value="warranty-lookup">
-                                    <input type="text" name="q" value="${q}" placeholder="Tìm SKU, khách hàng..." style="flex:1; padding:8px;">
-                                    <button type="submit" class="btn" style="background:#3b82f6; color:white;">Tìm</button>
-                                </form>
-                                <table>
-                                    <thead><tr><th>Mã yêu cầu</th><th>SKU</th><th>Khách hàng</th><th>Trạng thái</th></tr></thead>
-                                    <tbody>
-                                        <c:forEach items="${claims}" var="c">
-                                            <tr><td>${c.claimCode}</td><td>${c.sku}</td><td>${c.customerName}</td><td>${c.status}</td></tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
+                            <div class="box-body" style="background:#fff;">
+                                <c:set var="warrantyUiEmbed" value="${true}" scope="request"/>
+                                <jsp:include page="warranty_lookup_panel.jsp"/>
                             </div>
                         </div>
                     </c:when>
@@ -199,9 +191,16 @@
                         <div class="box">
                             <div class="box-header"><h3>Tạo yêu cầu trả hàng</h3></div>
                             <div class="box-body">
+                                <p style="font-size:13px;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;padding:10px 12px;border-radius:8px;margin-bottom:14px;">
+                                    Chỉ áp dụng trả hàng trong <strong>7 ngày</strong> kể từ <strong>ngày mua</strong> (hệ thống kiểm tra theo SKU + SĐT khách với giao dịch gần nhất).
+                                </p>
                                 <form action="sales_dashboard" method="post">
                                     <input type="hidden" name="action" value="createReturn">
                                     <div style="margin-bottom:15px;"><label>SKU Trả (*)</label><br><input name="returnSku" required value="${returnSku}" style="width:100%; padding:8px;"></div>
+                                    <div style="margin-bottom:15px;"><label>Tên khách hàng (*)</label><br><input name="returnCustomerName" required value="${returnCustomerName}" style="width:100%; padding:8px;"></div>
+                                    <div style="margin-bottom:15px;"><label>SĐT khách hàng</label><br><input name="returnCustomerPhone" value="${returnCustomerPhone}" style="width:100%; padding:8px;"></div>
+                                    <div style="margin-bottom:15px;"><label>Sản phẩm (tùy chọn)</label><br><input name="returnProductName" value="${returnProductName}" style="width:100%; padding:8px;"></div>
+                                    <div style="margin-bottom:15px;"><label>Tình trạng hàng (tùy chọn)</label><br><textarea name="returnConditionNote" style="width:100%; padding:8px; height:90px;">${returnConditionNote}</textarea></div>
                                     <div style="margin-bottom:15px;"><label>Lý do trả hàng (*)</label><br><textarea name="returnReason" required style="width:100%; padding:8px; height:100px;">${returnReason}</textarea></div>
                                     <button type="submit" class="btn" style="background:#1a1a2e; color:white;">Gửi yêu cầu trả</button>
                                 </form>
@@ -209,24 +208,81 @@
                         </div>
                     </c:when>
 
-                    <%-- 5. TRA CỨU TRẢ HÀNG (CỦA CƯỜNG) --%>
+                    <%-- 5. TRA CỨU TRẢ HÀNG --%>
                     <c:when test="${tab == 'return-lookup'}">
                         <div class="box">
                             <div class="box-header"><h3>Tra cứu trả hàng</h3></div>
-                            <div class="box-body">
-                                <form action="sales_dashboard" method="get" style="margin-bottom:20px; display:flex; gap:10px;">
-                                    <input type="hidden" name="tab" value="return-lookup">
-                                    <input type="text" name="rq" value="${rq}" placeholder="Tìm mã trả hàng..." style="flex:1; padding:8px;">
-                                    <button type="submit" class="btn" style="background:#3b82f6; color:white;">Tìm</button>
-                                </form>
-                                <table>
-                                    <thead><tr><th>Mã trả hàng</th><th>SKU</th><th>Khách hàng</th><th>Trạng thái</th></tr></thead>
-                                    <tbody>
-                                        <c:forEach items="${returnClaims}" var="r">
-                                            <tr><td>${r.returnCode}</td><td>${r.sku}</td><td>${r.customerName}</td><td>${r.status}</td></tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
+                            <div class="box-body" style="background:#fff;">
+                                <c:if test="${not empty error}">
+                                    <div style="color:#b42318;background:#fef3f2;border:1px solid #fecdca;padding:12px;border-radius:10px;margin-bottom:14px;">${error}</div>
+                                </c:if>
+                                <c:if test="${not empty lookupSuccess}">
+                                    <div style="color:#0f5132;background:#d1e7dd;border:1px solid #badbcc;padding:12px;border-radius:10px;margin-bottom:14px;">${lookupSuccess}</div>
+                                </c:if>
+                                <c:if test="${not empty returnCreated}">
+                                    <div style="color:#0f5132;background:#d1e7dd;border:1px solid #badbcc;padding:12px;border-radius:10px;margin-bottom:14px;">
+                                        Đã tạo yêu cầu trả hàng: <strong>${returnCreated}</strong>
+                                    </div>
+                                </c:if>
+                                <div style="margin-bottom:16px;">
+                                    <c:url var="salesShowReturnsUrl" value="sales_dashboard">
+                                        <c:param name="tab" value="return-lookup"/>
+                                        <c:param name="showReturns" value="1"/>
+                                        <c:if test="${not empty rlq}"><c:param name="q" value="${rlq}"/></c:if>
+                                    </c:url>
+                                    <a class="btn" style="background:#0f766e; color:white; text-decoration:none;"
+                                       href="${salesShowReturnsUrl}">
+                                        Xem các yêu cầu trả hàng
+                                    </a>
+                                </div>
+                                <jsp:include page="return_lookup_panel.jsp"/>
+
+                                <c:if test="${showReturnRequests}">
+                                    <div style="margin-top:24px;">
+                                        <h4 style="margin-bottom:10px;">Danh sách yêu cầu trả hàng</h4>
+                                        <c:choose>
+                                            <c:when test="${returnRequests != null && not empty returnRequests}">
+                                                <table>
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Mã yêu cầu</th>
+                                                            <th>SKU</th>
+                                                            <th>Sản phẩm</th>
+                                                            <th>Khách hàng</th>
+                                                            <th>SĐT</th>
+                                                            <th>Hiện trạng thái</th>
+                                                            <th>Lý do</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <c:forEach items="${returnRequests}" var="r">
+                                                            <tr>
+                                                                <td>${r.returnCode}</td>
+                                                                <td>${r.sku}</td>
+                                                                <td>${r.productName}</td>
+                                                                <td>${r.customerName}</td>
+                                                                <td>${r.customerPhone}</td>
+                                                                <td>
+                                                                    <c:choose>
+                                                                        <c:when test="${r.status == 'COMPLETED'}">COMPLETED</c:when>
+                                                                        <c:when test="${r.status == 'APPROVED'}">APPROVED</c:when>
+                                                                        <c:when test="${r.status == 'REFUNDED'}">Đã hoàn tiền</c:when>
+                                                                        <c:when test="${r.status == 'REJECTED'}">Từ chối</c:when>
+                                                                        <c:otherwise>Đang xử lý</c:otherwise>
+                                                                    </c:choose>
+                                                                </td>
+                                                                <td>${r.reason}</td>
+                                                            </tr>
+                                                        </c:forEach>
+                                                    </tbody>
+                                                </table>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <div style="color:#666;">Hiện chưa có yêu cầu trả hàng nào.</div>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
+                                </c:if>
                             </div>
                         </div>
                     </c:when>
