@@ -29,7 +29,23 @@ public class NotificationController extends HttpServlet {
         List<Notification> list = dao.getByReceiver(user.getUserID());
 
         request.setAttribute("notifications", list);
-        request.getRequestDispatcher("notifications.jsp").forward(request, response);
+
+        String targetJsp = "notification_manager.jsp";
+        switch (user.getRoleID()) {
+            case 0:
+                targetJsp = "notification_admin.jsp";
+                break;
+            case 1:
+                targetJsp = "notification_staff.jsp";
+                break;
+            case 2:
+                targetJsp = "notification_manager.jsp";
+                break;
+            case 3:
+                targetJsp = "notification_sales.jsp";
+                break;
+        }
+        request.getRequestDispatcher(targetJsp).forward(request, response);
     }
 
     /**
