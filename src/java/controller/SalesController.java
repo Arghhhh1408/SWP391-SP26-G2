@@ -36,15 +36,21 @@ public class SalesController extends HttpServlet {
 
         try {
             if ("dashboard".equals(tab)) {
-                // 1. Khởi tạo DashboardDAO để lấy số thật từ SQL
+                // 1. Khởi tạo các DAO cần thiết
                 dao.DashboardDAO ddao = new dao.DashboardDAO();
+                dao.BusinessReportDAO reportDao = new dao.BusinessReportDAO(); // Khởi tạo thêm cái này
 
-                // 2. Thay các con số 1.5M, 10.5M bằng kết quả từ Database
+                // 2. Lấy các con số doanh thu (Giữ nguyên của bạn)
                 request.setAttribute("revenueToday", ddao.getRevenueToday());
                 request.setAttribute("revenueWeek", ddao.getRevenueWeek());
                 request.setAttribute("revenueMonth", ddao.getRevenueMonth());
 
-                // 3. Lấy sản phẩm tồn kho thấp
+                // 3. LẤY DỮ LIỆU TOP BÁN CHẠY (MỚI)
+                // Gọi hàm từ BusinessReportDAO mà bạn vừa tạo, lấy top 5 sản phẩm
+                List<model.TopProductSales> topSelling = reportDao.topProductsLast30Days(5);
+                request.setAttribute("topSellingProducts", topSelling);
+
+                // 4. Lấy sản phẩm tồn kho thấp (Giữ nguyên của bạn)
                 request.setAttribute("lowStockProducts", pDao.getLowStockProducts(5));
             } else if ("pos".equals(tab)) {
                 try {

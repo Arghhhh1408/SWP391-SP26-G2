@@ -61,41 +61,50 @@ public class OrderController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-        String range = request.getParameter("range");
-        String sort = request.getParameter("sort");
-        String keyword = request.getParameter("keyword");
+            String range = request.getParameter("range");
+            String sort = request.getParameter("sort");
+            String keyword = request.getParameter("keyword");
 
-        if (range == null) range = "all";
-        if (sort == null) sort = "new";
-        if (keyword == null) keyword = "";
-        keyword = keyword.trim();
-
-        OrderHistoryDAO dao = new OrderHistoryDAO();
-        List<OrderHistory> list;
-
-        if (!keyword.isEmpty()) {
-            list = dao.searchOrders(keyword, sort);
-        } else {
-            if ("all".equals(range)) {
-                list = dao.getAllOrders(sort);
-            } else {
-                list = dao.getOrdersByRange(range, sort);
+            if (range == null) {
+                range = "all";
             }
+            if (sort == null) {
+                sort = "new";
+            }
+            if (keyword == null) {
+                keyword = "";
+            }
+            keyword = keyword.trim();
+
+            OrderHistoryDAO dao = new OrderHistoryDAO();
+            List<OrderHistory> list;
+
+            if (!keyword.isEmpty()) {
+                list = dao.searchOrders(keyword, sort);
+            } else {
+                if ("all".equals(range)) {
+                    list = dao.getAllOrders(sort);
+                } else {
+                    list = dao.getOrdersByRange(range, sort);
+                }
+            }
+
+            request.setAttribute("orders", list);
+            request.setAttribute("range", range);
+            request.setAttribute("sort", sort);
+            request.setAttribute("keyword", keyword);
+
+            request.setAttribute("activeTab", "orders"); 
+
+request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
+            return;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Tạm thời trả lỗi ra browser cho dễ debug
+            response.setContentType("text/plain;charset=UTF-8");
+            response.getWriter().println("ERROR: " + e.getMessage());
         }
-
-        request.setAttribute("orders", list);
-        request.setAttribute("range", range);
-        request.setAttribute("sort", sort);
-        request.setAttribute("keyword", keyword);
-
-        request.getRequestDispatcher("/orderHistory.jsp").forward(request, response);
-
-    } catch (Exception e) {
-        e.printStackTrace();
-        // Tạm thời trả lỗi ra browser cho dễ debug
-        response.setContentType("text/plain;charset=UTF-8");
-        response.getWriter().println("ERROR: " + e.getMessage());
-    }
     }
 
     /**

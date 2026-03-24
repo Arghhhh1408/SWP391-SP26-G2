@@ -303,7 +303,7 @@
                                             <tr>
                                                 <td>${s.sessionCode}</td>
                                                 <td>${s.date}</td>
-                                                <td>${s.createdBy}</td>
+                                                <td>${s.createdByName}</td>
                                                 <td>${s.totalCheckTimes}</td>
                                                 <td>
                                             <c:choose>

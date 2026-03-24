@@ -231,7 +231,7 @@
                         </div>
                     </c:when>
                     <%-- TAB LỊCH SỬ ĐƠN HÀNG --%>
-                    <c:when test="${tab == 'orders'}">
+                    <c:when test="${tab == 'orders' || activeTab == 'orders'}">
                         <jsp:include page="order_fragment.jsp" />
                     </c:when>
 
@@ -245,7 +245,7 @@
                         <jsp:include page="products_list_fragment.jsp" />
                     </c:when>
                     <%-- MẶC ĐỊNH LÀ DASHBOARD --%>
-                    <c:when test="${tab == 'dashboard' || empty tab}">
+                    <c:when test="${(tab == 'dashboard' || empty tab) && activeTab != 'orders'}">
                         <jsp:include page="sales_dashboardFragment.jsp" />
                     </c:when>
                 </c:choose>

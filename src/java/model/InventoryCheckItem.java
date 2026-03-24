@@ -31,6 +31,8 @@ public class InventoryCheckItem {
     private int totalCheckTimes;
     private Timestamp approvedAt;
     private Integer createdBy;
+    private String createdByName;
+    private String approvedByName;
 
     public InventoryCheckItem() {
     }
@@ -177,5 +179,21 @@ public class InventoryCheckItem {
 
     public void setCreatedBy(Integer createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public String getCreatedByName() {
+        return createdByName;
+    }
+
+    public void setCreatedByName(String createdByName) {
+        this.createdByName = createdByName;
+    }
+
+    public String getApprovedByName() {
+        return approvedByName;
+    }
+
+    public void setApprovedByName(String approvedByName) {
+        this.approvedByName = approvedByName;
     }
 }
