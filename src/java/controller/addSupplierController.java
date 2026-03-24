@@ -70,6 +70,7 @@ public class addSupplierController extends HttpServlet {
         if ("delete".equals(action) && idStr != null) {
             try {
                 int id = Integer.parseInt(idStr);
+                Supplier s = dao.getSupplierById(id);
                 boolean ok = dao.deactivateSupplier(id);
 
                 if (ok) {
@@ -81,7 +82,8 @@ public class addSupplierController extends HttpServlet {
                     log.setUserID(u.getUserID());
                     log.setAction("DEACTIVATE_SUPPLIER");
                     log.setTargetObject("Supplier ID: " + id);
-                    log.setDescription("Deactivate supplier");
+                    String sName = (s != null) ? s.getSupplierName() : "Unknown";
+                    log.setDescription("Ngừng hoạt động nhà cung cấp: " + sName + " (ID: " + id + ")");
                     log.setIpAddress(request.getRemoteAddr());
                     logDao.insertLog(log);
                 } else {
@@ -186,8 +188,8 @@ public class addSupplierController extends HttpServlet {
                             SystemLog log = new SystemLog();
                             log.setUserID(user.getUserID());
                             log.setAction("CREATE_SUPPLIER");
-                            log.setTargetObject("New Supplier: " + name);
-                            log.setDescription("Created new supplier");
+                            log.setTargetObject("Supplier: " + name);
+                            log.setDescription("Thêm nhà cung cấp mới: " + name);
                             log.setIpAddress(request.getRemoteAddr());
                             logDao.insertLog(log);
                         } else {
@@ -232,7 +234,7 @@ public class addSupplierController extends HttpServlet {
                                 log.setUserID(user.getUserID());
                                 log.setAction("UPDATE_SUPPLIER");
                                 log.setTargetObject("Supplier ID: " + id);
-                                log.setDescription("Updated supplier information");
+                                log.setDescription("Cập nhật thông tin nhà cung cấp: " + newName + " (ID: " + id + ")");
                                 log.setIpAddress(request.getRemoteAddr());
                                 logDAO.insertLog(log);
                             } else {
