@@ -241,8 +241,17 @@
     th {
         background: #f8fafc;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { display: flex; min-height: 100vh; font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; }
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    body {
+        display: flex;
+        min-height: 100vh;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #f4f6f9;
+    }
 
     .admin-sidebar {
         width: 240px; /* Tăng nhẹ độ rộng để menu thoải mái hơn */
@@ -253,14 +262,28 @@
         flex-direction: column;
         flex-shrink: 0;
         position: fixed;
-        top: 0; left: 0; bottom: 0;
+        top: 0;
+        left: 0;
+        bottom: 0;
         overflow-y: auto;
         z-index: 100;
     }
 
-    .sidebar-brand { padding: 20px 16px 12px; border-bottom: 1px solid #2e2e50; text-align: center; }
-    .sidebar-brand h2 { color: #fff; font-size: 18px; margin-bottom: 4px; }
-    .sidebar-brand small { font-size: 11px; color: #888; text-transform: uppercase; }
+    .sidebar-brand {
+        padding: 20px 16px 12px;
+        border-bottom: 1px solid #2e2e50;
+        text-align: center;
+    }
+    .sidebar-brand h2 {
+        color: #fff;
+        font-size: 18px;
+        margin-bottom: 4px;
+    }
+    .sidebar-brand small {
+        font-size: 11px;
+        color: #888;
+        text-transform: uppercase;
+    }
 
     .sidebar-section-title {
         padding: 20px 16px 8px;
@@ -282,16 +305,43 @@
         transition: all 0.2s;
     }
 
-    .admin-sidebar nav a:hover { background: #24243e; color: #fff; padding-left: 22px; }
-    .admin-sidebar nav a.active { background: #3b82f6; color: #fff; border-left: 4px solid #fff; }
+    .admin-sidebar nav a:hover {
+        background: #24243e;
+        color: #fff;
+        padding-left: 22px;
+    }
+    .admin-sidebar nav a.active {
+        background: #3b82f6;
+        color: #fff;
+        border-left: 4px solid #fff;
+    }
 
-    .admin-sidebar nav a .nav-icon { width: 20px; text-align: center; font-size: 16px; }
+    .admin-sidebar nav a .nav-icon {
+        width: 20px;
+        text-align: center;
+        font-size: 16px;
+    }
 
-    .sidebar-footer { margin-top: auto; padding: 20px 16px; border-top: 1px solid #2e2e50; background: #161625; }
-    .sidebar-footer a { color: #e05252; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .sidebar-footer {
+        margin-top: auto;
+        padding: 20px 16px;
+        border-top: 1px solid #2e2e50;
+        background: #161625;
+    }
+    .sidebar-footer a {
+        color: #e05252;
+        text-decoration: none;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
     /* Fix cho nội dung chính không bị đè */
-    .admin-main { margin-left: 240px; flex: 1; }
+    .admin-main {
+        margin-left: 240px;
+        flex: 1;
+    }
 </style>
 
 <aside class="admin-sidebar">
@@ -302,7 +352,7 @@
 
     <nav>
         <div class="sidebar-section-title">Tổng quan</div>
-        <a href="sales_dashboard?tab=dashboard" class="${tab == 'dashboard' || empty tab ? 'active' : ''}">
+        <a href="sales_dashboard?tab=dashboard" class="${tab == 'dashboard' || (empty tab && activeTab != 'orders') ? 'active' : ''}">
             <span class="nav-icon">📊</span> Dashboard
         </a>
 
@@ -311,7 +361,7 @@
         <a href="sales_dashboard?tab=pos" class="${tab == 'pos' ? 'active' : ''}">
             <span class="nav-icon">🛒</span> Bán hàng (POS)
         </a>
-        <a href="sales_dashboard?tab=orders" class="${tab == 'orders' ? 'active' : ''}">
+        <a href="sales_dashboard?tab=orders" class="${tab == 'orders' || activeTab == 'orders' ? 'active' : ''}">
             <span class="nav-icon">📜</span> Lịch sử đơn hàng
         </a>
         <a href="sales_dashboard?tab=customers" class="${tab == 'customers' ? 'active' : ''}">

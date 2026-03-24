@@ -73,15 +73,119 @@
                 border-radius: 4px;
                 margin-bottom: 20px;
             }
+            #invoiceModal {
+                display: none; /* Mặc định ẩn */
+                position: fixed;
+                z-index: 10000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.6);
+                backdrop-filter: blur(3px);
+                align-items: center;
+                justify-content: center;
+            }
+            .modal-content {
+                background: white;
+                width: 450px;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                position: relative;
+                font-family: 'Courier New', Courier, monospace;
+            }
+            @media print {
+    /* 1. Ẩn mọi thứ không liên quan */
+    .no-print, .admin-sidebar, .admin-topbar, .btn-back { 
+        display: none !important; 
+    }
+
+    /* 2. Ép nội dung in ra giữa trang */
+    body {
+        visibility: hidden;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center; /* Căn giữa theo chiều ngang */
+    }
+
+    /* 3. Chỉ hiển thị vùng hóa đơn và định dạng lại độ rộng */
+    #invoice-print-area {
+        visibility: visible;
+        position: absolute;
+        top: 0;
+        width: 300px; /* Độ rộng chuẩn cho máy in nhiệt K80 */
+        left: 50%;
+        transform: translateX(-50%); /* Kỹ thuật căn giữa tuyệt đối */
+        border: none;
+    }
+
+    /* 4. Xóa Header/Footer mặc định của trình duyệt (Ngày tháng, URL ở góc) */
+    @page {
+        margin: 0;
+    }
+}
         </style>
     </head>
+    <div id="invoiceModal">
+        <div class="modal-content">
+            <span onclick="closeModal()" class="no-print" style="position:absolute; right:15px; top:10px; font-size:28px; cursor:pointer;">&times;</span>
+
+            <div class="invoice-card" id="invoice-print-area" style="padding: 30px; color: #000;">
+                <div style="text-align: center; border-bottom: 1px dashed #ddd; padding-bottom: 10px;">
+                    <h2 style="margin:0;">S.I.M MARKET</h2>
+                    <p style="margin:5px 0;">Ngày: ${orderHeader.createdAt}</p>
+                </div>
+
+                <div style="margin: 15px 0; font-size: 14px;">
+                    <p><strong>Khách:</strong> ${not empty orderHeader.customerName ? orderHeader.customerName : "Khách lẻ"}</p>
+                    <p><strong>SĐT:</strong> ${not empty orderHeader.customerPhone ? orderHeader.customerPhone : "---"}</p>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #000;">
+                            <th align="left">Sản phẩm</th>
+                            <th style="text-align:center">SL</th>
+                            <th style="text-align:right">T.Tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <c:forEach items="${orderItems}" var="item">
+                            <tr style="border-bottom: 1px solid #f5f5f5;">
+                                <td style="font-size: 13px;">${item.name}</td>
+                                <td align="center">${item.quantity}</td>
+                                <td align="right"><fmt:formatNumber value="${item.lineTotal}" type="number"/>đ</td>
+                            </tr>
+                        </c:forEach>
+                    </tbody>
+                </table>
+
+                <div style="border-top: 2px solid #000; padding-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px;">
+                        <span>Tổng cộng:</span>
+                        <span><fmt:formatNumber value="${orderHeader.totalAmount}" type="number"/> đ</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; padding: 15px 30px 25px; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;" class="no-print">
+                <button onclick="window.print()" style="flex:1; background:#10b981; color:white; padding:12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">🖨️ IN</button>
+            </div>
+        </div>
+    </div>
     <body>
+
         <div class="detail-container">
             <a href="sales_dashboard?tab=orders" class="btn-back">⬅ Quay lại danh sách</a>
+
 
             <div class="detail-header">
                 <h2 style="margin:0;">Chi tiết đơn hàng #${orderHeader.stockOutId}</h2>
                 <span style="padding: 5px 10px; background: #dcfce7; color: #166534; border-radius: 20px; font-size: 12px; font-weight: bold;">Hoàn tất</span>
+                <button onclick="printBill()" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <span>🖨️</span> In lại hóa đơn
+                </button>
             </div>
 
             <div class="info-grid">
@@ -141,4 +245,20 @@
             </div>
         </div>
     </body>
+    <script>
+        function printBill() {
+            // Thay đổi kiểu hiển thị của Modal từ ẩn sang hiện (Flex)
+            document.getElementById('invoiceModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('invoiceModal').style.display = 'none';
+        }
+
+        // Đóng bằng phím Esc cho tiện
+        document.addEventListener('keydown', function (e) {
+            if (e.key === "Escape")
+                closeModal();
+        });
+    </script>
 </html>
