@@ -4,6 +4,7 @@
  */
 package controller;
 
+import dao.NotificationDAO;
 import dao.StockInDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -13,27 +14,33 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import model.Notification;
 import model.StockIn;
+import model.StockInDetail;
 import model.User;
 import dao.SystemLogDAO;
 import model.SystemLog;
+import websocket.NotificationEndpoint;
 
 /**
  *
  * @author dotha
  */
-@WebServlet(name = "StockInListController", urlPatterns = {"/stockinList"})
+@WebServlet(name = "StockInListController", urlPatterns = { "/stockinList" })
 public class StockInListController extends HttpServlet {
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -77,14 +84,15 @@ public class StockInListController extends HttpServlet {
         request.getRequestDispatcher("stockinList.jsp").forward(request, response);
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
+    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the
+    // + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -113,39 +121,48 @@ public class StockInListController extends HttpServlet {
         switch (action) {
             case "requestCancel":
                 try {
-                int id = Integer.parseInt(request.getParameter("id"));
-                String reason = request.getParameter("reason");
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    String reason = request.getParameter("reason");
 
-                if (reason == null || reason.trim().isEmpty()) {
-                    loadList(request, response, "Vui lòng nhập lý do hủy phiếu.", "error");
+                    if (reason == null || reason.trim().isEmpty()) {
+                        loadList(request, response, "Vui lòng nhập lý do hủy phiếu.", "error");
+                        return;
+                    }
+
+                    boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason.trim());
+
+                    try {
+                        SystemLogDAO logDAO = new SystemLogDAO();
+                        SystemLog log = new SystemLog();
+                        log.setUserID(user.getUserID());
+                        log.setAction("REQUEST_CANCEL_STOCKIN");
+                        log.setTargetObject("StockIn");
+                        log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason.trim());
+                        log.setIpAddress(request.getRemoteAddr());
+                        logDAO.insertLog(log);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
+                    if (ok) {
+                        // Send notification to managers
+                        try {
+                            sendCancelRequestNotification(user, id, reason.trim());
+                        } catch (Exception notifEx) {
+                            notifEx.printStackTrace();
+                        }
+                    }
+
+                    loadList(request, response,
+                            ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.",
+                            ok ? "success" : "error");
+                    return;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    loadList(request, response, "Dữ liệu không hợp lệ.", "error");
                     return;
                 }
-
-                boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason.trim());
-
-                try {
-                    SystemLogDAO logDAO = new SystemLogDAO();
-                    SystemLog log = new SystemLog();
-                    log.setUserID(user.getUserID());
-                    log.setAction("REQUEST_CANCEL_STOCKIN");
-                    log.setTargetObject("StockIn");
-                    log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason.trim());
-                    log.setIpAddress(request.getRemoteAddr());
-                    logDAO.insertLog(log);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-
-                loadList(request, response,
-                        ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.",
-                        ok ? "success" : "error");
-                return;
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                loadList(request, response, "Dữ liệu không hợp lệ.", "error");
-                return;
-            }
 
             case "approveCancel":
                 if (user.getRoleID() != 2) {
@@ -223,10 +240,10 @@ public class StockInListController extends HttpServlet {
     /**
      * Handles the HTTP <code>POST</code> method.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -255,8 +272,7 @@ public class StockInListController extends HttpServlet {
                 String note = request.getParameter("note");
                 String paymentStatus = request.getParameter("paymentStatus");
 
-                boolean validPaymentStatus
-                        = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
+                boolean validPaymentStatus = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
                         || StockIn.PAYMENT_STATUS_PARTIAL.equals(paymentStatus)
                         || StockIn.PAYMENT_STATUS_PAID.equals(paymentStatus)
                         || StockIn.PAYMENT_STATUS_CANCELLED.equals(paymentStatus);
@@ -296,6 +312,83 @@ public class StockInListController extends HttpServlet {
         }
 
         loadList(request, response, null, null);
+    }
+
+    // -----------------------------------------------------------------------
+    // Notification helper — Cancel Request
+    // -----------------------------------------------------------------------
+    private void sendCancelRequestNotification(User staff, int stockInId, String reason) {
+        StockInDAO dao = new StockInDAO();
+        StockIn stockIn = dao.getStockInById(stockInId);
+        if (stockIn == null)
+            return;
+
+        List<StockInDetail> details = dao.getStockInDetailsByStockInId(stockInId);
+
+        // Timestamp (Asia/Ho_Chi_Minh)
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        String timeStr = DateTimeFormatter.ofPattern("HH:mm").format(now);
+        String dateStr = DateTimeFormatter.ofPattern("dd/MM/yyyy").format(now);
+
+        String staffName = (staff.getFullName() != null && !staff.getFullName().isEmpty())
+                ? staff.getFullName()
+                : staff.getUsername();
+
+        // Payment status label
+        String ps;
+        switch (stockIn.getPaymentStatus() != null ? stockIn.getPaymentStatus() : "") {
+            case StockIn.PAYMENT_STATUS_PAID:
+                ps = "Đã thanh toán";
+                break;
+            case StockIn.PAYMENT_STATUS_PARTIAL:
+                ps = "Thanh toán một phần";
+                break;
+            case StockIn.PAYMENT_STATUS_CANCELLED:
+                ps = "Đã hủy";
+                break;
+            default:
+                ps = "Chưa thanh toán";
+        }
+
+        // Build message
+        StringBuilder msg = new StringBuilder();
+        msg.append(timeStr).append(" ").append(dateStr).append("\n");
+        msg.append("Lý do: ").append(reason).append("\n");
+        msg.append("Nhà cung cấp: ").append(stockIn.getSupplierName()).append("\n");
+        msg.append("Chi tiết sản phẩm:\n");
+
+        for (StockInDetail d : details) {
+            String pName = (d.getProductName() != null && !d.getProductName().isEmpty())
+                    ? d.getProductName()
+                    : "SP#" + d.getProductId();
+            int remaining = d.getQuantity() - d.getReceivedQuantity();
+            msg.append("  - ").append(pName)
+                    .append(" | Số lượng: ").append(d.getQuantity())
+                    .append(" | đã thêm: ").append(d.getReceivedQuantity())
+                    .append(" | còn lại: ").append(remaining)
+                    .append(" | Đơn giá: ").append(String.format("%,.0f đ", d.getUnitCost()))
+                    .append(" | Thành tiền: ").append(String.format("%,.0f đ", d.getSubTotal()))
+                    .append("\n");
+        }
+        msg.append("Trạng thái thanh toán: ").append(ps);
+
+        String title = "Phiếu nhập #" + stockInId + " được yêu cầu hủy từ " + staffName;
+
+        NotificationDAO notifDAO = new NotificationDAO();
+        List<Integer> managerIds = notifDAO.getManagerIds();
+
+        for (int managerId : managerIds) {
+            Notification n = new Notification();
+            n.setUserId(managerId);
+            n.setTitle(title);
+            n.setMessage(msg.toString());
+            n.setType("STOCKIN_CANCEL_REQUEST");
+            notifDAO.insert(n);
+
+            // Push WebSocket badge update
+            int unread = notifDAO.countUnread(managerId);
+            NotificationEndpoint.sendToUser(managerId, "{\"unreadCount\":" + unread + "}");
+        }
     }
 
     /**

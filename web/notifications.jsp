@@ -1,6 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8" %>
     <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
         <%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+            <%@taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
             <!DOCTYPE html>
             <html>
 
@@ -193,6 +194,25 @@
                         color: #4338ca;
                         margin-bottom: 8px;
                     }
+
+                    .btn-view-detail {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        margin-top: 14px;
+                        padding: 8px 16px;
+                        background: #1f4e79;
+                        color: #fff;
+                        border-radius: 8px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        text-decoration: none;
+                        transition: background 0.2s ease;
+                    }
+
+                    .btn-view-detail:hover {
+                        background: #163a59;
+                    }
                 </style>
             </head>
 
@@ -212,20 +232,29 @@
                         <c:choose>
                             <c:when test="${not empty notifications}">
                                 <c:forEach var="n" items="${notifications}">
-                                    <div class="notif-item ${not n.read ? 'unread' : ''}" id="notif-item-${n.notificationId}">
-                                        <div class="notif-type-badge">${n.type != null ? n.type : 'Hệ thống'}</div>
+                                    <div class="notif-item ${not n.read ? 'unread' : ''}"
+                                        id="notif-item-${n.notificationId}">
                                         <div class="notif-header">
                                             <h3 class="notif-title">${n.title}</h3>
-                                            <span class="notif-time">
-                                                <fmt:formatDate value="${n.createdAt}" pattern="HH:mm dd/MM/yyyy" />
-                                            </span>
                                         </div>
                                         <div class="notif-body">
                                             <c:out value="${n.message}" escapeXml="false" />
                                         </div>
+
+                                        <%-- Xem chi tiết button for stock-in notifications --%>
+                                        <c:if test="${n.type == 'STOCKIN_CANCEL_REQUEST' || n.type == 'STOCKIN_RECEIVED' || n.type == 'STOCKIN_COMPLETED'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               data-title="<c:out value='${n.title}'/>"
+                                               onclick="goToStockIn(this); return false;">
+                                                🔍 Xem chi tiết phiếu nhập
+                                            </a>
+                                        </c:if>
+
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
-                                                <button class="btn-mark-read" onclick="markAsRead(${n.notificationId})">Đã đọc</button>
+                                                <button class="btn-mark-read"
+                                                    onclick="markAsRead(${n.notificationId})">Đã đọc</button>
                                             </div>
                                         </c:if>
                                     </div>
@@ -241,32 +270,41 @@
                         </c:choose>
                     </div>
                 </div>
-                
+
                 <script>
                     var ctx = "${pageContext.request.contextPath}";
-                    
+
+                    // Navigate to stock-in detail page by parsing id from notification title
+                    function goToStockIn(link) {
+                        var title = link.getAttribute('data-title') || '';
+                        var match = title.match(/#(\d+)/);
+                        if (match) {
+                            window.location.href = ctx + '/stockinDetail?id=' + match[1];
+                        }
+                    }
+
                     function markAsRead(notifId) {
                         fetch(ctx + '/notifications', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: 'action=markRead&id=' + notifId
                         })
-                        .then(res => res.json())
-                        .then(data => {
-                            // Update UI visually
-                            var item = document.getElementById('notif-item-' + notifId);
-                            var actionBox = document.getElementById('notif-action-' + notifId);
-                            if(item) {
-                                item.classList.remove('unread');
-                            }
-                            if(actionBox) {
-                                actionBox.style.display = 'none';
-                            }
-                            
-                            // Let the WebSocket or User refresh handle badges in other frames
-                            // If they are on this standalone page, the sidebars aren't here
-                        })
-                        .catch(err => console.error(err));
+                            .then(res => res.json())
+                            .then(data => {
+                                // Update UI visually
+                                var item = document.getElementById('notif-item-' + notifId);
+                                var actionBox = document.getElementById('notif-action-' + notifId);
+                                if (item) {
+                                    item.classList.remove('unread');
+                                }
+                                if (actionBox) {
+                                    actionBox.style.display = 'none';
+                                }
+
+                                // Let the WebSocket or User refresh handle badges in other frames
+                                // If they are on this standalone page, the sidebars aren't here
+                            })
+                            .catch(err => console.error(err));
                     }
                 </script>
             </body>
