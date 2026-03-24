@@ -4,6 +4,7 @@
  */
 package controller;
 
+import dao.NotificationDAO;
 import dao.StockInDAO;
 import dao.SystemLogDAO;
 import java.io.IOException;
@@ -14,11 +15,16 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import model.Notification;
 import model.StockIn;
 import model.StockInDetail;
 import model.SystemLog;
 import model.User;
+import websocket.NotificationEndpoint;
 
 /**
  *
@@ -210,6 +216,12 @@ public class StockInDetailController extends HttpServlet {
                 }
 
                 if (ok) {
+                    // Send notification to managers
+                    try {
+                        sendReceiveNotification(user, stockIn, detailId, receiveQty);
+                    } catch (Exception notifEx) {
+                        notifEx.printStackTrace();
+                    }
                     response.sendRedirect("stockinDetail?id=" + stockInId + "&success=received");
                 } else {
                     forwardDetail(request, response, stockInId,
@@ -302,6 +314,97 @@ public class StockInDetailController extends HttpServlet {
         }
 
         forwardDetail(request, response, stockInId, null, null);
+    }
+
+    // -----------------------------------------------------------------------
+    // Notification helper
+    // -----------------------------------------------------------------------
+    private void sendReceiveNotification(User staff, StockIn stockIn, int updatedDetailId, int receiveQty) {
+        StockInDAO dao = new StockInDAO();
+
+        // Re-fetch StockIn to get updated status & remaining after SP ran
+        StockIn updatedStockIn = dao.getStockInById(stockIn.getStockInId());
+        if (updatedStockIn == null) updatedStockIn = stockIn;
+
+        // Re-fetch details so receivedQuantity is up-to-date
+        List<StockInDetail> details = dao.getStockInDetailsByStockInId(stockIn.getStockInId());
+
+        // Timestamp (Asia/Ho_Chi_Minh)
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        String timeStr = DateTimeFormatter.ofPattern("HH:mm").format(now);
+        String dateStr = DateTimeFormatter.ofPattern("dd/MM/yyyy").format(now);
+
+        String staffName = (staff.getFullName() != null && !staff.getFullName().isEmpty())
+                ? staff.getFullName() : staff.getUsername();
+
+        // Payment status label (use updated stockIn)
+        String ps;
+        switch (updatedStockIn.getPaymentStatus() != null ? updatedStockIn.getPaymentStatus() : "") {
+            case StockIn.PAYMENT_STATUS_PAID:      ps = "Đã thanh toán"; break;
+            case StockIn.PAYMENT_STATUS_PARTIAL:   ps = "Thanh toán một phần"; break;
+            case StockIn.PAYMENT_STATUS_CANCELLED: ps = "Đã hủy"; break;
+            default:                               ps = "Chưa thanh toán";
+        }
+
+        boolean isCompleted = StockIn.STOCK_STATUS_COMPLETED.equals(updatedStockIn.getStockStatus());
+
+        String title;
+        StringBuilder msg = new StringBuilder();
+        msg.append(timeStr).append(" ").append(dateStr).append("\n");
+        msg.append("Nhà cung cấp: ").append(updatedStockIn.getSupplierName()).append("\n");
+        msg.append("Chi tiết sản phẩm:\n");
+
+        if (isCompleted) {
+            // ── Completed: show ordered qty, unit cost, subtotal ──────────
+            title = "Phiếu nhập #" + updatedStockIn.getStockInId()
+                    + " đã nhập đủ số lượng từ " + staffName;
+
+            for (StockInDetail d : details) {
+                String pName = (d.getProductName() != null && !d.getProductName().isEmpty())
+                        ? d.getProductName() : "SP#" + d.getProductId();
+                msg.append("  - ").append(pName)
+                   .append(" | Số lượng: ").append(d.getQuantity())
+                   .append(" | Đơn giá: ").append(String.format("%,.0f đ", d.getUnitCost()))
+                   .append(" | Thành tiền: ").append(String.format("%,.0f đ", d.getSubTotal()))
+                   .append("\n");
+            }
+        } else {
+            // ── Partial receive: show added / remaining ───────────────────
+            title = "Phiếu nhập #" + updatedStockIn.getStockInId()
+                    + " được cập nhật từ " + staffName;
+
+            for (StockInDetail d : details) {
+                String pName = (d.getProductName() != null && !d.getProductName().isEmpty())
+                        ? d.getProductName() : "SP#" + d.getProductId();
+                int remaining = d.getQuantity() - d.getReceivedQuantity();
+                int added = (d.getDetailId() == updatedDetailId) ? receiveQty : 0;
+                msg.append("  - ").append(pName)
+                   .append(" | Số lượng: ").append(d.getQuantity())
+                   .append(" | đã thêm: ").append(added)
+                   .append(" | còn lại: ").append(remaining)
+                   .append("\n");
+            }
+        }
+
+        msg.append("Trạng thái thanh toán: ").append(ps);
+
+        String notifType = isCompleted ? "STOCKIN_COMPLETED" : "STOCKIN_RECEIVED";
+
+        NotificationDAO notifDAO = new NotificationDAO();
+        List<Integer> managerIds = notifDAO.getManagerIds();
+
+        for (int managerId : managerIds) {
+            Notification n = new Notification();
+            n.setUserId(managerId);
+            n.setTitle(title);
+            n.setMessage(msg.toString());
+            n.setType(notifType);
+            notifDAO.insert(n);
+
+            // Push WebSocket badge update
+            int unread = notifDAO.countUnread(managerId);
+            NotificationEndpoint.sendToUser(managerId, "{\"unreadCount\":" + unread + "}");
+        }
     }
 
     /**
