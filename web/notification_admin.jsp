@@ -7,7 +7,7 @@
 
             <head>
                 <meta charset="UTF-8">
-                <title>Thông Báo - IMS PRO</title>
+                <title>Thông Báo - Quản Trị Viên - IMS PRO</title>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
                     rel="stylesheet">
                 <style>
@@ -183,36 +183,6 @@
                         color: var(--text-muted);
                         margin: 0;
                     }
-
-                    .notif-type-badge {
-                        display: inline-block;
-                        padding: 4px 10px;
-                        border-radius: 6px;
-                        font-size: 12px;
-                        font-weight: 600;
-                        background: #e0e7ff;
-                        color: #4338ca;
-                        margin-bottom: 8px;
-                    }
-
-                    .btn-view-detail {
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 6px;
-                        margin-top: 14px;
-                        padding: 8px 16px;
-                        background: #1f4e79;
-                        color: #fff;
-                        border-radius: 8px;
-                        font-size: 13px;
-                        font-weight: 600;
-                        text-decoration: none;
-                        transition: background 0.2s ease;
-                    }
-
-                    .btn-view-detail:hover {
-                        background: #163a59;
-                    }
                 </style>
             </head>
 
@@ -221,7 +191,7 @@
                     <div class="page-header">
                         <h1 class="page-title">
                             <span style="font-size: 32px;">🔔</span>
-                            Tất cả thông báo
+                            Thông báo - Admin
                         </h1>
                         <a href="javascript:history.back()" class="back-btn">
                             <span>&larr;</span> Quay lại
@@ -240,16 +210,6 @@
                                         <div class="notif-body">
                                             <c:out value="${n.message}" escapeXml="false" />
                                         </div>
-
-                                        <%-- Xem chi tiết button for stock-in notifications --%>
-                                        <c:if test="${n.type == 'STOCKIN_CANCEL_REQUEST' || n.type == 'STOCKIN_RECEIVED' || n.type == 'STOCKIN_COMPLETED'}">
-                                            <a class="btn-view-detail"
-                                               href="#"
-                                               data-title="<c:out value='${n.title}'/>"
-                                               onclick="goToStockIn(this); return false;">
-                                                🔍 Xem chi tiết phiếu nhập
-                                            </a>
-                                        </c:if>
 
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
@@ -274,15 +234,6 @@
                 <script>
                     var ctx = "${pageContext.request.contextPath}";
 
-                    // Navigate to stock-in detail page by parsing id from notification title
-                    function goToStockIn(link) {
-                        var title = link.getAttribute('data-title') || '';
-                        var match = title.match(/#(\d+)/);
-                        if (match) {
-                            window.location.href = ctx + '/stockinDetail?id=' + match[1];
-                        }
-                    }
-
                     function markAsRead(notifId) {
                         fetch(ctx + '/notifications', {
                             method: 'POST',
@@ -291,18 +242,10 @@
                         })
                             .then(res => res.json())
                             .then(data => {
-                                // Update UI visually
                                 var item = document.getElementById('notif-item-' + notifId);
                                 var actionBox = document.getElementById('notif-action-' + notifId);
-                                if (item) {
-                                    item.classList.remove('unread');
-                                }
-                                if (actionBox) {
-                                    actionBox.style.display = 'none';
-                                }
-
-                                // Let the WebSocket or User refresh handle badges in other frames
-                                // If they are on this standalone page, the sidebars aren't here
+                                if (item) item.classList.remove('unread');
+                                if (actionBox) actionBox.style.display = 'none';
                             })
                             .catch(err => console.error(err));
                     }
