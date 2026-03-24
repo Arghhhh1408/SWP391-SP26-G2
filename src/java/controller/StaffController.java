@@ -159,7 +159,7 @@ public class StaffController extends HttpServlet {
         request.setAttribute("openRTVCount", dashboardDAO.countOpenRTVCases());
         request.setAttribute("unreadNotificationCount",
                 user == null ? 0 : dashboardDAO.countUnreadNotifications(user.getUserID()));
-        request.setAttribute("recentLogs", systemLogDAO.getStaffDashboardLogs(5));
+        request.setAttribute("recentLogs", systemLogDAO.getWarehouseStaffLogs(5));
     }
 
     private String formatCurrencyVi(double amount) {

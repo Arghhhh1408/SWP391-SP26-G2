@@ -225,4 +225,113 @@ public class OrderHistoryDAO extends DBContext {
         }
         return list;
     }
+
+    // 6. Báo cáo doanh thu & lợi nhuận theo ngày
+    public List<DailyReport> getDailySalesReport(String fromDate, String toDate) {
+        List<DailyReport> list = new ArrayList<>();
+        String sql = """
+            SELECT 
+                CAST(so.Date AS DATE) as ReportDate,
+                COUNT(DISTINCT so.StockOutID) as TotalOrders,
+                SUM(so.TotalAmount) as TotalRevenue,
+                SUM(sd.Quantity * p.Cost) as TotalCost
+            FROM dbo.StockOut so
+            JOIN dbo.StockOutDetails sd ON so.StockOutID = sd.StockOutID
+            JOIN dbo.Products p ON sd.ProductID = p.ProductID
+            WHERE CAST(so.Date AS DATE) BETWEEN ? AND ?
+            GROUP BY CAST(so.Date AS DATE)
+            ORDER BY ReportDate DESC
+            """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, fromDate);
+            ps.setString(2, toDate);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    DailyReport r = new DailyReport();
+                    r.setDate(rs.getDate("ReportDate"));
+                    r.setOrderCount(rs.getInt("TotalOrders"));
+                    r.setRevenue(rs.getDouble("TotalRevenue"));
+                    r.setCost(rs.getDouble("TotalCost"));
+                    r.setProfit(r.getRevenue() - r.getCost());
+                    list.add(r);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // 7. Chi tiết xuất kho
+    public List<StockOrderDetail> getStockOutDetailsReport(String fromDate, String toDate) {
+        List<StockOrderDetail> list = new ArrayList<>();
+        String sql = """
+            SELECT 
+                so.Date, so.StockOutID, p.Name as ProductName,
+                sd.Quantity, sd.UnitPrice as SellingPrice,
+                (sd.Quantity * sd.UnitPrice) as Revenue
+            FROM dbo.StockOut so
+            JOIN dbo.StockOutDetails sd ON so.StockOutID = sd.StockOutID
+            JOIN dbo.Products p ON sd.ProductID = p.ProductID
+            WHERE CAST(so.Date AS DATE) BETWEEN ? AND ?
+            ORDER BY so.Date DESC
+            """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, fromDate);
+            ps.setString(2, toDate);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    StockOrderDetail d = new StockOrderDetail();
+                    d.setDate(rs.getTimestamp("Date"));
+                    d.setOrderId(rs.getInt("StockOutID"));
+                    d.setProductName(rs.getString("ProductName"));
+                    d.setQuantity(rs.getInt("Quantity"));
+                    d.setPrice(rs.getDouble("SellingPrice"));
+                    d.setTotal(rs.getDouble("Revenue"));
+                    list.add(d);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public static class DailyReport {
+        private java.util.Date date;
+        private int orderCount;
+        private double revenue, cost, profit;
+        // Getters/Setters
+        public java.util.Date getDate() { return date; }
+        public void setDate(java.util.Date date) { this.date = date; }
+        public int getOrderCount() { return orderCount; }
+        public void setOrderCount(int orderCount) { this.orderCount = orderCount; }
+        public double getRevenue() { return revenue; }
+        public void setRevenue(double revenue) { this.revenue = revenue; }
+        public double getCost() { return cost; }
+        public void setCost(double cost) { this.cost = cost; }
+        public double getProfit() { return profit; }
+        public void setProfit(double profit) { this.profit = profit; }
+    }
+
+    public static class StockOrderDetail {
+        private java.sql.Timestamp date;
+        private int orderId;
+        private String productName;
+        private int quantity;
+        private double price, total;
+        // Getters/Setters
+        public java.sql.Timestamp getDate() { return date; }
+        public void setDate(java.sql.Timestamp date) { this.date = date; }
+        public int getOrderId() { return orderId; }
+        public void setOrderId(int orderId) { this.orderId = orderId; }
+        public String getProductName() { return productName; }
+        public void setProductName(String productName) { this.productName = productName; }
+        public int getQuantity() { return quantity; }
+        public void setQuantity(int quantity) { this.quantity = quantity; }
+        public double getPrice() { return price; }
+        public void setPrice(double price) { this.price = price; }
+        public double getTotal() { return total; }
+        public void setTotal(double total) { this.total = total; }
+    }
 }

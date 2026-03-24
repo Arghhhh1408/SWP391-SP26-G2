@@ -89,6 +89,10 @@
                 text-align: right;
             }
 
+            .reason-input {
+                width: 220px;
+            }
+
             .actions {
                 margin-top: 16px;
             }
@@ -139,7 +143,6 @@
                 padding-left: 20px;
             }
 
-            /* ===== Inventory session list ===== */
             .session-section {
                 margin-top: 36px;
             }
@@ -179,59 +182,12 @@
             }
 
             .session-table tbody td {
-                padding: 18px 16px;
-                vertical-align: top;
+                padding: 16px;
+                vertical-align: middle;
                 border: none;
                 border-bottom: 1px solid #edf2f7;
                 background: #fff;
                 text-align: left;
-            }
-
-            .session-id {
-                font-size: 16px;
-                font-weight: 800;
-                color: #0d274d;
-                margin-bottom: 8px;
-            }
-
-            .product-name {
-                font-size: 14px;
-                color: #516b8b;
-                margin-bottom: 6px;
-            }
-
-            .sub-line {
-                font-size: 13px;
-                color: #617992;
-                margin-bottom: 4px;
-            }
-
-            .count-main {
-                font-size: 15px;
-                font-weight: 700;
-                color: #0d274d;
-                margin-bottom: 4px;
-            }
-
-            .difference-line {
-                font-size: 14px;
-                color: #5f7592;
-                margin-bottom: 10px;
-            }
-
-            .progress-wrap {
-                width: 100%;
-                max-width: 250px;
-                height: 11px;
-                background: #e5e9ef;
-                border-radius: 10px;
-                overflow: hidden;
-            }
-
-            .progress-bar {
-                height: 100%;
-                background: linear-gradient(90deg, #69a4ff, #2f6ce5);
-                border-radius: 10px;
             }
 
             .badge {
@@ -240,13 +196,7 @@
                 border-radius: 999px;
                 font-size: 13px;
                 font-weight: 700;
-                margin-bottom: 10px;
                 white-space: nowrap;
-            }
-
-            .badge-type {
-                background: #dbe9ff;
-                color: #2962e3;
             }
 
             .badge-pending {
@@ -269,10 +219,12 @@
                 color: #4a6078;
             }
 
-            .evidence-line {
-                font-size: 14px;
-                color: #5a7090;
-                margin-bottom: 6px;
+            .empty-box {
+                background: #fff;
+                border-radius: 10px;
+                padding: 18px;
+                color: #6c7f95;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             }
 
             .action-btn {
@@ -290,64 +242,32 @@
                 background: #f7faff;
             }
 
-            .empty-box {
-                background: #fff;
-                border-radius: 10px;
-                padding: 18px;
-                color: #6c7f95;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            }
-            .product-main-name {
-                font-size: 18px;
-                font-weight: 800;
-                color: #0d274d;
-                margin-bottom: 8px;
+            .pagination-wrap {
+                margin-top: 18px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
             }
 
-            .progress-wrap {
-                width: 100%;
-                max-width: 280px;
-                height: 12px;
-                background: #e5e9ef;
-                border-radius: 999px;
-                overflow: hidden;
-                margin-bottom: 8px;
+            .page-label {
+                font-weight: bold;
+                color: #37506d;
+                margin-right: 8px;
             }
 
-            .progress-bar {
-                height: 100%;
-                border-radius: 999px;
+            .clickable-row {
+                cursor: pointer;
             }
 
-            .bar-match {
-                background: linear-gradient(90deg, #4caf50, #2e7d32);
-            }
-
-            .bar-excess {
-                background: linear-gradient(90deg, #ffb74d, #ef6c00);
-            }
-
-            .bar-shortage {
-                background: linear-gradient(90deg, #64b5f6, #1976d2);
-            }
-
-            .progress-note {
-                font-size: 13px;
-                color: #60758f;
-                margin-top: 4px;
-            }
-
-            .status-note {
-                margin-top: 10px;
-                font-size: 13px;
-                color: #617992;
-                line-height: 1.5;
+            .clickable-row:hover {
+                background: #f8fbff !important;
             }
         </style>
     </head>
     <body>
 
-        <h2>Kiểm kê kho thực tế</h2><br><br>        
+        <h2>Kiểm kê kho thực tế</h2><br><br>
 
         <div class="top-link">
             <c:if test="${sessionScope.acc.roleID == 1}">
@@ -399,6 +319,7 @@
 
         <form action="inventoryCheck" method="post">
             <input type="hidden" name="keyword" value="${keyword}">
+            <input type="hidden" name="page" value="${page}">
 
             <table>
                 <thead>
@@ -411,6 +332,7 @@
                         <th>Số lượng thực tế</th>
                         <th>Chênh lệch</th>
                         <th>Kết quả</th>
+                        <th>Lý do chênh lệch</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -462,12 +384,20 @@
                                     </c:otherwise>
                                 </c:choose>
                             </td>
+                            <td>
+                                <input
+                                    class="reason-input"
+                                    type="text"
+                                    name="reason_${item.productId}"
+                                    value="${item.reason != null ? item.reason : ''}"
+                                    placeholder="Nhập lý do nếu lệch">
+                            </td>
                         </tr>
                     </c:forEach>
 
                     <c:if test="${empty items}">
                         <tr>
-                            <td colspan="8">Không có dữ liệu</td>
+                            <td colspan="9">Không có dữ liệu</td>
                         </tr>
                     </c:if>
                 </tbody>
@@ -479,117 +409,71 @@
             </div>
         </form>
 
-        <!-- ===== Danh sách đã kiểm kê ===== -->
-        <!-- ===== Danh sách đã kiểm kê ===== -->
+        <div class="pagination-wrap">
+            <span class="page-label">Trang ${page} / ${totalPages}</span>
+
+            <c:if test="${page > 1}">
+                <a class="action-btn" href="inventoryCheck?keyword=${keyword}&page=${page - 1}">← Trang trước</a>
+            </c:if>
+
+            <c:forEach begin="1" end="${totalPages}" var="i">
+                <a class="action-btn"
+                   style="${i == page ? 'background:#1976d2;color:white;border-color:#1976d2;' : ''}"
+                   href="inventoryCheck?keyword=${keyword}&page=${i}">
+                    ${i}
+                </a>
+            </c:forEach>
+
+            <c:if test="${page < totalPages}">
+                <a class="action-btn" href="inventoryCheck?keyword=${keyword}&page=${page + 1}">Trang sau →</a>
+            </c:if>
+        </div>
+
         <div class="session-section">
             <div class="session-title">Danh sách sản phẩm đã kiểm kê</div>
             <div class="session-subtitle">
-                Hiển thị sản phẩm đã kiểm kê, kết quả đếm thực tế, chênh lệch và trạng thái xử lý.
+                Hiển thị các sản phẩm đã từng được lưu kiểm kê. Bấm vào từng sản phẩm để xem lịch sử các lần kiểm kê.
             </div>
 
             <c:choose>
-                <c:when test="${not empty checkedItems}">
+                <c:when test="${not empty checkedProducts}">
                     <table class="session-table">
                         <thead>
                             <tr>
-                                <th style="width: 30%;">PRODUCT</th>
-                                <th style="width: 30%;">COUNT RESULT</th>
-                                <th style="width: 20%;">STATUS</th>
-                                <th style="width: 20%;">ACTIONS</th>
+                                <th style="width: 10%;">ID</th>
+                                <th style="width: 15%;">SKU</th>
+                                <th style="width: 28%;">Tên sản phẩm</th>
+                                <th style="width: 10%;">ĐVT</th>
+                                <th style="width: 14%;">Số lần kiểm kê</th>
+                                <th style="width: 13%;">Lần gần nhất</th>
+                                <th style="width: 10%;">Trạng thái</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <c:forEach var="c" items="${checkedItems}">
-                                <tr>
-                                    <td>
-                                        <div class="product-main-name">${c.productName}</div>
-                                        <div class="sub-line">SKU: ${c.sku}</div>
-                                        <div class="sub-line">ĐVT: ${c.unit}</div>
-                                        <div class="sub-line">Ngày kiểm kê: ${c.date}</div>
-                                    </td>
-
-                                    <td>
-                                        <div class="count-main">
-                                            Hệ thống: ${c.systemQuantity} / Thực tế: ${c.physicalQuantity}
-                                        </div>
-
-                                        <div class="difference-line">
-                                            Chênh lệch:
-                                            <c:choose>
-                                                <c:when test="${c.variance > 0}">
-                                                    <span class="excess">+${c.variance}</span>
-                                                </c:when>
-                                                <c:when test="${c.variance < 0}">
-                                                    <span class="shortage">${c.variance}</span>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="match">0</span>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </div>
-
-                                        <c:set var="progressPercent"
-                                               value="${c.systemQuantity > 0 ? (c.physicalQuantity * 100 / c.systemQuantity) : 0}" />
-
-                                        <div class="progress-wrap">
-                                            <div class="progress-bar
-                                                 ${c.variance == 0 ? 'bar-match' : (c.variance > 0 ? 'bar-excess' : 'bar-shortage')}"
-                                                 style="width:
-                                                 <c:choose>
-                                                     <c:when test='${progressPercent > 100}'>100%</c:when>
-                                                     <c:when test='${progressPercent < 0}'>0%</c:when>
-                                                     <c:otherwise>${progressPercent}%</c:otherwise>
-                                                 </c:choose>;">
-                                            </div>
-                                        </div>
-
-                                        <div class="progress-note">
-                                            Tỷ lệ thực tế / hệ thống:
-                                            <c:choose>
-                                                <c:when test="${c.systemQuantity > 0}">
-                                                    ${progressPercent}%
-                                                </c:when>
-                                                <c:otherwise>
-                                                    0%
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </div>
-                                    </td>
-
+                            <c:forEach var="p" items="${checkedProducts}">
+                                <tr class="clickable-row"
+                                    onclick="window.location = 'inventoryCheck?mode=history&productId=${p.productId}'">
+                                    <td>${p.productId}</td>
+                                    <td>${p.sku}</td>
+                                    <td>${p.productName}</td>
+                                    <td>${p.unit}</td>
+                                    <td>${p.totalCheckTimes}</td>
+                                    <td>${p.date}</td>
                                     <td>
                                         <c:choose>
-                                            <c:when test="${c.status == 'Pending'}">
-                                                <span class="badge badge-pending">Pending Review</span>
+                                            <c:when test="${p.status == 'Pending'}">
+                                                <span class="badge badge-pending">Pending</span>
                                             </c:when>
-                                            <c:when test="${c.status == 'Approved'}">
-                                                <span class="badge badge-completed">Completed</span>
+                                            <c:when test="${p.status == 'Approved'}">
+                                                <span class="badge badge-completed">Approved</span>
                                             </c:when>
-                                            <c:when test="${c.status == 'Rejected'}">
-                                                <span class="badge badge-recount">Recount Required</span>
+                                            <c:when test="${p.status == 'Rejected'}">
+                                                <span class="badge badge-recount">Rejected</span>
                                             </c:when>
                                             <c:otherwise>
-                                                <span class="badge badge-default">${c.status}</span>
+                                                <span class="badge badge-default">${p.status}</span>
                                             </c:otherwise>
                                         </c:choose>
-
-                                        <div class="status-note">
-                                            <c:choose>
-                                                <c:when test="${c.variance == 0}">
-                                                    Khớp tồn kho
-                                                </c:when>
-                                                <c:when test="${c.variance > 0}">
-                                                    Số lượng thực tế nhiều hơn hệ thống
-                                                </c:when>
-                                                <c:otherwise>
-                                                    Số lượng thực tế ít hơn hệ thống
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </div>
-                                    </td>
-
-                                    <td>
-                                        <a class="action-btn" href="inventoryCheck?mode=view&id=${c.countId}">View</a>
-                                        <a class="action-btn" href="inventoryCheck?mode=edit&id=${c.countId}">Edit</a>
                                     </td>
                                 </tr>
                             </c:forEach>
@@ -599,7 +483,7 @@
 
                 <c:otherwise>
                     <div class="empty-box">
-                        Chưa có dữ liệu kiểm kê đã lưu.
+                        Chưa có sản phẩm nào được lưu kiểm kê.
                     </div>
                 </c:otherwise>
             </c:choose>

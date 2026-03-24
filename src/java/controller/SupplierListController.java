@@ -62,6 +62,7 @@ public class SupplierListController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("acc") == null) {
             response.sendRedirect("login.jsp");
@@ -69,31 +70,37 @@ public class SupplierListController extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("acc");
-        if (user == null) {
+        if (user == null || (user.getRoleID() != 1 && user.getRoleID() != 2)) {
             response.sendRedirect("login.jsp");
             return;
         }
 
-        if (user.getRoleID() != 1 && user.getRoleID() != 2) {
-            response.sendRedirect("login.jsp");
-            return;
-        }
-
-        SupplierDAO supplierdao = new SupplierDAO();
-        List<Supplier> supplierList = supplierdao.getAllSupllier();
-        request.setAttribute("supplierList", supplierList);
+        SupplierDAO supplierDAO = new SupplierDAO();
 
         String supplierName = request.getParameter("supplierName");
         String supplierPhone = request.getParameter("supplierPhone");
         String supplierAddress = request.getParameter("supplierAddress");
         String supplierEmail = request.getParameter("supplierEmail");
         String status = request.getParameter("status");
-        List<Supplier> list;
 
-        if (supplierName != null || supplierPhone != null || supplierAddress != null || supplierEmail != null || status != null) {
-            list = supplierdao.searchSupplier(supplierName, supplierPhone, supplierAddress, supplierEmail);
+        boolean hasSearch
+                = (supplierName != null && !supplierName.trim().isEmpty())
+                || (supplierPhone != null && !supplierPhone.trim().isEmpty())
+                || (supplierAddress != null && !supplierAddress.trim().isEmpty())
+                || (supplierEmail != null && !supplierEmail.trim().isEmpty())
+                || (status != null && !status.trim().isEmpty());
+
+        List<Supplier> list;
+        if (hasSearch) {
+            list = supplierDAO.searchSupplier(
+                    supplierName,
+                    supplierPhone,
+                    supplierAddress,
+                    supplierEmail,
+                    status
+            );
         } else {
-            list = supplierdao.getAllSupllier();
+            list = supplierDAO.getAllSupplier();
         }
 
         request.setAttribute("list", list);
@@ -111,7 +118,7 @@ public class SupplierListController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        doGet(request, response);
     }
 
     /**

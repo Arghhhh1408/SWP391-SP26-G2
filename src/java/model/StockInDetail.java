@@ -4,25 +4,41 @@
  */
 package model;
 
-
 /**
  *
  * @author dotha
  */
 public class StockInDetail {
 
-    private int stockinId;
+    private int detailId;
+    private int stockInId;
     private int productId;
     private int quantity;
+    private int receivedQuantity;
     private double unitCost;
-    private String productName;
+    private double subTotal;
 
-    public int getStockinId() {
-        return stockinId;
+    private String productName;
+    private String sku;
+    private String unit;
+
+    public StockInDetail() {
     }
 
-    public void setStockinId(int stockinId) {
-        this.stockinId = stockinId;
+    public int getDetailId() {
+        return detailId;
+    }
+
+    public void setDetailId(int detailId) {
+        this.detailId = detailId;
+    }
+
+    public int getStockInId() {
+        return stockInId;
+    }
+
+    public void setStockInId(int stockInId) {
+        this.stockInId = stockInId;
     }
 
     public int getProductId() {
@@ -41,12 +57,28 @@ public class StockInDetail {
         this.quantity = quantity;
     }
 
+    public int getReceivedQuantity() {
+        return receivedQuantity;
+    }
+
+    public void setReceivedQuantity(int receivedQuantity) {
+        this.receivedQuantity = receivedQuantity;
+    }
+
     public double getUnitCost() {
         return unitCost;
     }
 
     public void setUnitCost(double unitCost) {
         this.unitCost = unitCost;
+    }
+
+    public double getSubTotal() {
+        return subTotal;
+    }
+
+    public void setSubTotal(double subTotal) {
+        this.subTotal = subTotal;
     }
 
     public String getProductName() {
@@ -56,8 +88,20 @@ public class StockInDetail {
     public void setProductName(String productName) {
         this.productName = productName;
     }
-    
-    public double getSubTotal(){
-        return quantity * unitCost;
+
+    public String getSku() {
+        return sku;
+    }
+
+    public void setSku(String sku) {
+        this.sku = sku;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
     }
 }

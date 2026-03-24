@@ -51,7 +51,10 @@ public class BulkProductActionController extends HttpServlet {
 
         if ("softDelete".equals(action)) {
             success = dao.bulkSoftDelete(ids);
-            logMsg = "Xóa mềm " + ids.length + " sản phẩm (chuyển sang Inactive)";
+            logMsg = "Xóa mềm " + ids.length + " sản phẩm (chuyển sang Deactivated)";
+        } else if ("activate".equals(action)) {
+            success = dao.bulkActivate(ids);
+            logMsg = "Kích hoạt lại " + ids.length + " sản phẩm (chuyển sang Active)";
         } else if ("hardDelete".equals(action)) {
             success = dao.bulkHardDelete(ids);
             logMsg = "Xóa vĩnh viễn " + ids.length + " sản phẩm khỏi hệ thống";

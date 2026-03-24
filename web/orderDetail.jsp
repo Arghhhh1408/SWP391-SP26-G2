@@ -177,7 +177,14 @@
     <body>
 
         <div class="detail-container">
-            <a href="sales_dashboard?tab=orders" class="btn-back">⬅ Quay lại danh sách</a>
+            <c:choose>
+                <c:when test="${sessionScope.acc.roleID == 2}">
+                    <a href="${pageContext.request.contextPath}/notifications" class="btn-back">⬅ Quay lại</a>
+                </c:when>
+                <c:otherwise>
+                    <a href="sales_dashboard?tab=orders" class="btn-back">⬅ Quay lại danh sách</a>
+                </c:otherwise>
+            </c:choose>
 
 
             <div class="detail-header">

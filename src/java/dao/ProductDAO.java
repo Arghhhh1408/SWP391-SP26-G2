@@ -76,19 +76,22 @@ public class ProductDAO extends DBContext {
         return list;
     }
 
-    public List<Product> getLowStockProducts(int threshold) {
+    public List<Product> getLowStockProducts(int defaultThreshold) {
         List<Product> list = new ArrayList<>();
-        // Lưu ý: Dùng đúng tên cột StockQuantity và tên bảng Products như các hàm trên của bạn
-        String sql = "SELECT * FROM dbo.Products WHERE StockQuantity <= ? AND Status = 'Active'";
+        String sql = """
+            SELECT p.*, l.MinStockLevel
+            FROM dbo.Products p
+            LEFT JOIN dbo.LowStockAlerts l ON p.ProductID = l.ProductID
+            WHERE p.Status = 'Active' 
+              AND p.StockQuantity < ISNULL(l.MinStockLevel, ?)
+        """;
 
         try {
-            // Sử dụng biến 'connection' có sẵn từ DBContext (không cần khởi tạo lại conn)
             PreparedStatement stm = connection.prepareStatement(sql);
-            stm.setInt(1, threshold);
+            stm.setInt(1, defaultThreshold);
             ResultSet rs = stm.executeQuery();
 
             while (rs.next()) {
-                // Sử dụng hàm map(rs) bạn đã viết sẵn ở dưới để đồng bộ dữ liệu
                 list.add(map(rs));
             }
         } catch (Exception e) {
@@ -122,17 +125,85 @@ public class ProductDAO extends DBContext {
         return null;
     }
 
+    public List<Product> searchBySupplier(int supplierId, String keyword) {
+        List<Product> list = new ArrayList<>();
+
+        String sql = "SELECT p.ProductID, p.Name, p.SKU, p.Cost, p.Price, p.StockQuantity, p.Unit, "
+                + "       sp.SupplyPrice "
+                + "FROM Products p "
+                + "INNER JOIN SupplierProduct sp ON p.ProductID = sp.ProductID "
+                + "WHERE sp.SupplierID = ? "
+                + "  AND sp.IsActive = 1 "
+                + "  AND p.Status = 'Active' "
+                + "  AND ( ? = '' OR p.Name LIKE ? OR p.SKU LIKE ? ) "
+                + "ORDER BY p.Name";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            String kw = keyword == null ? "" : keyword.trim();
+            ps.setInt(1, supplierId);
+            ps.setString(2, kw);
+            ps.setString(3, "%" + kw + "%");
+            ps.setString(4, "%" + kw + "%");
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Product p = new Product();
+                    p.setId(rs.getInt("ProductID"));
+                    p.setName(rs.getString("Name"));
+                    p.setSku(rs.getString("SKU"));
+                    p.setCost(rs.getDouble("SupplyPrice") > 0 ? rs.getDouble("SupplyPrice") : rs.getDouble("Cost"));
+                    p.setPrice(rs.getDouble("Price"));
+                    p.setQuantity(rs.getInt("StockQuantity"));
+                    p.setUnit(rs.getString("Unit"));
+                    list.add(p);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    public boolean existsInSupplier(int supplierId, int productId) {
+        String sql = "SELECT 1 FROM SupplierProduct WHERE SupplierID = ? AND ProductID = ? AND IsActive = 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, supplierId);
+            ps.setInt(2, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     private Product map(ResultSet rs) throws SQLException {
         Product p = new Product();
         p.setId(rs.getInt("ProductID"));
         p.setName(rs.getString("Name"));
         p.setSku(rs.getString("SKU"));
+        p.setCost(rs.getDouble("Cost"));
         p.setPrice(rs.getDouble("Price"));
         p.setQuantity(rs.getInt("StockQuantity"));
         p.setUnit(rs.getString("Unit"));
+        p.setDescription(rs.getString("Description"));
+        p.setImageURL(rs.getString("ImageURL"));
+        p.setWarrantyPeriod(rs.getInt("WarrantyPeriod"));
         p.setStatus(rs.getString("Status"));
+        p.setCategoryId(rs.getInt("CategoryID"));
+        p.setCreateDate(rs.getTimestamp("CreatedDate"));
+        p.setUpdateDate(rs.getTimestamp("UpdatedDate"));
+        try {
+            int threshold = rs.getInt("MinStockLevel");
+            if (!rs.wasNull()) {
+                p.setLowStockThreshold(threshold);
+            }
+        } catch (SQLException ignore) {
+            // Column might not exist in some simple SELECT * queries without JOIN
+        }
         return p;
-
     }
 
     public void increaseQuantity(int productId, int quantity) {
@@ -148,25 +219,33 @@ public class ProductDAO extends DBContext {
         }
     }
 
-    public List<Product> getAllProducts() throws Exception {
+    public List<Product> getAllActiveProducts() throws Exception {
         List<Product> list = new ArrayList<>();
-        String sql = "SELECT * FROM Products";
+        String sql = """
+            SELECT p.*, l.MinStockLevel 
+            FROM Products p
+            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+            WHERE p.Status = 'Active'
+            """;
         PreparedStatement st = connection.prepareStatement(sql);
         ResultSet rs = st.executeQuery();
         while (rs.next()) {
-            list.add(new Product(rs.getInt("ProductID"),
-                    rs.getString("Name"),
-                    rs.getString("SKU"),
-                    rs.getDouble("Cost"),
-                    rs.getDouble("Price"),
-                    rs.getInt("StockQuantity"),
-                    rs.getString("Unit"),
-                    rs.getString("Description"),
-                    rs.getString("ImageURL"),
-                    rs.getString("Status") != null ? rs.getString("Status").trim() : null,
-                    rs.getInt("CategoryID"),
-                    rs.getTimestamp("CreatedDate"),
-                    rs.getTimestamp("UpdatedDate")));
+            list.add(map(rs));
+        }
+        return list;
+    }
+
+    public List<Product> getAllProducts() throws Exception {
+        List<Product> list = new ArrayList<>();
+        String sql = """
+            SELECT p.*, l.MinStockLevel 
+            FROM Products p
+            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+            """;
+        PreparedStatement st = connection.prepareStatement(sql);
+        ResultSet rs = st.executeQuery();
+        while (rs.next()) {
+            list.add(map(rs));
         }
         return list;
     }
@@ -206,6 +285,9 @@ public class ProductDAO extends DBContext {
         st.setString(6, p.getUnit());
         st.setString(7, p.getDescription());
         st.setString(8, p.getImageURL());
+        if (p.getQuantity() <= 0) {
+            p.setStatus("Deactivated");
+        }
         st.setString(9, p.getStatus());
         st.setInt(10, p.getCategoryId());
 
@@ -230,6 +312,9 @@ public class ProductDAO extends DBContext {
         st.setString(6, p.getUnit());
         st.setString(7, p.getDescription());
         st.setString(8, p.getImageURL());
+        if (p.getQuantity() <= 0) {
+            p.setStatus("Deactivated");
+        }
         st.setString(9, p.getStatus());
         st.setInt(10, p.getCategoryId());
         st.setInt(11, p.getId());
@@ -249,29 +334,56 @@ public class ProductDAO extends DBContext {
     }
 
     public Product getProductById(int id) {
-        String sql = "SELECT * FROM Products WHERE ProductID = ?";
+        String sql = """
+            SELECT p.*, l.MinStockLevel 
+            FROM Products p
+            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+            WHERE p.ProductID = ?
+        """;
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setInt(1, id);
             ResultSet rs = st.executeQuery();
             if (rs.next()) {
-                return new Product(rs.getInt("ProductID"),
-                        rs.getString("Name"),
-                        rs.getString("SKU"),
-                        rs.getDouble("Cost"),
-                        rs.getDouble("Price"),
-                        rs.getInt("StockQuantity"),
-                        rs.getString("Unit"),
-                        rs.getString("Description"),
-                        rs.getString("ImageURL"),
-                        rs.getString("Status") != null ? rs.getString("Status").trim() : null,
-                        rs.getInt("CategoryID"),
-                        rs.getTimestamp("CreatedDate"),
-                        rs.getTimestamp("UpdatedDate"));
+                return map(rs);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return null;
+    }
+
+    public Product getByIdAndSupplier(int productId, int supplierId) {
+        String sql = """
+        SELECT p.ProductID, p.Name, p.SKU, p.Cost, p.Price, p.StockQuantity, p.Unit,
+               p.Description, p.ImageURL, p.Status, p.CategoryID, p.CreatedDate, p.UpdatedDate, p.WarrantyPeriod,
+               sp.SupplyPrice
+        FROM dbo.Products p
+        INNER JOIN dbo.SupplierProduct sp ON p.ProductID = sp.ProductID
+        WHERE p.ProductID = ?
+          AND sp.SupplierID = ?
+          AND p.Status = 'Active'
+          AND sp.IsActive = 1
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            ps.setInt(2, supplierId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Product p = map(rs);
+                    double supplyPrice = rs.getDouble("SupplyPrice");
+                    if (supplyPrice > 0) {
+                        p.setCost(supplyPrice);
+                    }
+                    return p;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         return null;
     }
 
@@ -301,11 +413,14 @@ public class ProductDAO extends DBContext {
         return false;
     }
 
-    public List<Product> searchProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId)
+    public List<Product> searchProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status)
             throws Exception {
         List<Product> list = new ArrayList<>();
         CategoryDAO catDao = new CategoryDAO();
         StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE 1=1");
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            sql.append(" AND Status = ?");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -334,6 +449,10 @@ public class ProductDAO extends DBContext {
 
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
+
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            st.setString(paramIndex++, status);
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
@@ -374,9 +493,12 @@ public class ProductDAO extends DBContext {
         return list;
     }
 
-    public int countProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId) throws Exception {
+    public int countProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status) throws Exception {
         CategoryDAO catDao = new CategoryDAO();
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM Products WHERE 1=1");
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            sql.append(" AND Status = ?");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -406,6 +528,10 @@ public class ProductDAO extends DBContext {
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
 
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            st.setString(paramIndex++, status);
+        }
+
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
             st.setString(paramIndex++, searchPattern);
@@ -433,11 +559,14 @@ public class ProductDAO extends DBContext {
         return 0;
     }
 
-    public List<Product> searchProductsPaginated(String keyword, Double minPrice, Double maxPrice, Integer categoryId,
+    public List<Product> searchProductsPaginated(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status,
             int page, int pageSize) throws Exception {
         List<Product> list = new ArrayList<>();
         CategoryDAO catDao = new CategoryDAO();
         StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE 1=1");
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            sql.append(" AND Status = ?");
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql.append(" AND (Name LIKE ? OR SKU LIKE ?)");
@@ -469,6 +598,10 @@ public class ProductDAO extends DBContext {
 
         PreparedStatement st = connection.prepareStatement(sql.toString());
         int paramIndex = 1;
+
+        if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
+            st.setString(paramIndex++, status);
+        }
 
         if (keyword != null && !keyword.trim().isEmpty()) {
             String searchPattern = "%" + keyword.trim() + "%";
@@ -518,7 +651,7 @@ public class ProductDAO extends DBContext {
         if (ids == null || ids.length == 0) {
             return false;
         }
-        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Inactive', UpdatedDate = GETDATE() WHERE ProductID IN (");
+        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Deactivated', UpdatedDate = GETDATE() WHERE ProductID IN (");
         for (int i = 0; i < ids.length; i++) {
             sql.append("?");
             if (i < ids.length - 1) {
@@ -572,8 +705,119 @@ public class ProductDAO extends DBContext {
             ps.setInt(2, productId);
             ps.setInt(3, quantity); // Đảm bảo không trừ quá số lượng đang có
             ps.executeUpdate();
+
+            // Auto-deactivate if stock hits zero
+            String checkSql = "UPDATE Products SET Status = 'Deactivated', UpdatedDate = GETDATE() WHERE ProductID = ? AND StockQuantity = 0";
+            try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+                checkPs.setInt(1, productId);
+                checkPs.executeUpdate();
+            }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public boolean bulkActivate(int[] ids) {
+        if (ids == null || ids.length == 0) {
+            return false;
+        }
+        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Active', UpdatedDate = GETDATE() WHERE ProductID IN (");
+        for (int i = 0; i < ids.length; i++) {
+            sql.append("?");
+            if (i < ids.length - 1) {
+                sql.append(",");
+            }
+        }
+        sql.append(")");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < ids.length; i++) {
+                ps.setInt(i + 1, ids[i]);
+            }
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public List<ProductPerformance> getTopSellingProducts(int limit) {
+        List<ProductPerformance> list = new ArrayList<>();
+        String sql = """
+            SELECT TOP (?) 
+                p.ProductID, p.SKU, p.Name,
+                SUM(sd.Quantity) as TotalQuantity,
+                SUM(sd.Quantity * sd.UnitPrice) as TotalRevenue
+            FROM dbo.Products p
+            JOIN dbo.StockOutDetails sd ON p.ProductID = sd.ProductID
+            GROUP BY p.ProductID, p.SKU, p.Name
+            ORDER BY TotalQuantity DESC
+            """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ProductPerformance pp = new ProductPerformance();
+                    pp.setProductId(rs.getInt("ProductID"));
+                    pp.setSku(rs.getString("SKU"));
+                    pp.setName(rs.getString("Name"));
+                    pp.setQuantitySold(rs.getInt("TotalQuantity"));
+                    pp.setRevenueGenerated(rs.getDouble("TotalRevenue"));
+                    list.add(pp);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public static class ProductPerformance {
+
+        private int productId;
+        private String sku, name;
+        private int quantitySold;
+        private double revenueGenerated;
+
+        // Getters/Setters
+        public int getProductId() {
+            return productId;
+        }
+
+        public void setProductId(int productId) {
+            this.productId = productId;
+        }
+
+        public String getSku() {
+            return sku;
+        }
+
+        public void setSku(String sku) {
+            this.sku = sku;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getQuantitySold() {
+            return quantitySold;
+        }
+
+        public void setQuantitySold(int quantitySold) {
+            this.quantitySold = quantitySold;
+        }
+
+        public double getRevenueGenerated() {
+            return revenueGenerated;
+        }
+
+        public void setRevenueGenerated(double revenueGenerated) {
+            this.revenueGenerated = revenueGenerated;
         }
     }
 }

@@ -153,7 +153,7 @@ public class CategoryDAO extends DBContext {
         }
         return null;
     }
-    
+
     public boolean isCategoryExists(String name) {
         String sql = "SELECT CategoryID FROM Categories WHERE CategoryName = ?";
         try {
@@ -219,7 +219,8 @@ public class CategoryDAO extends DBContext {
     }
 
     public Integer getCategoryIdByName(String name) {
-        if (name == null || name.trim().isEmpty()) return null;
+        if (name == null || name.trim().isEmpty())
+            return null;
         String sql = "SELECT CategoryID FROM Categories WHERE LTRIM(RTRIM(CategoryName)) = ?";
         try {
             PreparedStatement st = connection.prepareStatement(sql);
@@ -232,5 +233,17 @@ public class CategoryDAO extends DBContext {
             e.printStackTrace();
         }
         return null;
+    }
+    public java.util.Map<Integer, String> getCategoryIdToNameMap() {
+        java.util.Map<Integer, String> map = new java.util.HashMap<>();
+        String sql = "SELECT CategoryID, CategoryName FROM Categories";
+        try (PreparedStatement st = connection.prepareStatement(sql); ResultSet rs = st.executeQuery()) {
+            while (rs.next()) {
+                map.put(rs.getInt("CategoryID"), rs.getString("CategoryName"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return map;
     }
 }

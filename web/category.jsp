@@ -180,7 +180,7 @@
                         background: #f8f9fa;
                         color: #007bff;
                     }
-                    
+
                     .cat-pill a.has-children::after {
                         content: '▾';
                         margin-left: 5px;
@@ -301,9 +301,10 @@
 
                     <div class="admin-content">
                         <c:if test="${not empty sessionScope.error}">
-                            <div style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c2c2;">
+                            <div
+                                style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c2c2;">
                                 ${sessionScope.error}
-                                <c:remove var="error" scope="session"/>
+                                <c:remove var="error" scope="session" />
                             </div>
                         </c:if>
 
@@ -325,6 +326,14 @@
                                         <label>Đến</label>
                                         <input type="number" name="maxPrice" class="input-field" value="${maxPrice}"
                                             style="width: 100px;">
+                                    </div>
+                                    <div class="search-group">
+                                        <label>Trạng thái</label>
+                                        <select name="status" class="input-field" style="min-width: 120px;">
+                                            <option value="all" ${status == 'all' ? 'selected' : ''}>Tất cả</option>
+                                            <option value="Active" ${status == 'Active' ? 'selected' : ''}>Hoạt động</option>
+                                            <option value="Deactivated" ${status == 'Deactivated' ? 'selected' : ''}>Ngừng kinh doanh</option>
+                                        </select>
                                     </div>
                                     <c:if test="${not empty param.categoryId}">
                                         <input type="hidden" name="categoryId" value="${param.categoryId}">
@@ -348,7 +357,8 @@
                             </div>
                             <c:forEach items="${categories}" var="cat">
                                 <div class="cat-pill ${cat.id == param.categoryId ? 'active' : ''}">
-                                    <a href="category?categoryId=${cat.id}" class="${not empty cat.children ? 'has-children' : ''}">
+                                    <a href="category?categoryId=${cat.id}"
+                                        class="${not empty cat.children ? 'has-children' : ''}">
                                         ${cat.name}
                                     </a>
                                     <c:if test="${not empty cat.children}">
@@ -377,20 +387,32 @@
                             </c:forEach>
                         </div>
 
-                        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px; gap: 10px; align-items: center; flex-wrap: wrap;">
-                            <div id="bulkActions" style="display: none; gap: 10px; align-items: center; background: #f8fafc; padding: 5px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <div
+                            style="display: flex; justify-content: flex-end; margin-bottom: 20px; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <div id="bulkActions"
+                                style="display: none; gap: 10px; align-items: center; background: #f8fafc; padding: 5px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
                                 <span style="font-size: 13px; font-weight: 600; color: #64748b;">Hàng loạt:</span>
-                                <button type="button" onclick="submitBulkAction('softDelete')" class="btn btn-outline" style="background: #fef9c3; color: #854d0e; border-color: #fef08a; padding: 4px 8px; font-size: 12px;">Xóa mềm</button>
-                                <button type="button" onclick="submitBulkAction('hardDelete')" class="btn btn-outline" style="background: #fee2e2; color: #991b1b; border-color: #fecaca; padding: 4px 8px; font-size: 12px;">Xóa cứng</button>
+                                <button type="button" onclick="submitBulkAction('softDelete')" class="btn btn-outline"
+                                    style="background: #fef9c3; color: #854d0e; border-color: #fef08a; padding: 4px 8px; font-size: 12px;">Xóa
+                                    mềm</button>
+                                <button type="button" onclick="submitBulkAction('activate')" class="btn btn-outline"
+                                    style="background: #dcfce7; color: #166534; border-color: #bbf7d0; padding: 4px 8px; font-size: 12px;">Kích hoạt</button>
+                                <button type="button" onclick="submitBulkAction('hardDelete')" class="btn btn-outline"
+                                    style="background: #fee2e2; color: #991b1b; border-color: #fecaca; padding: 4px 8px; font-size: 12px;">Xóa
+                                    cứng</button>
                             </div>
-                            
-                            <a href="exportProducts" class="btn btn-outline" style="background: #dcfce7; color: #166534; border-color: #bbf7d0;">Export Excel</a>
-                            
-                            <form action="importProducts" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px;">
-                                <input type="file" name="file" accept=".xlsx, .xls" style="font-size: 12px; width: 150px;" required>
-                                <button type="submit" class="btn btn-primary" style="padding: 5px 10px;">Import Excel</button>
+
+                            <a href="exportProducts" class="btn btn-outline"
+                                style="background: #dcfce7; color: #166534; border-color: #bbf7d0;">Export Excel</a>
+
+                            <form action="importProducts" method="post" enctype="multipart/form-data"
+                                style="display: flex; gap: 5px;">
+                                <input type="file" name="file" accept=".xlsx, .xls"
+                                    style="font-size: 12px; width: 150px;" required>
+                                <button type="submit" class="btn btn-primary" style="padding: 5px 10px;">Import
+                                    Excel</button>
                             </form>
-                            
+
                             <a href="addProduct" class="btn btn-primary">+ Thêm sản phẩm mới</a>
                         </div>
 
@@ -415,7 +437,8 @@
                                 <table class="admin-table">
                                     <thead>
                                         <tr>
-                                            <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+                                            <th style="width: 40px;"><input type="checkbox" id="selectAll"
+                                                    onclick="toggleSelectAll(this)"></th>
                                             <th>ID</th>
                                             <th>Ảnh</th>
                                             <th>Tên sản phẩm</th>
@@ -428,7 +451,8 @@
                                     <tbody>
                                         <c:forEach items="${products}" var="p">
                                             <tr>
-                                                <td><input type="checkbox" name="selectedProducts" value="${p.id}" onclick="updateBulkActionsVisibility()"></td>
+                                                <td><input type="checkbox" name="selectedProducts" value="${p.id}"
+                                                        onclick="updateBulkActionsVisibility()"></td>
                                                 <td><small style="color: #999;">#${p.id}</small></td>
                                                 <td><img src="${p.imageURL}" class="product-img" alt="${p.name}"></td>
                                                 <td>
@@ -442,7 +466,8 @@
                                                         groupingUsed="true" />
                                                 </td>
                                                 <td>
-                                                    <span class="stock-badge ${p.quantity < 5 ? 'stock-low' : ''}">${p.quantity}</span>
+                                                    <span
+                                                        class="stock-badge ${p.quantity < 5 ? 'stock-low' : ''}">${p.quantity}</span>
                                                 </td>
                                                 <td>
                                                     <span
@@ -461,7 +486,7 @@
                                     </tbody>
                                 </table>
                             </form>
-                                </tbody>
+                            </tbody>
                             </table>
 
                             <!-- Pagination -->
@@ -480,23 +505,29 @@
                                         <c:if test="${not empty maxPrice}">
                                             <c:param name="maxPrice" value="${maxPrice}" />
                                         </c:if>
+                                        <c:if test="${not empty status}">
+                                            <c:param name="status" value="${status}" />
+                                        </c:if>
                                     </c:url>
 
                                     <c:set var="pageSep" value="${basePageUrl.contains('?') ? '&' : '?'}" />
 
                                     <c:if test="${currentPaginationPage > 1}">
                                         <a href="${basePageUrl}${pageSep}page=1" class="page-link">«</a>
-                                        <a href="${basePageUrl}${pageSep}page=${currentPaginationPage - 1}" class="page-link">‹</a>
+                                        <a href="${basePageUrl}${pageSep}page=${currentPaginationPage - 1}"
+                                            class="page-link">‹</a>
                                     </c:if>
 
                                     <c:forEach begin="${currentPaginationPage - 2 > 0 ? currentPaginationPage - 2 : 1}"
-                                        end="${currentPaginationPage + 2 < totalPages ? currentPaginationPage + 2 : totalPages}" var="i">
+                                        end="${currentPaginationPage + 2 < totalPages ? currentPaginationPage + 2 : totalPages}"
+                                        var="i">
                                         <a href="${basePageUrl}${pageSep}page=${i}"
                                             class="page-link ${i == currentPaginationPage ? 'active' : ''}">${i}</a>
                                     </c:forEach>
 
                                     <c:if test="${currentPaginationPage < totalPages}">
-                                        <a href="${basePageUrl}${pageSep}page=${currentPaginationPage + 1}" class="page-link">›</a>
+                                        <a href="${basePageUrl}${pageSep}page=${currentPaginationPage + 1}"
+                                            class="page-link">›</a>
                                         <a href="${basePageUrl}${pageSep}page=${totalPages}" class="page-link">»</a>
                                     </c:if>
                                 </div>
@@ -543,9 +574,14 @@
                     }
 
                     function submitBulkAction(action) {
-                        var confirmMsg = action === 'hardDelete' ?
-                            'Bạn có chắc chắn muốn XÓA VĨNH VIỄN các sản phẩm đã chọn không? Thao tác này không thể hoàn tác!' :
-                            'Bạn có muốn chuyển trạng thái các sản phẩm đã chọn thành Inactive không?';
+                        var confirmMsg = '';
+                        if (action === 'hardDelete') {
+                            confirmMsg = 'Bạn có chắc chắn muốn XÓA VĨNH VIỄN các sản phẩm đã chọn không? Thao tác này không thể hoàn tác!';
+                        } else if (action === 'activate') {
+                            confirmMsg = 'Bạn có muốn chuyển trạng thái các sản phẩm đã chọn thành Active không?';
+                        } else {
+                            confirmMsg = 'Bạn có muốn chuyển trạng thái các sản phẩm đã chọn thành Deactive không?';
+                        }
 
                         if (confirm(confirmMsg)) {
                             document.getElementById('bulkActionType').value = action;

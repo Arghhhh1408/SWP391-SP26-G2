@@ -82,25 +82,30 @@ public class SystemLogDAO extends DBContext {
         return list;
     }
 
-    public List<SystemLog> getStaffDashboardLogs(int limit) {
+    public List<SystemLog> getWarehouseStaffLogs(int limit) {
         List<SystemLog> list = new ArrayList<>();
 
-        String sql = "SELECT TOP (?) * "
-                + "FROM [dbo].[SystemLog] "
-                + "WHERE Action IN (?, ?, ?, ?, ?, ?, ?) "
-                + "ORDER BY LogDate DESC";
+        String sql = "SELECT TOP (?) l.*, u.FullName "
+                + "FROM [dbo].[SystemLog] l "
+                + "LEFT JOIN [dbo].[User] u ON l.UserID = u.UserID "
+                + "WHERE l.Action IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                + "ORDER BY l.LogDate DESC";
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             stm.setInt(1, limit);
 
             stm.setString(2, "CREATE_STOCKIN");
-            stm.setString(3, "COMPLETE_WARRANTY");
-            stm.setString(4, "REJECT_WARRANTY");
-            stm.setString(5, "COMPLETE_RETURN");
-            stm.setString(6, "REJECT_RETURN");
-            stm.setString(7, "NOTIFY_LOW_STOCK");
-            stm.setString(8, "UNNOTIFY_LOW_STOCK");
+            stm.setString(3, "UPDATE_STOCKIN");
+            stm.setString(4, "DELETE_STOCKIN");
+            stm.setString(5, "VIEW_SUPPLIER_DEBT");
+            stm.setString(6, "VIEW_SUPPLIER_PRODUCT");
+            stm.setString(7, "COMPLETE_WARRANTY");
+            stm.setString(8, "REJECT_WARRANTY");
+            stm.setString(9, "COMPLETE_RETURN");
+            stm.setString(10, "REJECT_RETURN");
+            stm.setString(11, "NOTIFY_LOW_STOCK");
+            stm.setString(12, "UNNOTIFY_LOW_STOCK");
 
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {
@@ -112,6 +117,7 @@ public class SystemLogDAO extends DBContext {
                 log.setDescription(rs.getString("Description"));
                 log.setLogDate(rs.getTimestamp("LogDate"));
                 log.setIpAddress(rs.getString("IPAddress"));
+                log.setName(rs.getString("FullName"));
                 list.add(log);
             }
         } catch (Exception e) {
@@ -159,8 +165,8 @@ public class SystemLogDAO extends DBContext {
             String idSearch = "%ID: " + productId + "%";
             stm.setString(1, idSearch);
             stm.setString(2, "Product ID: " + productId + "%");
-            stm.setString(3, "%Product ID: " + productId + "%"); 
-            
+            stm.setString(3, "%Product ID: " + productId + "%");
+
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {
                 SystemLog log = new SystemLog();
@@ -214,7 +220,7 @@ public class SystemLogDAO extends DBContext {
                 log.setLogDate(rs.getTimestamp("LogDate"));
                 log.setIpAddress(rs.getString("IPAddress"));
                 log.setName(rs.getString("FullName"));
-                
+
                 // 3. Resolve Product Name from Description
                 String desc = log.getDescription();
                 Integer pid = null;
@@ -229,13 +235,14 @@ public class SystemLogDAO extends DBContext {
                         if (end > 0) {
                             pid = Integer.parseInt(idStr.substring(0, end));
                         }
-                    } catch (Exception e) {}
+                    } catch (Exception e) {
+                    }
                 }
-                
+
                 if (pid != null) {
                     log.setProductName(productMap.get(pid));
                 }
-                
+
                 list.add(log);
             }
         } catch (Exception e) {

@@ -8,45 +8,21 @@
         <h3>📜 Lịch sử đơn hàng</h3>
     </div>
     <div class="box-body">
-        <form action="orders" method="get" style="background: #ffffff; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-            <div style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr 1fr; gap: 15px; align-items: end;">
-
-                <div>
-                    <label style="display:block; font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase;">Tìm kiếm đơn hàng</label>
-                    <input type="text" name="keyword" value="${keyword}" 
-                           placeholder="Mã đơn, SĐT khách..." 
-                           style="width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;">
-                </div>
-
-                <div>
-                    <label style="display:block; font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase;">Thời gian</label>
-                    <select name="range" style="width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; font-size: 14px;">
-                        <option value="all" ${range == 'all' ? 'selected' : ''}>Tất cả thời gian</option>
-                        <option value="today" ${range == 'today' ? 'selected' : ''}>Hôm nay</option>
-                        <option value="yesterday" ${range == 'yesterday' ? 'selected' : ''}>Hôm qua</option>
-                        <option value="this_week" ${range == 'this_week' ? 'selected' : ''}>Tuần này</option>
-                        <option value="this_month" ${range == 'this_month' ? 'selected' : ''}>Tháng này</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label style="display:block; font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase;">Sắp xếp</label>
-                    <select name="sort" style="width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; font-size: 14px;">
-                        <option value="new" ${sort == 'new' ? 'selected' : ''}>Mới nhất trước</option>
-                        <option value="old" ${sort == 'old' ? 'selected' : ''}>Cũ nhất trước</option>
-                        <option value="total_desc" ${sort == 'total_desc' ? 'selected' : ''}>Giá trị giảm dần</option>
-                    </select>
-                </div>
-
-                <div style="display: flex; gap: 8px;">
-                    <button type="submit" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 11px; border-radius: 8px; cursor: pointer; font-weight: 700; transition: 0.2s;">
-                        Lọc
-                    </button>
-                    <a href="orders" style="background: #f1f5f9; color: #475569; text-decoration: none; padding: 11px; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1px solid #cbd5e1;">
-                        ↻
-                    </a>
-                </div>
-            </div>
+        <form action="${currentPage == 'manager_dashboard' ? 'manager_dashboard' : 'sales_dashboard'}" method="get" style="margin-bottom: 20px; display: flex; gap: 10px;">
+            <input type="hidden" name="tab" value="orders">
+            <input type="text" name="orderSearch" value="${orderSearch}" 
+                   placeholder="Nhập mã hóa đơn hoặc SĐT..." 
+                   style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <button type="submit" class="btn" style="background: #3b82f6; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">
+                Tìm kiếm
+            </button>
+            <c:if test="${acc.roleID == 2}">
+                <a href="exportManager?type=stockout_details&keyword=${orderSearch}" 
+                   class="btn" 
+                   style="background: #10b981; color: white; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                    <span>📥</span> Xuất Excel
+                </a>
+            </c:if>
         </form>
 
         <table style="width: 100%; border-collapse: collapse;">

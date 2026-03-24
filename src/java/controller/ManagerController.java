@@ -1,9 +1,11 @@
 package controller;
 
 import dao.CategoryDAO;
+import dao.ProductDAO;
 import dao.ReturnDAO;
 import dao.WarrantyClaimDAO;
 import java.io.IOException;
+import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -34,13 +36,25 @@ public class ManagerController extends HttpServlet {
             ReturnDAO dao = new ReturnDAO();
             request.setAttribute("returns", dao.listAll());
         } else if ("warranty".equals(tab)) {
-            WarrantyClaimDAO dao = new WarrantyClaimDAO();
+            dao.WarrantyClaimDAO dao = new dao.WarrantyClaimDAO();
             request.setAttribute("claims", dao.listAll());
+        } else if ("orders".equals(tab)) {
+            String keyword = request.getParameter("orderSearch");
+            dao.OrderHistoryDAO oDao = new dao.OrderHistoryDAO();
+            List<model.OrderHistory> list;
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                list = oDao.searchOrders(keyword.trim(), "new");
+            } else {
+                list = oDao.getAllOrders("new");
+            }
+            request.setAttribute("orders", list);
+            request.setAttribute("orderSearch", keyword);
         } else {
             // Dashboard Overview / Default
             WarrantyClaimDAO wDao = new WarrantyClaimDAO();
             ReturnDAO rDao = new ReturnDAO();
             CategoryDAO cDao = new CategoryDAO();
+            ProductDAO pDao = new ProductDAO();
             
             var claims = wDao.listAll();
             var returns = rDao.listAll();
@@ -56,6 +70,7 @@ public class ManagerController extends HttpServlet {
             // Load categories for the Add Product form
             try {
                 request.setAttribute("categories", cDao.getHierarchicalList());
+                request.setAttribute("lowStockProducts", pDao.getLowStockProducts(10)); // 10 is the fallback default
             } catch (Exception e) {
                 e.printStackTrace();
             }

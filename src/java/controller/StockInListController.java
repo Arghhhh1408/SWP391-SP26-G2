@@ -4,6 +4,7 @@
  */
 package controller;
 
+import dao.NotificationDAO;
 import dao.StockInDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -13,9 +14,17 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import model.Notification;
 import model.StockIn;
+import model.StockInDetail;
 import model.User;
+import dao.SystemLogDAO;
+import model.SystemLog;
+import websocket.NotificationEndpoint;
 
 /**
  *
@@ -50,7 +59,33 @@ public class StockInListController extends HttpServlet {
         }
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
+    private void loadList(HttpServletRequest request, HttpServletResponse response, String message, String messageType)
+            throws ServletException, IOException {
+
+        HttpSession session = request.getSession(false);
+        StockInDAO dao = new StockInDAO();
+        List<StockIn> list = dao.getAllStockIn();
+
+        if (message == null && session != null) {
+            String flashMessage = (String) session.getAttribute("flashMessage");
+            String flashType = (String) session.getAttribute("flashType");
+
+            if (flashMessage != null) {
+                message = flashMessage;
+                messageType = flashType;
+                session.removeAttribute("flashMessage");
+                session.removeAttribute("flashType");
+            }
+        }
+
+        request.setAttribute("stockList", list);
+        request.setAttribute("message", message);
+        request.setAttribute("messageType", messageType);
+        request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+    }
+
+    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the
+    // + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
      *
@@ -62,6 +97,7 @@ public class StockInListController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("acc") == null) {
             response.sendRedirect("login.jsp");
@@ -69,11 +105,6 @@ public class StockInListController extends HttpServlet {
         }
 
         User user = (User) session.getAttribute("acc");
-        if (user == null) {
-            response.sendRedirect("login.jsp");
-            return;
-        }
-
         if (user.getRoleID() != 1 && user.getRoleID() != 2) {
             response.sendRedirect("login.jsp");
             return;
@@ -82,60 +113,137 @@ public class StockInListController extends HttpServlet {
         String action = request.getParameter("action");
         StockInDAO dao = new StockInDAO();
 
-        if (action == null) {
-            List<StockIn> list = dao.getAllStockIn();
-            request.setAttribute("stockList", list);
-            request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+        if (action == null || action.trim().isEmpty()) {
+            loadList(request, response, null, null);
             return;
         }
 
         switch (action) {
-            case "edit":
-                try {
+            case "requestCancel":
+    try {
                 int id = Integer.parseInt(request.getParameter("id"));
-                StockIn stockIn = dao.getStockInById(id);
+                String reason = request.getParameter("reason");
 
-                if (stockIn != null) {
-                    request.setAttribute("stockIn", stockIn);
-                    request.getRequestDispatcher("editStockIn.jsp").forward(request, response);
-                } else {
-                    request.setAttribute("message", "Không tìm thấy phiếu nhập");
-                    List<StockIn> list = dao.getAllStockIn();
-                    request.setAttribute("stockList", list);
-                    request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+                if (reason == null || reason.trim().isEmpty()) {
+                    loadList(request, response, "Vui lòng nhập lý do hủy phiếu.", "error");
+                    return;
                 }
-            } catch (Exception e) {
-                request.setAttribute("message", "Dữ liệu không hợp lệ");
-                List<StockIn> list = dao.getAllStockIn();
-                request.setAttribute("stockList", list);
-                request.getRequestDispatcher("stockinList.jsp").forward(request, response);
-            }
-            break;
 
-            case "delete":
+                // Rule mới:
+                // Không cho hủy nếu đã nhận hàng > 0 hoặc paymentStatus khác Unpaid
+                boolean canCancel = dao.canRequestCancelStockIn(id);
+
+                if (!canCancel) {
+                    loadList(request, response,
+                            "Không thể hủy phiếu vì đã có hàng nhận vào kho hoặc đã phát sinh thanh toán.",
+                            "error");
+                    return;
+                }
+
+                boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason.trim());
+
                 try {
-                int id = Integer.parseInt(request.getParameter("id"));
-                boolean deleted = dao.deleteStockIn(id);
-
-                if (deleted) {
-                    request.setAttribute("message", "Xóa phiếu nhập thành công");
-                } else {
-                    request.setAttribute("message", "Xóa phiếu nhập thất bại");
+                    SystemLogDAO logDAO = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+                    log.setUserID(user.getUserID());
+                    log.setAction("REQUEST_CANCEL_STOCKIN");
+                    log.setTargetObject("StockIn");
+                    log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason.trim());
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDAO.insertLog(log);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
+
+                if (ok) {
+                    try {
+                        sendCancelRequestNotification(user, id, reason.trim());
+                    } catch (Exception notifEx) {
+                        notifEx.printStackTrace();
+                    }
+                }
+
+                loadList(request, response,
+                        ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.",
+                        ok ? "success" : "error");
+                return;
+
             } catch (Exception e) {
-                request.setAttribute("message", "Dữ liệu không hợp lệ");
+                e.printStackTrace();
+                loadList(request, response, "Dữ liệu không hợp lệ.", "error");
+                return;
             }
 
-            List<StockIn> list = dao.getAllStockIn();
-            request.setAttribute("stockList", list);
-            request.getRequestDispatcher("stockinList.jsp").forward(request, response);
-            break;
+            case "approveCancel":
+                if (user.getRoleID() != 2) {
+                    response.sendRedirect("login.jsp");
+                    return;
+                }
+
+                try {
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    boolean ok = dao.approveCancelStockIn(id, user.getUserID());
+
+                    try {
+                        SystemLogDAO logDAO = new SystemLogDAO();
+                        SystemLog log = new SystemLog();
+                        log.setUserID(user.getUserID());
+                        log.setAction("APPROVE_CANCEL_STOCKIN");
+                        log.setTargetObject("StockIn");
+                        log.setDescription("Duyệt hủy phiếu nhập | StockInID: " + id);
+                        log.setIpAddress(request.getRemoteAddr());
+                        logDAO.insertLog(log);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
+                    loadList(request, response,
+                            ok ? "Đã duyệt hủy phiếu." : "Duyệt hủy thất bại.",
+                            ok ? "success" : "error");
+                    return;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    loadList(request, response, "Dữ liệu không hợp lệ.", "error");
+                    return;
+                }
+
+            case "rejectCancel":
+                if (user.getRoleID() != 2) {
+                    response.sendRedirect("login.jsp");
+                    return;
+                }
+
+                try {
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    boolean ok = dao.rejectCancelStockIn(id);
+
+                    try {
+                        SystemLogDAO logDAO = new SystemLogDAO();
+                        SystemLog log = new SystemLog();
+                        log.setUserID(user.getUserID());
+                        log.setAction("REJECT_CANCEL_STOCKIN");
+                        log.setTargetObject("StockIn");
+                        log.setDescription("Từ chối hủy phiếu nhập | StockInID: " + id);
+                        log.setIpAddress(request.getRemoteAddr());
+                        logDAO.insertLog(log);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
+                    loadList(request, response,
+                            ok ? "Đã từ chối yêu cầu hủy." : "Từ chối yêu cầu hủy thất bại.",
+                            ok ? "success" : "error");
+                    return;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    loadList(request, response, "Dữ liệu không hợp lệ.", "error");
+                    return;
+                }
 
             default:
-                List<StockIn> defaultList = dao.getAllStockIn();
-                request.setAttribute("stockList", defaultList);
-                request.getRequestDispatcher("stockinList.jsp").forward(request, response);
-                break;
+                loadList(request, response, null, null);
         }
     }
 
@@ -153,38 +261,145 @@ public class StockInListController extends HttpServlet {
 
         request.setCharacterEncoding("UTF-8");
 
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("acc") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        User user = (User) session.getAttribute("acc");
+        if (user.getRoleID() != 1 && user.getRoleID() != 2) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
         String action = request.getParameter("action");
         StockInDAO dao = new StockInDAO();
 
         if ("update".equals(action)) {
             try {
                 int stockInId = Integer.parseInt(request.getParameter("stockInId"));
-                String stockStatus = request.getParameter("stockStatus");
-                String paymentStatus = request.getParameter("paymentStatus");
                 String note = request.getParameter("note");
+                String paymentStatus = request.getParameter("paymentStatus");
 
-                StockIn s = new StockIn();
-                s.setStockInId(stockInId);
-                s.setStockStatus(stockStatus);
-                s.setPaymentStatus(paymentStatus);
-                s.setNote(note);
+                boolean validPaymentStatus = StockIn.PAYMENT_STATUS_UNPAID.equals(paymentStatus)
+                        || StockIn.PAYMENT_STATUS_PARTIAL.equals(paymentStatus)
+                        || StockIn.PAYMENT_STATUS_PAID.equals(paymentStatus)
+                        || StockIn.PAYMENT_STATUS_CANCELLED.equals(paymentStatus);
 
-                boolean updated = dao.updateStockIn(s);
-
-                if (updated) {
-                    request.setAttribute("message", "Cập nhật phiếu nhập thành công");
-                } else {
-                    request.setAttribute("message", "Cập nhật phiếu nhập thất bại");
+                if (!validPaymentStatus) {
+                    loadList(request, response, "Trạng thái thanh toán không hợp lệ.", "error");
+                    return;
                 }
 
+                boolean updated = dao.updateNoteAndPaymentStatus(stockInId, note, paymentStatus);
+
+                try {
+                    SystemLogDAO logDAO = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+                    log.setUserID(user.getUserID());
+                    log.setAction("UPDATE_STOCKIN");
+                    log.setTargetObject("StockIn");
+                    log.setDescription("Cập nhật phiếu nhập | StockInID: " + stockInId
+                            + " | PaymentStatus: " + paymentStatus
+                            + " | Note: " + note);
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDAO.insertLog(log);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
+                loadList(request, response,
+                        updated ? "Cập nhật phiếu nhập thành công." : "Cập nhật phiếu nhập thất bại.",
+                        updated ? "success" : "error");
+                return;
+
             } catch (Exception e) {
-                request.setAttribute("message", "Dữ liệu cập nhật không hợp lệ");
+                e.printStackTrace();
+                loadList(request, response, "Dữ liệu cập nhật không hợp lệ.", "error");
+                return;
             }
         }
 
-        List<StockIn> list = dao.getAllStockIn();
-        request.setAttribute("stockList", list);
-        request.getRequestDispatcher("stockinList.jsp").forward(request, response);
+        loadList(request, response, null, null);
+    }
+
+    // -----------------------------------------------------------------------
+    // Notification helper — Cancel Request
+    // -----------------------------------------------------------------------
+    private void sendCancelRequestNotification(User staff, int stockInId, String reason) {
+        StockInDAO dao = new StockInDAO();
+        StockIn stockIn = dao.getStockInById(stockInId);
+        if (stockIn == null) {
+            return;
+        }
+
+        List<StockInDetail> details = dao.getStockInDetailsByStockInId(stockInId);
+
+        // Timestamp (Asia/Ho_Chi_Minh)
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        String timeStr = DateTimeFormatter.ofPattern("HH:mm").format(now);
+        String dateStr = DateTimeFormatter.ofPattern("dd/MM/yyyy").format(now);
+
+        String staffName = (staff.getFullName() != null && !staff.getFullName().isEmpty())
+                ? staff.getFullName()
+                : staff.getUsername();
+
+        // Payment status label
+        String ps;
+        switch (stockIn.getPaymentStatus() != null ? stockIn.getPaymentStatus() : "") {
+            case StockIn.PAYMENT_STATUS_PAID:
+                ps = "Đã thanh toán";
+                break;
+            case StockIn.PAYMENT_STATUS_PARTIAL:
+                ps = "Thanh toán một phần";
+                break;
+            case StockIn.PAYMENT_STATUS_CANCELLED:
+                ps = "Đã hủy";
+                break;
+            default:
+                ps = "Chưa thanh toán";
+        }
+
+        // Build message
+        StringBuilder msg = new StringBuilder();
+        msg.append(timeStr).append(" ").append(dateStr).append("\n");
+        msg.append("Lý do: ").append(reason).append("\n");
+        msg.append("Nhà cung cấp: ").append(stockIn.getSupplierName()).append("\n");
+        msg.append("Chi tiết sản phẩm:\n");
+
+        for (StockInDetail d : details) {
+            String pName = (d.getProductName() != null && !d.getProductName().isEmpty())
+                    ? d.getProductName()
+                    : "SP#" + d.getProductId();
+            int remaining = d.getQuantity() - d.getReceivedQuantity();
+            msg.append("  - ").append(pName)
+                    .append(" | Số lượng: ").append(d.getQuantity())
+                    .append(" | đã thêm: ").append(d.getReceivedQuantity())
+                    .append(" | còn lại: ").append(remaining)
+                    .append(" | Đơn giá: ").append(String.format("%,.0f đ", d.getUnitCost()))
+                    .append(" | Thành tiền: ").append(String.format("%,.0f đ", d.getSubTotal()))
+                    .append("\n");
+        }
+        msg.append("Trạng thái thanh toán: ").append(ps);
+
+        String title = "Phiếu nhập #" + stockInId + " được yêu cầu hủy từ " + staffName;
+
+        NotificationDAO notifDAO = new NotificationDAO();
+        List<Integer> managerIds = notifDAO.getManagerIds();
+
+        for (int managerId : managerIds) {
+            Notification n = new Notification();
+            n.setUserId(managerId);
+            n.setTitle(title);
+            n.setMessage(msg.toString());
+            n.setType("STOCKIN_CANCEL_REQUEST");
+            notifDAO.insert(n);
+
+            // Push WebSocket badge update
+            int unread = notifDAO.countUnread(managerId);
+            NotificationEndpoint.sendToUser(managerId, "{\"unreadCount\":" + unread + "}");
+        }
     }
 
     /**

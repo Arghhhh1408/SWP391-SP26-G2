@@ -89,11 +89,13 @@ public class ProductCRUDController extends HttpServlet {
             String description = request.getParameter("description");
             String imageURL = request.getParameter("imageURL");
             String status = request.getParameter("status");
+            String lowStockThresholdStr = request.getParameter("lowStockThreshold");
             int categoryId = 0;
 
             double cost = 0;
             double price = 0;
             int quantity = 0;
+            int lowStockThreshold = 10; // Default
 
             try {
                 categoryId = Integer.parseInt(request.getParameter("categoryId"));
@@ -107,6 +109,8 @@ public class ProductCRUDController extends HttpServlet {
                     price = Double.parseDouble(priceStr);
                 if (quantityStr != null && !quantityStr.isEmpty())
                     quantity = Integer.parseInt(quantityStr);
+                if (lowStockThresholdStr != null && !lowStockThresholdStr.isEmpty())
+                    lowStockThreshold = Integer.parseInt(lowStockThresholdStr);
 
             } catch (NumberFormatException e) {
                 request.setAttribute("error", "Invalid number format for Cost, Price, or Quantity");
@@ -161,6 +165,7 @@ public class ProductCRUDController extends HttpServlet {
             p.setImageURL(imageURL);
             p.setStatus(status);
             p.setCategoryId(categoryId);
+            p.setLowStockThreshold(lowStockThreshold);
 
             if (idStr == null || idStr.isEmpty()) {
                 // Check SKU exists
@@ -173,12 +178,16 @@ public class ProductCRUDController extends HttpServlet {
                     return;
                 }
                 int newId = pDao.addProduct(p);
+                if (newId > 0) {
+                    new dao.LowStockDAO().saveOrUpdateAlert(newId, lowStockThreshold);
+                }
                 logProductAction(request, "ADD_PRODUCT", "Thêm sản phẩm mới: " + p.getName() + " | SKU: " + p.getSku() + " | ID: " + newId);
             } else {
                 int id = Integer.parseInt(idStr);
                 Product oldP = pDao.getProductById(id);
                 p.setId(id);
                 pDao.updateProduct(p);
+                new dao.LowStockDAO().saveOrUpdateAlert(id, lowStockThreshold);
                 logProductEdit(request, oldP, p);
             }
             response.sendRedirect(getAfterCrudRedirect(request));

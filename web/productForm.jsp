@@ -155,9 +155,15 @@
                                     <input type="number" name="quantity" class="form-control" value="${product.quantity}" min="0" required>
                                 </div>
 
-                                <div class="form-group">
+                                 <div class="form-group">
                                     <label>Bảo hành (tháng):</label>
                                     <input type="number" name="warrantyPeriod" class="form-control" value="${product.warrantyPeriod}" min="0" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Ngưỡng kho thấp:</label>
+                                    <input type="number" name="lowStockThreshold" class="form-control" value="${product.lowStockThreshold}" min="0" required>
+                                    <small style="color: #666;">Cảnh báo khi số lượng nhỏ hơn số này.</small>
                                 </div>
 
                                 <div class="form-group full-width">
