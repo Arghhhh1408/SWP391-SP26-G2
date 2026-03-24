@@ -32,6 +32,8 @@
         <% } %>
 
         <form action="sales-warranty-create" method="post">
+            <input type="hidden" name="stockOutId" value="<%= request.getAttribute("stockOutId") == null ? "" : request.getAttribute("stockOutId") %>">
+
             <div class="row">
                 <label for="sku">SKU (*)</label>
                 <input id="sku" name="sku" required value="<%= request.getAttribute("sku") == null ? "" : request.getAttribute("sku") %>">
@@ -39,12 +41,12 @@
 
             <div class="row">
                 <label for="productName">Tên sản phẩm</label>
-                <input id="productName" name="productName" value="<%= request.getAttribute("productName") == null ? "" : request.getAttribute("productName") %>">
+                <input id="productName" name="productName" value="<%= request.getAttribute("productName") == null ? "" : request.getAttribute("productName") %>" readonly style="background:#f8fafc;">
             </div>
 
             <div class="row">
-                <label for="customerName">Tên khách hàng (*)</label>
-                <input id="customerName" name="customerName" required value="<%= request.getAttribute("customerName") == null ? "" : request.getAttribute("customerName") %>">
+                <label for="customerName">Tên khách hàng</label>
+                <input id="customerName" name="customerName" value="<%= request.getAttribute("customerName") == null ? "" : request.getAttribute("customerName") %>" readonly style="background:#f8fafc;">
             </div>
 
             <div class="row">

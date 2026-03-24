@@ -490,16 +490,26 @@
                                         <td>${r.reason}</td>
                                         <td>${r.status}</td>
                                         <td>
-                                            <form action="staff_dashboard" method="post" style="display:inline-block;">
-                                                <input type="hidden" name="action" value="completeReturn">
-                                                <input type="hidden" name="id" value="${r.id}">
-                                                <button type="submit" class="btn">Hoàn tất</button>
-                                            </form>
-                                            <form action="staff_dashboard" method="post" style="display:inline-block; margin-left:8px;">
-                                                <input type="hidden" name="action" value="rejectReturn">
-                                                <input type="hidden" name="id" value="${r.id}">
-                                                <button type="submit" class="btn btn-light">Từ chối</button>
-                                            </form>
+                                            <c:choose>
+                                                <c:when test="${r.status == 'COMPLETED' || r.status == 'REJECTED' || r.status == 'REFUNDED' || r.status == 'CANCELLED'}">
+                                                    <span style="color:#64748b; font-weight:600;">Đã xử lý</span>
+                                                </c:when>
+                                                <c:when test="${r.status == 'NEW' || r.status == 'APPROVED'}">
+                                                    <form action="staff_dashboard" method="post" style="display:inline-block;">
+                                                        <input type="hidden" name="action" value="completeReturn">
+                                                        <input type="hidden" name="id" value="${r.id}">
+                                                        <button type="submit" class="btn">Hoàn thành</button>
+                                                    </form>
+                                                    <form action="staff_dashboard" method="post" style="display:inline-block; margin-left:8px;">
+                                                        <input type="hidden" name="action" value="rejectReturn">
+                                                        <input type="hidden" name="id" value="${r.id}">
+                                                        <button type="submit" class="btn btn-light">Từ chối</button>
+                                                    </form>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span style="color:#64748b; font-size:12px;">—</span>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </td>
                                     </tr>
                                 </c:forEach>
@@ -586,16 +596,23 @@
                                         <td>${c.issueDescription}</td>
                                         <td>${c.status}</td>
                                         <td>
-                                            <form action="staff_dashboard" method="post" style="display:inline-block;">
-                                                <input type="hidden" name="action" value="completeWarranty">
-                                                <input type="hidden" name="id" value="${c.id}">
-                                                <button type="submit" class="btn">Hoàn tất</button>
-                                            </form>
-                                            <form action="staff_dashboard" method="post" style="display:inline-block; margin-left:8px;">
-                                                <input type="hidden" name="action" value="rejectWarranty">
-                                                <input type="hidden" name="id" value="${c.id}">
-                                                <button type="submit" class="btn btn-light">Từ chối</button>
-                                            </form>
+                                            <c:choose>
+                                                <c:when test="${c.status == 'COMPLETED' || c.status == 'REJECTED' || c.status == 'CANCELLED'}">
+                                                    <span style="color:#64748b; font-weight:600;">Đã xử lý</span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <form action="staff_dashboard" method="post" style="display:inline-block;">
+                                                        <input type="hidden" name="action" value="completeWarranty">
+                                                        <input type="hidden" name="id" value="${c.id}">
+                                                        <button type="submit" class="btn">Hoàn tất</button>
+                                                    </form>
+                                                    <form action="staff_dashboard" method="post" style="display:inline-block; margin-left:8px;">
+                                                        <input type="hidden" name="action" value="rejectWarranty">
+                                                        <input type="hidden" name="id" value="${c.id}">
+                                                        <button type="submit" class="btn btn-light">Từ chối</button>
+                                                    </form>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </td>
                                     </tr>
                                 </c:forEach>

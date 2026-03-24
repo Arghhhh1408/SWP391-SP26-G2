@@ -10,6 +10,9 @@
             </head>
 
             <body>
+                <c:if test="${sessionScope.acc == null or sessionScope.acc.roleID ne 0}">
+                    <c:redirect url="login" />
+                </c:if>
                 <c:set var="currentPage" value="systemLog" scope="request" />
                 <jsp:include page="adminSidebar.jsp" />
 

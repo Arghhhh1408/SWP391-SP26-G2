@@ -1,8 +1,9 @@
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@taglib uri="jakarta.tags.core" prefix="c"%>
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="UTF-8">
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Chi tiết trả hàng &amp; hoàn tiền</title>
     </head>
@@ -73,13 +74,17 @@
             <br>
 
             <fieldset>
-                <legend>Ghi nhận hoàn tiền (khung)</legend>
+                <legend>Ghi nhận hoàn tiền</legend>
                 <form action="returns" method="post">
                     <input type="hidden" name="action" value="recordRefund" />
                     <input type="hidden" name="id" value="${rr.id}" />
 
-                    <label for="amount">Số tiền (*):</label>
-                    <input id="amount" type="text" name="refundAmount" required />
+                    <label for="amount">Số tiền hoàn (VNĐ) (*):</label>
+                    <input id="amount" type="text" name="refundAmount" required placeholder="VD: 850000 hoặc 1.000.000" />
+                    <br><br>
+
+                    <label for="amount2">Nhập lại số tiền hoàn (VNĐ) (*):</label>
+                    <input id="amount2" type="text" name="refundAmountConfirm" required placeholder="Phải trùng với ô trên" />
                     <br><br>
 
                     <label for="method">Phương thức (tùy chọn):</label>

@@ -1,6 +1,7 @@
 package controller;
 
 import dao.ReturnDAO;
+import dao.WarrantyLookupDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -10,6 +11,8 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.time.LocalDate;
+import model.ReturnLookupResult;
 import model.ReturnRequest;
 import model.ReturnStatus;
 import model.User;
@@ -118,6 +121,15 @@ public class ReturnRefundController extends HttpServlet {
             return;
         }
 
+        WarrantyLookupDAO wlDao = new WarrantyLookupDAO();
+        LocalDate latestPurchase = wlDao.getLatestPurchaseDateForSkuAndPhone(sku, customerPhone);
+        if (!ReturnLookupResult.isPurchaseWithinReturnWindow(latestPurchase)) {
+            request.setAttribute("error",
+                    "Chỉ được trả hàng trong vòng 7 ngày kể từ ngày mua (SKU + SĐT khách phải khớp giao dịch gần nhất).");
+            forwardBackToListWithData(request, response, dao);
+            return;
+        }
+
         ReturnRequest rr = dao.create(sku, productName, customerName, customerPhone, reason, conditionNote, actor);
         if (rr == null) {
             request.setAttribute("error", "Không thể tạo yêu cầu (kiểm tra DB/tables).");
@@ -171,13 +183,14 @@ public class ReturnRefundController extends HttpServlet {
             response.sendRedirect("returns");
             return;
         }
-        Double amount = tryParseDouble(safeTrim(request.getParameter("refundAmount")));
+        Double amount = tryParseMoney(safeTrim(request.getParameter("refundAmount")));
+        Double amountConfirm = tryParseMoney(safeTrim(request.getParameter("refundAmountConfirm")));
         String method = safeTrim(request.getParameter("refundMethod"));
         String reference = safeTrim(request.getParameter("refundReference"));
         String note = safeTrim(request.getParameter("note"));
 
-        if (amount == null) {
-            request.setAttribute("error", "Số tiền hoàn là bắt buộc (định dạng số).");
+        if (amount == null || amountConfirm == null || Math.abs(amount - amountConfirm) > 0.009) {
+            request.setAttribute("error", "Nhập hai lần cùng số tiền hoàn (VNĐ), có thể dùng dấu chấm phân cách hàng nghìn.");
             showDetail(request, response, dao);
             return;
         }
@@ -230,23 +243,36 @@ public class ReturnRefundController extends HttpServlet {
         }
     }
 
+    private static Double tryParseMoney(String s) {
+        if (s == null || s.isBlank()) {
+            return null;
+        }
+        String t = s.trim().replace(".", "").replace(",", ".");
+        try {
+            double v = Double.parseDouble(t);
+            return v >= 0 ? v : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private String safeTrim(String s) {
         return s == null ? null : s.trim();
     }
 
     private String getActor(HttpServletRequest request) {
-    HttpSession session = request.getSession();
-    Object acc = session.getAttribute("acc");
+        HttpSession session = request.getSession();
+        Object acc = session.getAttribute("acc");
 
-    if (acc instanceof User) {
-        User u = (User) acc;
-        if (u.getUsername() != null && !u.getUsername().isBlank()) {
-            return u.getUsername();
+        if (acc instanceof User) {
+            User u = (User) acc;
+            if (u.getUsername() != null && !u.getUsername().isBlank()) {
+                return u.getUsername();
+            }
+            return "user#" + u.getUserID();
         }
-        return "user#" + u.getUserID();
-    }
 
-    return "unknown";
-}
+        return "unknown";
+    }
 }
 
