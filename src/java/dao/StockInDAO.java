@@ -75,6 +75,55 @@ public class StockInDAO extends DBContext {
         return list;
     }
 
+    public StockIn getStockInByIdBasic(int stockInId) {
+        String sql = "SELECT s.StockInID, s.SupplierID, sup.Name AS SupplierName, s.Date, s.CreatedBy, "
+                + "       u.Username AS StaffName, s.Note, s.StockStatus, s.PaymentStatus, "
+                + "       s.CancelRequestNote, s.CancelRequestedBy, s.CancelRequestedAt, "
+                + "       s.CancelApprovedBy, s.CancelApprovedAt "
+                + "FROM StockIn s "
+                + "LEFT JOIN [User] u ON s.CreatedBy = u.UserID "
+                + "LEFT JOIN Suppliers sup ON s.SupplierID = sup.SupplierID "
+                + "WHERE s.StockInID = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, stockInId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    StockIn s = new StockIn();
+                    s.setStockInId(rs.getInt("StockInID"));
+                    s.setSupplierId(rs.getInt("SupplierID"));
+                    s.setSupplierName(rs.getString("SupplierName"));
+                    s.setDate(rs.getTimestamp("Date"));
+                    s.setCreatedBy(rs.getInt("CreatedBy"));
+                    s.setStaffName(rs.getString("StaffName"));
+                    s.setNote(rs.getString("Note"));
+                    s.setStockStatus(rs.getString("StockStatus"));
+                    s.setPaymentStatus(rs.getString("PaymentStatus"));
+                    s.setCancelRequestNote(rs.getString("CancelRequestNote"));
+
+                    int cancelRequestedBy = rs.getInt("CancelRequestedBy");
+                    if (!rs.wasNull()) {
+                        s.setCancelRequestedBy(cancelRequestedBy);
+                    }
+
+                    s.setCancelRequestedAt(rs.getTimestamp("CancelRequestedAt"));
+
+                    int cancelApprovedBy = rs.getInt("CancelApprovedBy");
+                    if (!rs.wasNull()) {
+                        s.setCancelApprovedBy(cancelApprovedBy);
+                    }
+
+                    s.setCancelApprovedAt(rs.getTimestamp("CancelApprovedAt"));
+                    return s;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
     public StockIn getStockInById(int stockInId) {
         String sql = "SELECT v.StockInID, v.SupplierID, v.SupplierName, v.Date, v.CreatedBy, "
                 + "       u.Username AS StaffName, v.Note, v.StockStatus, v.PaymentStatus, "
