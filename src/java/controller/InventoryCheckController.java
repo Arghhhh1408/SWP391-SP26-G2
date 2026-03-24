@@ -19,6 +19,9 @@ import java.sql.Date;
 import java.util.List;
 import model.InventoryCheckItem;
 import model.User;
+import dao.NotificationDAO;
+import model.Notification;
+import websocket.NotificationEndpoint;
 
 /**
  *
@@ -251,6 +254,30 @@ public class InventoryCheckController extends HttpServlet {
 
             if (ok) {
                 session.setAttribute("message", "Lưu kiểm kê thành công.");
+                
+                // Send notification to all managers
+                try {
+                    NotificationDAO nDao = new NotificationDAO();
+                    List<Integer> managerIds = nDao.getManagerIds();
+                    String senderName = (user.getFullName() != null && !user.getFullName().trim().isEmpty()) 
+                                        ? user.getFullName() : user.getUsername();
+                    
+                    for (Integer managerId : managerIds) {
+                        Notification n = new Notification();
+                        n.setUserId(managerId);
+                        n.setTitle("Kiểm kê kho mới");
+                        n.setMessage(senderName + " đã lưu kiểm kê, hãy kiểm tra");
+                        n.setType("INVENTORY_CHECK_SAVED");
+                        nDao.insert(n);
+                        
+                        // Push WebSocket real-time update
+                        int unread = nDao.countUnread(managerId);
+                        NotificationEndpoint.sendToUser(managerId, "{\"unreadCount\":" + unread + "}");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    // Log error but don't block the main flow
+                }
             } else {
                 session.setAttribute("error", "Lưu kiểm kê thất bại.");
             }
@@ -528,7 +555,7 @@ public class InventoryCheckController extends HttpServlet {
         request.setAttribute("approvalSessions", approvalSessions);
         request.setAttribute("selectedSessionCode", sessionCode);
         request.setAttribute("selectedSessionDate", first.getDate());
-        request.setAttribute("selectedSessionCreatedBy", first.getCreatedBy());
+        request.setAttribute("selectedSessionCreatedBy", first.getCreatedByName());
         request.setAttribute("selectedSessionSize", sessionItems.size());
         request.setAttribute("selectedSessionItems", sessionItems);
 
@@ -559,6 +586,29 @@ public class InventoryCheckController extends HttpServlet {
 
         if (ok) {
             session.setAttribute("message", "Approve phiếu kiểm kho thành công.");
+            
+            // Notify staff
+            InventoryCheckDAO daoNotify = new InventoryCheckDAO();
+            Integer creatorId = daoNotify.getCreatorIdBySessionCode(sessionCode);
+            if (creatorId != null) {
+                try {
+                    String managerName = (user.getFullName() != null && !user.getFullName().trim().isEmpty())
+                                        ? user.getFullName() : user.getUsername();
+                    Notification n = new Notification();
+                    n.setUserId(creatorId);
+                    n.setTitle("Phiếu kiểm kho đã được duyệt");
+                    n.setMessage("manager " + managerName + " đã Duyệt phiếu kiểm kê của bạn.");
+                    n.setType("INVENTORY_CHECK_APPROVED");
+                    
+                    NotificationDAO nDao = new NotificationDAO();
+                    if (nDao.insert(n)) {
+                        int unread = nDao.countUnread(creatorId);
+                        websocket.NotificationEndpoint.sendToUser(creatorId, "{\"unreadCount\":" + unread + "}");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         } else {
             session.setAttribute("error", "Approve phiếu kiểm kho thất bại.");
         }
@@ -597,6 +647,29 @@ public class InventoryCheckController extends HttpServlet {
 
         if (ok) {
             session.setAttribute("message", "Reject phiếu kiểm kho thành công.");
+            
+            // Notify staff
+            InventoryCheckDAO daoNotify = new InventoryCheckDAO();
+            Integer creatorId = daoNotify.getCreatorIdBySessionCode(sessionCode);
+            if (creatorId != null) {
+                try {
+                    String managerName = (user.getFullName() != null && !user.getFullName().trim().isEmpty())
+                                        ? user.getFullName() : user.getUsername();
+                    Notification n = new Notification();
+                    n.setUserId(creatorId);
+                    n.setTitle("Phiếu kiểm kho bị từ chối");
+                    n.setMessage("manager " + managerName + " đã Từ chối phiếu kiểm kê của bạn. Lý do: " + rejectReason);
+                    n.setType("INVENTORY_CHECK_REJECTED");
+                    
+                    NotificationDAO nDao = new NotificationDAO();
+                    if (nDao.insert(n)) {
+                        int unread = nDao.countUnread(creatorId);
+                        websocket.NotificationEndpoint.sendToUser(creatorId, "{\"unreadCount\":" + unread + "}");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         } else {
             session.setAttribute("error", "Reject phiếu kiểm kho thất bại.");
         }
