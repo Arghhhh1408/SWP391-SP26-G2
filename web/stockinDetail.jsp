@@ -303,6 +303,19 @@
                         </span>
                     </div>
                     <div class="summary-item">
+                        <strong>Thanh toán ban đầu:</strong>
+                        <span class="money">
+                            <fmt:formatNumber value="${stockIn.initialPaidAmount}" type="number" groupingUsed="true"/>
+                        </span>
+                    </div>
+
+                    <div class="summary-item">
+                        <strong>Công nợ phát sinh:</strong>
+                        <span class="money">
+                            <fmt:formatNumber value="${stockIn.totalAmountCalculated - stockIn.initialPaidAmount}" type="number" groupingUsed="true"/>
+                        </span>
+                    </div>
+                    <div class="summary-item">
                         <strong>Trạng thái nhập:</strong>
                         <div style="margin-top:6px;">
                             <c:choose>
@@ -368,84 +381,85 @@
                     </div>
                 </c:if>
             </div>
+            <c:if test="${sessionScope.acc.roleID == 1}">
+                <div class="card">
+                    <h3 style="margin-bottom:16px; color:#1f4e79;">Chi tiết hàng nhập</h3>
 
-            <div class="card">
-                <h3 style="margin-bottom:16px; color:#1f4e79;">Chi tiết hàng nhập</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Detail ID</th>
+                                    <th>Product ID</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th>SKU</th>
+                                    <th>ĐVT</th>
+                                    <th class="text-center">Số lượng đặt</th>
+                                    <th class="text-center">Đã nhận</th>
+                                    <th class="text-center">Còn lại</th>
+                                    <th>Giá nhập</th>
+                                    <th>Thành tiền</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:if test="${empty details}">
+                                    <tr>
+                                        <td colspan="11" class="empty-state">Không có chi tiết phiếu nhập.</td>
+                                    </tr>
+                                </c:if>
 
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Detail ID</th>
-                                <th>Product ID</th>
-                                <th>Tên sản phẩm</th>
-                                <th>SKU</th>
-                                <th>ĐVT</th>
-                                <th class="text-center">Số lượng đặt</th>
-                                <th class="text-center">Đã nhận</th>
-                                <th class="text-center">Còn lại</th>
-                                <th>Giá nhập</th>
-                                <th>Thành tiền</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <c:if test="${empty details}">
-                            <tr>
-                                <td colspan="11" class="empty-state">Không có chi tiết phiếu nhập.</td>
-                            </tr>
-                        </c:if>
+                                <c:forEach var="d" items="${details}">
+                                    <tr>
+                                        <td>${d.detailId}</td>
+                                        <td>${d.productId}</td>
+                                        <td>${d.productName}</td>
+                                        <td>${d.sku}</td>
+                                        <td>${d.unit}</td>
+                                        <td class="text-center">${d.quantity}</td>
+                                        <td class="text-center">${d.receivedQuantity}</td>
+                                        <td class="text-center">${d.quantity - d.receivedQuantity}</td>
+                                        <td class="money">
+                                            <fmt:formatNumber value="${d.unitCost}" type="number" groupingUsed="true"/>
+                                        </td>
+                                        <td class="money">
+                                            <fmt:formatNumber value="${d.subTotal}" type="number" groupingUsed="true"/>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${stockIn.stockStatus == 'Pending' && (d.quantity - d.receivedQuantity) > 0}">
+                                                    <form action="stockinDetail" method="post" class="receive-form">
+                                                        <input type="hidden" name="action" value="receive">
+                                                        <input type="hidden" name="stockInId" value="${stockIn.stockInId}">
+                                                        <input type="hidden" name="detailId" value="${d.detailId}">
 
-                        <c:forEach var="d" items="${details}">
-                            <tr>
-                                <td>${d.detailId}</td>
-                                <td>${d.productId}</td>
-                                <td>${d.productName}</td>
-                                <td>${d.sku}</td>
-                                <td>${d.unit}</td>
-                                <td class="text-center">${d.quantity}</td>
-                                <td class="text-center">${d.receivedQuantity}</td>
-                                <td class="text-center">${d.quantity - d.receivedQuantity}</td>
-                                <td class="money">
-                            <fmt:formatNumber value="${d.unitCost}" type="number" groupingUsed="true"/>
-                            </td>
-                            <td class="money">
-                            <fmt:formatNumber value="${d.subTotal}" type="number" groupingUsed="true"/>
-                            </td>
-                            <td>
-                            <c:choose>
-                                <c:when test="${stockIn.stockStatus == 'Pending' && (d.quantity - d.receivedQuantity) > 0}">
-                                    <form action="stockinDetail" method="post" class="receive-form">
-                                        <input type="hidden" name="action" value="receive">
-                                        <input type="hidden" name="stockInId" value="${stockIn.stockInId}">
-                                        <input type="hidden" name="detailId" value="${d.detailId}">
+                                                        <input type="number"
+                                                               name="receiveQty"
+                                                               min="1"
+                                                               max="${d.quantity - d.receivedQuantity}"
+                                                               placeholder="SL nhận"
+                                                               required>
 
-                                        <input type="number"
-                                               name="receiveQty"
-                                               min="1"
-                                               max="${d.quantity - d.receivedQuantity}"
-                                               placeholder="SL nhận"
-                                               required>
+                                                        <button type="submit" class="btn btn-primary">Nhận hàng</button>
+                                                    </form>
+                                                </c:when>
 
-                                        <button type="submit" class="btn btn-primary">Nhận hàng</button>
-                                    </form>
-                                </c:when>
+                                                <c:when test="${(d.quantity - d.receivedQuantity) <= 0}">
+                                                    <span class="badge badge-stock-completed">Đã nhận đủ</span>
+                                                </c:when>
 
-                                <c:when test="${(d.quantity - d.receivedQuantity) <= 0}">
-                                    <span class="badge badge-stock-completed">Đã nhận đủ</span>
-                                </c:when>
-
-                                <c:otherwise>
-                                    <span style="color:#777;">Không thể thao tác</span>
-                                </c:otherwise>
-                            </c:choose>
-                            </td>
-                            </tr>
-                        </c:forEach>
-                        </tbody>
-                    </table>
+                                                <c:otherwise>
+                                                    <span style="color:#777;">Không thể thao tác</span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            </c:if>
         </div>
     </body>
 </html>

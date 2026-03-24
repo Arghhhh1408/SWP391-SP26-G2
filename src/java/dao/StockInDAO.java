@@ -26,9 +26,11 @@ public class StockInDAO extends DBContext {
                 + "       v.CancelRequestNote, v.CancelRequestedBy, v.CancelRequestedAt, "
                 + "       v.CancelApprovedBy, v.CancelApprovedAt, "
                 + "       v.TotalOrderedQuantity, v.TotalReceivedQuantity, v.TotalRemainingQuantity, "
-                + "       v.TotalAmountCalculated "
+                + "       v.TotalAmountCalculated, "
+                + "       ISNULL(s.InitialPaidAmount, 0) AS InitialPaidAmount "
                 + "FROM vw_StockInProgress v "
                 + "LEFT JOIN [User] u ON v.CreatedBy = u.UserID "
+                + "LEFT JOIN StockIn s ON v.StockInID = s.StockInID "
                 + "ORDER BY v.StockInID DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
@@ -45,6 +47,7 @@ public class StockInDAO extends DBContext {
                 s.setStockStatus(rs.getString("StockStatus"));
                 s.setPaymentStatus(rs.getString("PaymentStatus"));
                 s.setCancelRequestNote(rs.getString("CancelRequestNote"));
+                s.setInitialPaidAmount(rs.getDouble("InitialPaidAmount"));
 
                 int cancelRequestedBy = rs.getInt("CancelRequestedBy");
                 if (!rs.wasNull()) {
@@ -78,9 +81,11 @@ public class StockInDAO extends DBContext {
                 + "       v.CancelRequestNote, v.CancelRequestedBy, v.CancelRequestedAt, "
                 + "       v.CancelApprovedBy, v.CancelApprovedAt, "
                 + "       v.TotalOrderedQuantity, v.TotalReceivedQuantity, v.TotalRemainingQuantity, "
-                + "       v.TotalAmountCalculated "
+                + "       v.TotalAmountCalculated, "
+                + "       ISNULL(s.InitialPaidAmount, 0) AS InitialPaidAmount "
                 + "FROM vw_StockInProgress v "
                 + "LEFT JOIN [User] u ON v.CreatedBy = u.UserID "
+                + "LEFT JOIN StockIn s ON v.StockInID = s.StockInID "
                 + "WHERE v.StockInID = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -98,6 +103,7 @@ public class StockInDAO extends DBContext {
                     s.setStockStatus(rs.getString("StockStatus"));
                     s.setPaymentStatus(rs.getString("PaymentStatus"));
                     s.setCancelRequestNote(rs.getString("CancelRequestNote"));
+                    s.setInitialPaidAmount(rs.getDouble("InitialPaidAmount"));
 
                     int cancelRequestedBy = rs.getInt("CancelRequestedBy");
                     if (!rs.wasNull()) {
@@ -163,117 +169,98 @@ public class StockInDAO extends DBContext {
     }
 
     public int insertStockInWithDetailsAndDebt(StockIn stockIn, List<StockInDetail> details, double paidNow) {
-        String insertStockIn = """
-        INSERT INTO StockIn (SupplierID, TotalAmount, CreatedBy, Note, StockStatus, PaymentStatus)
-        OUTPUT INSERTED.StockInID
-        VALUES (?, ?, ?, ?, ?, ?)
-        """;
+        String insertStockInSql = """
+        INSERT INTO StockIn (SupplierID, CreatedBy, Note, StockStatus, PaymentStatus, TotalAmount, InitialPaidAmount, Date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())
+    """;
 
-        String insertDetail = """
+        String insertDetailSql = """
         INSERT INTO StockInDetails (StockInID, ProductID, Quantity, ReceivedQuantity, UnitCost)
-        VALUES (?, ?, ?, 0, ?)
-        """;
+        VALUES (?, ?, ?, ?, ?)
+    """;
 
-        String insertDebt = """
+        String insertDebtSql = """
         INSERT INTO SupplierDebts (SupplierID, StockInID, Amount, DueDate, Status)
-        OUTPUT INSERTED.DebtID
-        VALUES (?, ?, ?, DATEADD(DAY, 45, CAST(GETDATE() AS DATE)), ?)
-        """;
-
-        String insertDebtPayment = """
-        INSERT INTO SupplierDebtPayment (DebtID, Amount, PaymentDate, Note, CreatedBy)
-        VALUES (?, ?, GETDATE(), ?, ?)
-        """;
-
-        int stockInId = -1;
+        VALUES (?, ?, ?, DATEADD(DAY, 30, GETDATE()), ?)
+    """;
 
         try {
             connection.setAutoCommit(false);
 
-            BigDecimal total = BigDecimal.valueOf(stockIn.getTotalAmount()).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal paid = BigDecimal.valueOf(Math.max(0, paidNow)).setScale(2, RoundingMode.HALF_UP);
+            PreparedStatement psStock = connection.prepareStatement(insertStockInSql, PreparedStatement.RETURN_GENERATED_KEYS);
+            psStock.setInt(1, stockIn.getSupplierId());
+            psStock.setInt(2, stockIn.getCreatedBy());
+            psStock.setString(3, stockIn.getNote());
+            psStock.setString(4, stockIn.getStockStatus());
+            psStock.setString(5, stockIn.getPaymentStatus());
+            psStock.setDouble(6, stockIn.getTotalAmount());
+            psStock.setDouble(7, stockIn.getInitialPaidAmount());
 
-            if (paid.compareTo(total) > 0) {
-                paid = total;
+            int affected = psStock.executeUpdate();
+            if (affected <= 0) {
+                connection.rollback();
+                return -1;
             }
 
-            // 1. Insert StockIn
-            try (PreparedStatement ps = connection.prepareStatement(insertStockIn)) {
-                ps.setInt(1, stockIn.getSupplierId());
-                ps.setBigDecimal(2, total);
-                ps.setInt(3, stockIn.getCreatedBy());
-                ps.setString(4, stockIn.getNote());
-                ps.setString(5, stockIn.getStockStatus());
-                ps.setString(6, stockIn.getPaymentStatus());
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        stockInId = rs.getInt(1);
-                    } else {
-                        throw new RuntimeException("Không lấy được StockInID.");
-                    }
-                }
+            ResultSet rs = psStock.getGeneratedKeys();
+            int stockInId = -1;
+            if (rs.next()) {
+                stockInId = rs.getInt(1);
             }
 
-            // 2. Insert StockInDetails
-            try (PreparedStatement ps = connection.prepareStatement(insertDetail)) {
-                for (StockInDetail d : details) {
-                    ps.setInt(1, stockInId);
-                    ps.setInt(2, d.getProductId());
-                    ps.setInt(3, d.getQuantity());
-                    ps.setBigDecimal(4, BigDecimal.valueOf(d.getUnitCost()).setScale(2, RoundingMode.HALF_UP));
-                    ps.addBatch();
-                }
-                ps.executeBatch();
+            if (stockInId <= 0) {
+                connection.rollback();
+                return -1;
             }
 
-            // 3. Insert SupplierDebts
-            String debtStatus = paid.compareTo(BigDecimal.ZERO) <= 0
-                    ? "Pending"
-                    : (paid.compareTo(total) < 0 ? "Partial" : "Paid");
-
-            int debtId = -1;
-            try (PreparedStatement ps = connection.prepareStatement(insertDebt)) {
-                ps.setInt(1, stockIn.getSupplierId());
-                ps.setInt(2, stockInId);
-                ps.setBigDecimal(3, total);
-                ps.setString(4, debtStatus);
-
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        debtId = rs.getInt(1);
-                    }
-                }
+            PreparedStatement psDetail = connection.prepareStatement(insertDetailSql);
+            for (StockInDetail d : details) {
+                psDetail.setInt(1, stockInId);
+                psDetail.setInt(2, d.getProductId());
+                psDetail.setInt(3, d.getQuantity());
+                psDetail.setInt(4, d.getReceivedQuantity());
+                psDetail.setDouble(5, d.getUnitCost());
+                psDetail.addBatch();
             }
+            psDetail.executeBatch();
 
-            // 4. Insert lịch sử thanh toán nếu có
-            if (debtId > 0 && paid.compareTo(BigDecimal.ZERO) > 0) {
-                try (PreparedStatement ps = connection.prepareStatement(insertDebtPayment)) {
-                    ps.setInt(1, debtId);
-                    ps.setBigDecimal(2, paid);
-                    ps.setString(3, "Thanh toán ban đầu khi tạo phiếu nhập");
-                    ps.setInt(4, stockIn.getCreatedBy());
-                    ps.executeUpdate();
+            double debtAmount = stockIn.getTotalAmount() - stockIn.getInitialPaidAmount();
+
+            if (debtAmount > 0) {
+                PreparedStatement psDebt = connection.prepareStatement(insertDebtSql);
+                psDebt.setInt(1, stockIn.getSupplierId());
+                psDebt.setInt(2, stockInId);
+                psDebt.setDouble(3, debtAmount);
+
+                if (StockIn.PAYMENT_STATUS_PARTIAL.equals(stockIn.getPaymentStatus())) {
+                    psDebt.setString(4, "Partial");
+                } else {
+                    psDebt.setString(4, "Pending");
                 }
+
+                psDebt.executeUpdate();
             }
 
             connection.commit();
             return stockInId;
 
         } catch (Exception e) {
+            e.printStackTrace();
             try {
                 connection.rollback();
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
-            throw new RuntimeException("insertStockInWithDetailsAndDebt failed: " + e.getMessage(), e);
         } finally {
             try {
                 connection.setAutoCommit(true);
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            closeConnection();
         }
+
+        return -1;
     }
 
     public boolean receiveStockInDetail(int detailId, int receiveQty) {
@@ -300,6 +287,46 @@ public class StockInDAO extends DBContext {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return false;
+    }
+
+    public boolean canRequestCancelStockIn(int stockInId) {
+        String sql = """
+        SELECT 
+            ISNULL(SUM(ISNULL(d.ReceivedQuantity, 0)), 0) AS TotalReceived,
+            ISNULL(s.InitialPaidAmount, 0) AS InitialPaidAmount,
+            s.StockStatus
+        FROM StockIn s
+        LEFT JOIN StockInDetails d ON s.StockInID = d.StockInID
+        WHERE s.StockInID = ?
+        GROUP BY s.InitialPaidAmount, s.StockStatus
+    """;
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setInt(1, stockInId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int totalReceived = rs.getInt("TotalReceived");
+                double initialPaidAmount = rs.getDouble("InitialPaidAmount");
+                String stockStatus = rs.getString("StockStatus");
+
+                if (stockStatus == null) {
+                    stockStatus = "";
+                }
+
+                return totalReceived == 0
+                        && initialPaidAmount <= 0
+                        && "Pending".equalsIgnoreCase(stockStatus);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            closeConnection();
+        }
+
         return false;
     }
 

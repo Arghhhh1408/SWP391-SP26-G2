@@ -82,13 +82,14 @@ public class SystemLogDAO extends DBContext {
         return list;
     }
 
-    public List<SystemLog> getStaffDashboardLogs(int limit) {
+    public List<SystemLog> getWarehouseStaffLogs(int limit) {
         List<SystemLog> list = new ArrayList<>();
 
-        String sql = "SELECT TOP (?) * "
-                + "FROM [dbo].[SystemLog] "
-                + "WHERE Action IN (?, ?, ?, ?, ?, ?, ?, ?, ?) "
-                + "ORDER BY LogDate DESC";
+        String sql = "SELECT TOP (?) l.*, u.FullName "
+                + "FROM [dbo].[SystemLog] l "
+                + "LEFT JOIN [dbo].[User] u ON l.UserID = u.UserID "
+                + "WHERE l.Action IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                + "ORDER BY l.LogDate DESC";
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
@@ -116,6 +117,7 @@ public class SystemLogDAO extends DBContext {
                 log.setDescription(rs.getString("Description"));
                 log.setLogDate(rs.getTimestamp("LogDate"));
                 log.setIpAddress(rs.getString("IPAddress"));
+                log.setName(rs.getString("FullName"));
                 list.add(log);
             }
         } catch (Exception e) {

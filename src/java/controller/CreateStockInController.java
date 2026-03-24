@@ -401,6 +401,7 @@ public class CreateStockInController extends HttpServlet {
         stockIn.setStockStatus(StockIn.STOCK_STATUS_PENDING);
         stockIn.setPaymentStatus(finalPaymentStatus);
         stockIn.setTotalAmount(total);
+        stockIn.setInitialPaidAmount(paidNow);
 
         StockInDAO stockInDAO = new StockInDAO();
         int stockInId;
@@ -441,7 +442,7 @@ public class CreateStockInController extends HttpServlet {
                 SupplierDAO supplierDAO2 = new SupplierDAO();
                 Supplier supplier = supplierDAO2.getSupplierById(supplierId);
                 String supplierName = (supplier != null) ? supplier.getSupplierName() : "#" + supplierId;
-                sendStockInNotification(user, stockInId, supplierName, details, total, finalPaymentStatus);
+                sendStockInNotification(user, stockInId, supplierName, details, total, paidNow, finalPaymentStatus);
             } catch (Exception notifEx) {
                 notifEx.printStackTrace(); // notification failure must NOT break the main flow
             }
@@ -461,34 +462,41 @@ public class CreateStockInController extends HttpServlet {
     // Notification helper
     // -----------------------------------------------------------------------
     private void sendStockInNotification(User staff, int stockInId, String supplierName,
-            List<StockInDetail> details, double total, String paymentStatus) {
+            List<StockInDetail> details, double total, double initialPaidAmount, String paymentStatus) {
 
         // Build human-readable message
         StringBuilder msg = new StringBuilder();
         msg.append("Nhân viên ").append(staff.getFullName() != null ? staff.getFullName() : staff.getUsername())
-           .append(" đã tạo phiếu nhập thành công.\n")
-           .append("Nhà cung cấp: ").append(supplierName).append("\n")
-           .append("Chi tiết sản phẩm:\n");
+                .append(" đã tạo phiếu nhập thành công.\n")
+                .append("Nhà cung cấp: ").append(supplierName).append("\n")
+                .append("Chi tiết sản phẩm:\n");
 
         for (StockInDetail d : details) {
             String pName = d.getProductName() != null ? d.getProductName() : "SP#" + d.getProductId();
             msg.append("  - ").append(pName)
-               .append(" | Số lượng: ").append(d.getQuantity())
-               .append(" | Đơn giá: ").append(String.format("%,.0f đ", d.getUnitCost()))
-               .append(" | Thành tiền: ").append(String.format("%,.0f đ", d.getQuantity() * d.getUnitCost()))
-               .append("\n");
+                    .append(" | Số lượng: ").append(d.getQuantity())
+                    .append(" | Đơn giá: ").append(String.format("%,.0f đ", d.getUnitCost()))
+                    .append(" | Thành tiền: ").append(String.format("%,.0f đ", d.getQuantity() * d.getUnitCost()))
+                    .append("\n");
         }
         msg.append("Tổng tiền: ").append(String.format("%,.0f đ", total)).append("\n");
+        msg.append("Thanh toán ban đầu: ").append(String.format("%,.0f đ", initialPaidAmount)).append("\n");
+        msg.append("Công nợ phát sinh: ").append(String.format("%,.0f đ", total - initialPaidAmount)).append("\n");
         String ps;
         switch (paymentStatus) {
-            case StockIn.PAYMENT_STATUS_PAID:    ps = "Đã thanh toán"; break;
-            case StockIn.PAYMENT_STATUS_PARTIAL: ps = "Thanh toán một phần"; break;
-            default:                             ps = "Chưa thanh toán";
+            case StockIn.PAYMENT_STATUS_PAID:
+                ps = "Đã thanh toán";
+                break;
+            case StockIn.PAYMENT_STATUS_PARTIAL:
+                ps = "Thanh toán một phần";
+                break;
+            default:
+                ps = "Chưa thanh toán";
         }
         msg.append("Trạng thái thanh toán: ").append(ps);
 
-        String title = "Phiếu nhập #" + stockInId + " mới từ " +
-                       (staff.getFullName() != null ? staff.getFullName() : staff.getUsername());
+        String title = "Phiếu nhập #" + stockInId + " mới từ "
+                + (staff.getFullName() != null ? staff.getFullName() : staff.getUsername());
 
         NotificationDAO notifDAO = new NotificationDAO();
         List<Integer> managerIds = notifDAO.getManagerIds();

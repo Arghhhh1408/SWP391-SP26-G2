@@ -30,17 +30,17 @@ import websocket.NotificationEndpoint;
  *
  * @author dotha
  */
-@WebServlet(name = "StockInListController", urlPatterns = { "/stockinList" })
+@WebServlet(name = "StockInListController", urlPatterns = {"/stockinList"})
 public class StockInListController extends HttpServlet {
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
      *
-     * @param request  servlet request
+     * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException      if an I/O error occurs
+     * @throws IOException if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -89,10 +89,10 @@ public class StockInListController extends HttpServlet {
     /**
      * Handles the HTTP <code>GET</code> method.
      *
-     * @param request  servlet request
+     * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException      if an I/O error occurs
+     * @throws IOException if an I/O error occurs
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -120,49 +120,59 @@ public class StockInListController extends HttpServlet {
 
         switch (action) {
             case "requestCancel":
-                try {
-                    int id = Integer.parseInt(request.getParameter("id"));
-                    String reason = request.getParameter("reason");
+    try {
+                int id = Integer.parseInt(request.getParameter("id"));
+                String reason = request.getParameter("reason");
 
-                    if (reason == null || reason.trim().isEmpty()) {
-                        loadList(request, response, "Vui lòng nhập lý do hủy phiếu.", "error");
-                        return;
-                    }
-
-                    boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason.trim());
-
-                    try {
-                        SystemLogDAO logDAO = new SystemLogDAO();
-                        SystemLog log = new SystemLog();
-                        log.setUserID(user.getUserID());
-                        log.setAction("REQUEST_CANCEL_STOCKIN");
-                        log.setTargetObject("StockIn");
-                        log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason.trim());
-                        log.setIpAddress(request.getRemoteAddr());
-                        logDAO.insertLog(log);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-
-                    if (ok) {
-                        // Send notification to managers
-                        try {
-                            sendCancelRequestNotification(user, id, reason.trim());
-                        } catch (Exception notifEx) {
-                            notifEx.printStackTrace();
-                        }
-                    }
-
-                    loadList(request, response,
-                            ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.",
-                            ok ? "success" : "error");
-                    return;
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    loadList(request, response, "Dữ liệu không hợp lệ.", "error");
+                if (reason == null || reason.trim().isEmpty()) {
+                    loadList(request, response, "Vui lòng nhập lý do hủy phiếu.", "error");
                     return;
                 }
+
+                // Rule mới:
+                // Không cho hủy nếu đã nhận hàng > 0 hoặc paymentStatus khác Unpaid
+                boolean canCancel = dao.canRequestCancelStockIn(id);
+
+                if (!canCancel) {
+                    loadList(request, response,
+                            "Không thể hủy phiếu vì đã có hàng nhận vào kho hoặc đã phát sinh thanh toán.",
+                            "error");
+                    return;
+                }
+
+                boolean ok = dao.requestCancelStockIn(id, user.getUserID(), reason.trim());
+
+                try {
+                    SystemLogDAO logDAO = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+                    log.setUserID(user.getUserID());
+                    log.setAction("REQUEST_CANCEL_STOCKIN");
+                    log.setTargetObject("StockIn");
+                    log.setDescription("Yêu cầu hủy phiếu nhập | StockInID: " + id + " | Reason: " + reason.trim());
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDAO.insertLog(log);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
+                if (ok) {
+                    try {
+                        sendCancelRequestNotification(user, id, reason.trim());
+                    } catch (Exception notifEx) {
+                        notifEx.printStackTrace();
+                    }
+                }
+
+                loadList(request, response,
+                        ok ? "Đã gửi yêu cầu hủy phiếu." : "Gửi yêu cầu hủy thất bại.",
+                        ok ? "success" : "error");
+                return;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                loadList(request, response, "Dữ liệu không hợp lệ.", "error");
+                return;
+            }
 
             case "approveCancel":
                 if (user.getRoleID() != 2) {
@@ -240,10 +250,10 @@ public class StockInListController extends HttpServlet {
     /**
      * Handles the HTTP <code>POST</code> method.
      *
-     * @param request  servlet request
+     * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException      if an I/O error occurs
+     * @throws IOException if an I/O error occurs
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -320,8 +330,9 @@ public class StockInListController extends HttpServlet {
     private void sendCancelRequestNotification(User staff, int stockInId, String reason) {
         StockInDAO dao = new StockInDAO();
         StockIn stockIn = dao.getStockInById(stockInId);
-        if (stockIn == null)
+        if (stockIn == null) {
             return;
+        }
 
         List<StockInDetail> details = dao.getStockInDetailsByStockInId(stockInId);
 

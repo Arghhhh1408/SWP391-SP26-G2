@@ -290,6 +290,7 @@
                                 <th>Nhà cung cấp</th>
                                 <th>Nhân viên tạo</th>
                                 <th class="text-center">Đặt / Đã nhận / Còn</th>
+                                <th>Thanh toán ban đầu</th>
                                 <th>Giá trị phiếu</th>
                                 <th>Trạng thái</th>
                                 <th>Ghi chú</th>
@@ -318,6 +319,10 @@
 
                                         <td class="text-center">
                                             ${s.totalOrderedQuantity} / ${s.totalReceivedQuantity} / ${s.totalRemainingQuantity}
+                                        </td>
+
+                                        <td class="money">
+                                            <fmt:formatNumber value="${s.initialPaidAmount}" type="number" groupingUsed="true"/>
                                         </td>
 
                                         <td class="money">
@@ -387,13 +392,16 @@
                                                     Chi tiết
                                                 </a>
 
-                                                <c:if test="${sessionScope.acc.roleID == 1 && s.stockStatus == 'Pending'}">
-                                                    <form action="stockinList" method="get" class="inline-form">
-                                                        <input type="hidden" name="action" value="requestCancel">
-                                                        <input type="hidden" name="id" value="${s.stockInId}">
-                                                        <input type="text" name="reason" placeholder="Nhập lý do hủy" required>
-                                                        <button type="submit" class="btn btn-danger">Yêu cầu hủy</button>
-                                                    </form>
+                                                <c:if test="${sessionScope.acc.roleID == 1 
+                                                              && s.stockStatus == 'Pending'
+                                                              && s.totalReceivedQuantity == 0
+                                                              && s.paymentStatus == 'Unpaid'}">
+                                                      <form action="stockinList" method="get" class="inline-form">
+                                                          <input type="hidden" name="action" value="requestCancel">
+                                                          <input type="hidden" name="id" value="${s.stockInId}">
+                                                          <input type="text" name="reason" placeholder="Nhập lý do hủy" required>
+                                                          <button type="submit" class="btn btn-danger">Yêu cầu hủy</button>
+                                                      </form>
                                                 </c:if>
 
                                                 <c:if test="${sessionScope.acc.roleID == 2 && s.stockStatus == 'CancelRequested'}">
