@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 import java.util.List;
 import model.Notification;
 import model.User;
+import websocket.NotificationEndpoint;
 
 @WebServlet(name = "NotificationController", urlPatterns = { "/notifications" })
 public class NotificationController extends HttpServlet {
@@ -78,6 +79,9 @@ public class NotificationController extends HttpServlet {
         }
 
         int remainingUnread = dao.countUnread(user.getUserID());
+
+        // Push WebSocket update to all open tabs of this user
+        NotificationEndpoint.sendToUser(user.getUserID(), "{\"unreadCount\":" + remainingUnread + "}");
 
         try (PrintWriter out = response.getWriter()) {
             out.print("{\"unreadCount\":" + remainingUnread + "}");

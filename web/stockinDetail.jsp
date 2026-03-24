@@ -247,7 +247,14 @@
             <div class="page-title">Chi tiết phiếu nhập #${stockIn.stockInId}</div>
 
             <div class="top-bar">
-                <a class="back-link" href="stockinList">← Quay lại danh sách phiếu nhập</a>
+                <c:choose>
+                    <c:when test="${sessionScope.acc.roleID == 2}">
+                        <a class="back-link" href="${pageContext.request.contextPath}/notifications">← Quay lại</a>
+                    </c:when>
+                    <c:otherwise>
+                        <a class="back-link" href="stockinList">← Quay lại danh sách phiếu nhập</a>
+                    </c:otherwise>
+                </c:choose>
 
                 <div class="action-group">
                     <c:if test="${sessionScope.acc.roleID == 2 && stockIn.stockStatus == 'CancelRequested'}">

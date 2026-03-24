@@ -20,6 +20,10 @@ import utils.DBContext;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.util.List;
+import dao.NotificationDAO;
+import model.Notification;
+import websocket.NotificationEndpoint;
 
 /**
  *
@@ -197,6 +201,47 @@ public class CheckoutController extends HttpServlet {
 
             con.commit(); // Hoàn tất Transaction
             session.removeAttribute("cart");
+
+            // --- BƯỚC 6: Gửi thông báo cho Manager ---
+            try {
+                NotificationDAO notifDAO = new NotificationDAO();
+                List<Integer> managerIds = notifDAO.getManagerIds();
+
+                StringBuilder productNames = new StringBuilder();
+                StringBuilder quantities = new StringBuilder();
+                for (CartItem it : cart.values()) {
+                    if (productNames.length() > 0) {
+                        productNames.append(", ");
+                        quantities.append(", ");
+                    }
+                    productNames.append(it.getName());
+                    quantities.append(it.getQty());
+                }
+
+                String sellerName = (acc != null) ? acc.getFullName() : "Nhân viên bán hàng";
+                String customerDisplayName = (name != null && !name.isEmpty()) ? name : "Khách lẻ";
+
+                String notifMessage = String.format("Đã bán thành công \"%s\" | Số lượng: \"%s\" | Người bán: \"%s\" | Khách hàng: \"%s\" | Thành tiền: \"%,.0f đ\"",
+                        productNames.toString(), quantities.toString(), sellerName, customerDisplayName, totalAmount);
+
+                String notifTitle = "Đơn hàng #" + stockOutId + " mới từ " + sellerName;
+
+                for (int managerId : managerIds) {
+                    Notification n = new Notification();
+                    n.setUserId(managerId);
+                    n.setTitle(notifTitle);
+                    n.setMessage(notifMessage);
+                    n.setType("SALE_SUCCESS");
+                    notifDAO.insert(n);
+
+                    // Đẩy thông báo qua WebSocket
+                    int unread = notifDAO.countUnread(managerId);
+                    NotificationEndpoint.sendToUser(managerId, "{\"unreadCount\":" + unread + "}");
+                }
+            } catch (Exception eNotif) {
+                eNotif.printStackTrace(); // Không làm gián đoạn luồng chính nếu lỗi thông báo
+            }
+
             response.sendRedirect("sales_dashboard?tab=pos&success=1");
 
         } catch (Exception e) {

@@ -218,14 +218,15 @@
 
             <body>
                 <div class="main-content">
+                    <a href="${pageContext.request.contextPath}/manager_dashboard" class="back-btn" style="margin-bottom: 20px;">
+                        <span>&larr;</span> Quay về dashboard
+                    </a>
+
                     <div class="page-header">
                         <h1 class="page-title">
                             <span style="font-size: 32px;">🔔</span>
                             Tất cả thông báo
                         </h1>
-                        <a href="javascript:history.back()" class="back-btn">
-                            <span>&larr;</span> Quay lại
-                        </a>
                     </div>
 
                     <div class="notifications-container">
@@ -246,8 +247,17 @@
                                             <a class="btn-view-detail"
                                                href="#"
                                                data-title="<c:out value='${n.title}'/>"
-                                               onclick="goToStockIn(this); return false;">
+                                               onclick="goToStockIn(this, ${n.notificationId}, ${n.read}); return false;">
                                                 🔍 Xem chi tiết phiếu nhập
+                                            </a>
+                                        </c:if>
+
+                                        <c:if test="${n.type == 'SALE_SUCCESS'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               data-title="<c:out value='${n.title}'/>"
+                                               onclick="goToOrderDetail(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔍 Xem chi tiết đơn hàng
                                             </a>
                                         </c:if>
 
@@ -275,7 +285,10 @@
                     var ctx = "${pageContext.request.contextPath}";
 
                     // Navigate to stock-in detail page by parsing id from notification title
-                    function goToStockIn(link) {
+                    async function goToStockIn(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
                         var title = link.getAttribute('data-title') || '';
                         var match = title.match(/#(\d+)/);
                         if (match) {
@@ -283,8 +296,19 @@
                         }
                     }
 
+                    async function goToOrderDetail(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        var title = link.getAttribute('data-title') || '';
+                        var match = title.match(/#(\d+)/);
+                        if (match) {
+                            window.location.href = ctx + '/orderdetail?id=' + match[1];
+                        }
+                    }
+
                     function markAsRead(notifId) {
-                        fetch(ctx + '/notifications', {
+                        return fetch(ctx + '/notifications', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: 'action=markRead&id=' + notifId
@@ -300,9 +324,6 @@
                                 if (actionBox) {
                                     actionBox.style.display = 'none';
                                 }
-
-                                // Let the WebSocket or User refresh handle badges in other frames
-                                // If they are on this standalone page, the sidebars aren't here
                             })
                             .catch(err => console.error(err));
                     }
