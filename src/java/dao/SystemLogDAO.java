@@ -88,24 +88,29 @@ public class SystemLogDAO extends DBContext {
         String sql = "SELECT TOP (?) l.*, u.FullName "
                 + "FROM [dbo].[SystemLog] l "
                 + "LEFT JOIN [dbo].[User] u ON l.UserID = u.UserID "
-                + "WHERE l.Action IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                + "WHERE l.Action IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                 + "ORDER BY l.LogDate DESC";
-
+ 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             stm.setInt(1, limit);
-
+ 
             stm.setString(2, "CREATE_STOCKIN");
             stm.setString(3, "UPDATE_STOCKIN");
             stm.setString(4, "DELETE_STOCKIN");
-            stm.setString(5, "VIEW_SUPPLIER_DEBT");
-            stm.setString(6, "VIEW_SUPPLIER_PRODUCT");
-            stm.setString(7, "COMPLETE_WARRANTY");
-            stm.setString(8, "REJECT_WARRANTY");
-            stm.setString(9, "COMPLETE_RETURN");
-            stm.setString(10, "REJECT_RETURN");
-            stm.setString(11, "NOTIFY_LOW_STOCK");
-            stm.setString(12, "UNNOTIFY_LOW_STOCK");
+            stm.setString(5, "INVENTORY_CHECK");
+            stm.setString(6, "INVENTORY_CHECK_SAVE");
+            stm.setString(7, "INVENTORY_CHECK_UPDATE");
+            stm.setString(8, "INVENTORY_CHECK_APPROVE");
+            stm.setString(9, "INVENTORY_CHECK_REJECT");
+            stm.setString(10, "VIEW_SUPPLIER_DEBT");
+            stm.setString(11, "VIEW_SUPPLIER_PRODUCT");
+            stm.setString(12, "COMPLETE_WARRANTY");
+            stm.setString(13, "REJECT_WARRANTY");
+            stm.setString(14, "COMPLETE_RETURN");
+            stm.setString(15, "REJECT_RETURN");
+            stm.setString(16, "NOTIFY_LOW_STOCK");
+            stm.setString(17, "UNNOTIFY_LOW_STOCK");
 
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {

@@ -205,7 +205,9 @@ public class StockInDetailController extends HttpServlet {
                     SystemLog log = new SystemLog();
                     log.setUserID(user.getUserID());
                     log.setAction("RECEIVE_STOCKIN_DETAIL");
-                    log.setTargetObject("StockInDetail");
+                    String actorName = (user.getFullName() != null && !user.getFullName().trim().isEmpty()) 
+                                        ? user.getFullName() : user.getUsername();
+                    log.setTargetObject("User: " + actorName);
                     log.setDescription("Nhận hàng cho phiếu nhập | StockInID: " + stockInId
                             + " | DetailID: " + detailId
                             + " | ReceiveQty: " + receiveQty);
