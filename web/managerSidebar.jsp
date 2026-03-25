@@ -317,6 +317,10 @@
            class="${param.tab == 'returns' ? 'active' : ''}">
             <span class="nav-icon">🔄</span> Trả hàng
         </a>
+        <a href="${pageContext.request.contextPath}/manager_dashboard?tab=vendorReturns"
+           class="${param.tab == 'vendorReturns' ? 'active' : ''}">
+            <span class="nav-icon">🏭</span> Duyệt trả NCC
+        </a>
 
         <div class="sidebar-section-title">Warehouse</div>
         <a href="${pageContext.request.contextPath}/category"

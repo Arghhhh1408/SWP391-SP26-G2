@@ -1,70 +1,91 @@
 <%-- Document : systemLog --%>
-    <%@page contentType="text/html" pageEncoding="UTF-8" %>
-        <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-            <!DOCTYPE html>
-            <html lang="vi">
+<%@page contentType="text/html" pageEncoding="UTF-8" %>
+<%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@taglib uri="jakarta.tags.fmt" prefix="fmt" %>
+<!DOCTYPE html>
+<html lang="vi">
 
-            <head>
-                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-                <title>Lịch Sử Hoạt Động</title>
-            </head>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Nhật ký hệ thống | IMS PRO</title>
+</head>
 
-            <body>
-                <c:if test="${sessionScope.acc == null or sessionScope.acc.roleID ne 0}">
-                    <c:redirect url="login" />
-                </c:if>
-                <c:set var="currentPage" value="systemLog" scope="request" />
-                <jsp:include page="adminSidebar.jsp" />
+<body>
+    <c:set var="currentPage" value="systemLog" scope="request" />
+    <jsp:include page="adminSidebar.jsp" />
 
-                <div class="admin-main">
-                    <div class="admin-topbar">
-                        <div>
-                            <h1>Lịch Sử Hoạt Động</h1>
-                            <small>Admin &rsaquo; Hệ thống &rsaquo; System Log</small>
+    <div class="admin-main">
+        <div class="admin-topbar">
+            <div class="topbar-left">
+                <h1>Nhật ký hệ thống</h1>
+                <p>Admin &rsaquo; Theo dõi lịch sử hoạt động</p>
+            </div>
+            <div class="user-profile">
+                <span>👤 ${sessionScope.acc.fullName}</span>
+            </div>
+        </div>
+
+        <div class="admin-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3>🔍 Bộ lọc nhật ký</h3>
+                </div>
+                <div class="card-body">
+                    <form action="systemlog" method="get">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: flex-end;">
+                            <div class="form-group">
+                                <label style="display:block; font-size:12px; font-weight:700; color:#b5b5c3; margin-bottom:8px; text-transform:uppercase;">Hành động</label>
+                                <input type="text" name="action" value="${action}" class="form-control" placeholder="LOGIN, UPDATE...">
+                            </div>
+                            <div class="form-group">
+                                <label style="display:block; font-size:12px; font-weight:700; color:#b5b5c3; margin-bottom:8px; text-transform:uppercase;">Ngày ghi nhận</label>
+                                <input type="date" name="date" value="${date}" class="form-control">
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="submit" class="btn btn-primary" style="flex: 1;">Áp dụng</button>
+                                <a href="systemlog" class="btn btn-outline">Làm mới</a>
+                            </div>
                         </div>
-                        <div>Xin chào, <strong>${sessionScope.acc.fullName}</strong></div>
-                    </div>
+                    </form>
+                </div>
+            </div>
 
-                    <div class="admin-content">
-
-                        <form action="systemlog" method="get">
-                            UserID: <input type="number" name="userId" value="${userId}" placeholder="User ID">
-                            Action: <input type="text" name="action" value="${action}" placeholder="Action">
-                            Date: <input type="date" name="date" value="${date}">
-                            <button type="submit">Lọc</button>
-                        </form>
-                        <br>
-
-                        <table border="1">
-                            <thead>
+            <div class="card">
+                <div class="card-body" style="padding: 0;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>UID</th>
+                                <th>Hành động</th>
+                                <th>Đối tượng</th>
+                                <th>Thời gian</th>
+                                <th>IP Truy cập</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach items="${requestScope.logs}" var="log">
                                 <tr>
-                                    <th>Log ID</th>
-                                    <th>User ID</th>
-                                    <th>Action</th>
-                                    <th>Target Object</th>
-                                    <th>Description</th>
-                                    <th>Date</th>
-                                    <th>IP Address</th>
+                                    <td><span style="color: #b5b5c3; font-weight: 700;">#${log.logID}</span></td>
+                                    <td style="font-weight: 600;">UID:${log.userID}</td>
+                                    <td>
+                                        <span class="badge badge-primary">${log.action}</span>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight: 600;">${log.targetObject}</div>
+                                        <div style="color: #b5b5c3; font-size: 11px;">${log.description}</div>
+                                    </td>
+                                    <td style="color: #181c32; font-size: 13px;">
+                                        <fmt:formatDate value="${log.logDate}" pattern="dd/MM/yyyy HH:mm:ss" />
+                                    </td>
+                                    <td><code style="background: #f3f6f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${log.ipAddress}</code></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <c:forEach items="${requestScope.logs}" var="log">
-                                    <tr>
-                                        <td>${log.logID}</td>
-                                        <td>${log.userID}</td>
-                                        <td>${log.action}</td>
-                                        <td>${log.targetObject}</td>
-                                        <td>${log.description}</td>
-                                        <td>${log.logDate}</td>
-                                        <td>${log.ipAddress}</td>
-                                    </tr>
-                                </c:forEach>
-                            </tbody>
-                        </table>
-
-                    </div><!-- /admin-content -->
-                </div><!-- /admin-main -->
-
-            </body>
-
-            </html>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

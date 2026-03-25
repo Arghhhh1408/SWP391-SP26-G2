@@ -7,8 +7,12 @@ package controller;
 
 import dao.SystemLogDAO;
 import dao.UserDAO;
+import dao.NotificationDAO;
+import model.Notification;
 import model.SystemLog;
 import utils.SecurityUtils;
+import websocket.NotificationEndpoint;
+import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -189,6 +193,73 @@ public class PersonalProfileController extends HttpServlet {
                 session.setAttribute("passwordSuccess", "Đổi mật khẩu thành công!");
             } else {
                 session.setAttribute("passwordError", "Có lỗi xảy ra khi đổi mật khẩu!");
+            }
+        } else if ("requestResetPassword".equals(action)) {
+            try {
+                if (u.getRoleID() == 0) {
+                    // Admins reset their own password directly
+                    UserDAO userDAO = new UserDAO();
+                    String newHash = SecurityUtils.hashPassword("123");
+                    if (userDAO.resetPassword(u.getUserID(), newHash)) {
+                        SystemLogDAO logDAO = new SystemLogDAO();
+                        SystemLog log = new SystemLog();
+                        log.setUserID(u.getUserID());
+                        log.setAction("RESET_PASSWORD_DIRECT");
+                        log.setTargetObject("User: " + u.getUsername());
+                        log.setDescription("Admin reset their own password to 123 directly.");
+                        log.setIpAddress(request.getRemoteAddr());
+                        logDAO.insertLog(log);
+
+                        u.setPasswordHash(newHash);
+                        session.setAttribute("acc", u);
+                        session.setAttribute("passwordSuccess", "Mật khẩu của bạn đã được reset về 123!");
+                    } else {
+                        session.setAttribute("passwordError", "Có lỗi xảy ra khi reset mật khẩu!");
+                    }
+                } else {
+                    // Other roles request reset from Admin
+                    NotificationDAO notifDAO = new NotificationDAO();
+                    List<Integer> adminIds = notifDAO.getAdminIds();
+                    
+                    String roleName;
+                    switch (u.getRoleID()) {
+                        case 0: roleName = "Admin"; break;
+                        case 1: roleName = "Warehouse Staff"; break;
+                        case 2: roleName = "Manager"; break;
+                        case 3: roleName = "Salesperson"; break;
+                        default: roleName = "Unknown"; break;
+                    }
+
+                    String notifTitle = "Yêu cầu Reset Mật khẩu từ " + u.getUsername();
+                    String notifMessage = String.format("Tài khoản \"%s\", Tên \"%s\", Role \"%s\" yêu cầu reset mật khẩu.",
+                            u.getUsername(), (u.getFullName() != null ? u.getFullName() : u.getUsername()), roleName);
+
+                    for (int adminId : adminIds) {
+                        Notification n = new Notification();
+                        n.setUserId(adminId);
+                        n.setTitle(notifTitle);
+                        n.setMessage(notifMessage);
+                        n.setType("PASSWORD_RESET_REQUEST");
+                        notifDAO.insert(n);
+
+                        int unread = notifDAO.countUnread(adminId);
+                        NotificationEndpoint.sendToUser(adminId, "{\"unreadCount\":" + unread + "}");
+                    }
+
+                    SystemLogDAO logDAO = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+                    log.setUserID(u.getUserID());
+                    log.setAction("REQUEST_RESET_PASSWORD");
+                    log.setTargetObject("User: " + u.getUsername());
+                    log.setDescription("User requested a password reset notification to Admin.");
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDAO.insertLog(log);
+
+                    session.setAttribute("passwordSuccess", "Đã gửi yêu cầu reset mật khẩu tới Admin!");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                session.setAttribute("passwordError", "Lỗi khi xử lý Reset mật khẩu: " + e.getMessage());
             }
         }
 

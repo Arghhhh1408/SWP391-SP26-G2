@@ -81,11 +81,23 @@ public class ExcelUtils {
 
             if (rowIterator.hasNext()) rowIterator.next(); // Skip header
 
+            int currentExcelRow = 1; // Row 0 is header
             while (rowIterator.hasNext()) {
                 Row row = rowIterator.next();
+                currentExcelRow++;
+                
+                String name = getCellValueAsString(row.getCell(0));
+                String sku = getCellValueAsString(row.getCell(1));
+                
+                // Skip completely empty rows or rows missing both name and sku
+                if (name.isEmpty() && sku.isEmpty()) {
+                    continue;
+                }
+                
                 ImportedProduct ip = new ImportedProduct();
-                ip.name = getCellValueAsString(row.getCell(0));
-                ip.sku = getCellValueAsString(row.getCell(1));
+                ip.rowNum = currentExcelRow;
+                ip.name = name;
+                ip.sku = sku;
                 ip.cost = getCellValueAsDouble(row.getCell(2));
                 ip.price = getCellValueAsDouble(row.getCell(3));
                 ip.quantity = (int) getCellValueAsDouble(row.getCell(4));
@@ -389,5 +401,6 @@ public class ExcelUtils {
         public String name, sku, unit, categoryName, status, description, imageUrl;
         public double cost, price;
         public int quantity;
+        public int rowNum;
     }
 }

@@ -16,6 +16,15 @@ import utils.SecurityUtils;
  * @author minhtuan
  */
 public class UserDAO extends DBContext {
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     public User login(String username, String password) {
         String sql = "select * from [User] where Username = ? and PasswordHash = ? and IsActive = 1";
         try {
@@ -34,10 +43,11 @@ public class UserDAO extends DBContext {
                 u.setUserID(rs.getInt("UserID"));
                 u.setUsername(dbUsername);
                 u.setFullName(rs.getString("FullName"));
-                u.setRoleID(rs.getInt("RoleID")); // Chú ý: Admin có thể là 0 hoặc 1 tùy DB của bạn
+                u.setRoleID(rs.getInt("RoleID"));
                 u.setEmail(rs.getString("Email"));
                 u.setPhone(rs.getString("Phone"));
                 u.setCreateDate(rs.getDate("CreateDate"));
+                u.setIsActive(rs.getBoolean("IsActive"));
                 return u;
             }
         } catch (Exception e) {
@@ -61,6 +71,7 @@ public class UserDAO extends DBContext {
                 u.setEmail(rs.getString("Email"));
                 u.setPhone(rs.getString("Phone"));
                 u.setCreateDate(rs.getDate("CreateDate"));
+                u.setIsActive(rs.getBoolean("IsActive"));
                 list.add(u);
             }
             return list;
@@ -75,12 +86,12 @@ public class UserDAO extends DBContext {
                 + "VALUES (?, ?, ?, ?, ?, ?, 1)";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
-            stm.setString(1, u.getUsername());
+            stm.setString(1, normalize(u.getUsername()));
             stm.setString(2, SecurityUtils.hashPassword(u.getPasswordHash()));
-            stm.setString(3, u.getFullName());
+            stm.setString(3, normalize(u.getFullName()));
             stm.setInt(4, u.getRoleID());
-            stm.setString(5, u.getEmail());
-            stm.setString(6, u.getPhone());
+            stm.setString(5, normalize(u.getEmail()));
+            stm.setString(6, normalize(u.getPhone()));
             int rows = stm.executeUpdate();
             return rows > 0;
         } catch (Exception e) {
@@ -133,6 +144,7 @@ public class UserDAO extends DBContext {
                 u.setEmail(rs.getString("Email"));
                 u.setPhone(rs.getString("Phone"));
                 u.setCreateDate(rs.getDate("CreateDate"));
+                u.setIsActive(rs.getBoolean("IsActive"));
                 list.add(u);
             }
             return list;
@@ -157,61 +169,89 @@ public class UserDAO extends DBContext {
 
     public String checkDuplicate(String username, String email, String phone) {
         try {
+            String normalizedUsername = normalize(username);
+            String normalizedEmail = normalize(email);
+            String normalizedPhone = normalize(phone);
+
             String sql = "SELECT * FROM [User] WHERE Username = ?";
             PreparedStatement stm = connection.prepareStatement(sql);
-            stm.setString(1, username);
+            stm.setString(1, normalizedUsername);
             if (stm.executeQuery().next()) {
-                return "Username already exists";
+                return "Username đã tồn tại";
             }
 
-            sql = "SELECT * FROM [User] WHERE Email = ?";
-            stm = connection.prepareStatement(sql);
-            stm.setString(1, email);
-            if (stm.executeQuery().next()) {
-                return "Email already exists";
+            if (normalizedEmail != null) {
+                sql = "SELECT * FROM [User] WHERE LOWER(LTRIM(RTRIM(Email))) = LOWER(?)";
+                stm = connection.prepareStatement(sql);
+                stm.setString(1, normalizedEmail);
+                if (stm.executeQuery().next()) {
+                    return "Email đã được sử dụng bởi một tài khoản khác";
+                }
             }
 
-            sql = "SELECT * FROM [User] WHERE Phone = ?";
-            stm = connection.prepareStatement(sql);
-            stm.setString(1, phone);
-            if (stm.executeQuery().next()) {
-                return "Phone number already exists";
+            if (normalizedPhone != null) {
+                sql = "SELECT * FROM [User] WHERE LTRIM(RTRIM(Phone)) = ?";
+                stm = connection.prepareStatement(sql);
+                stm.setString(1, normalizedPhone);
+                if (stm.executeQuery().next()) {
+                    return "Số điện thoại đã được sử dụng bởi một tài khoản khác";
+                }
+            }
+
+            ContactIdentityDAO identityDAO = new ContactIdentityDAO();
+            String supplierConflict = identityDAO.validateUserAgainstActiveSuppliers(normalizedEmail, normalizedPhone);
+            if (supplierConflict != null) {
+                return supplierConflict;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null; // No duplicate
+        return null;
     }
 
     public String checkDuplicateForUpdate(int userID, String username, String email, String phone) {
         try {
+            String normalizedUsername = normalize(username);
+            String normalizedEmail = normalize(email);
+            String normalizedPhone = normalize(phone);
+
             String sql = "SELECT * FROM [User] WHERE Username = ? AND UserID != ?";
             PreparedStatement stm = connection.prepareStatement(sql);
-            stm.setString(1, username);
+            stm.setString(1, normalizedUsername);
             stm.setInt(2, userID);
             if (stm.executeQuery().next()) {
-                return "Username already exists";
+                return "Username đã tồn tại";
             }
 
-            sql = "SELECT * FROM [User] WHERE Email = ? AND UserID != ?";
-            stm = connection.prepareStatement(sql);
-            stm.setString(1, email);
-            stm.setInt(2, userID);
-            if (stm.executeQuery().next()) {
-                return "Email already exists";
+            if (normalizedEmail != null) {
+                sql = "SELECT * FROM [User] WHERE LOWER(LTRIM(RTRIM(Email))) = LOWER(?) AND UserID != ?";
+                stm = connection.prepareStatement(sql);
+                stm.setString(1, normalizedEmail);
+                stm.setInt(2, userID);
+                if (stm.executeQuery().next()) {
+                    return "Email đã được sử dụng bởi một tài khoản khác";
+                }
             }
 
-            sql = "SELECT * FROM [User] WHERE Phone = ? AND UserID != ?";
-            stm = connection.prepareStatement(sql);
-            stm.setString(1, phone);
-            stm.setInt(2, userID);
-            if (stm.executeQuery().next()) {
-                return "Phone number already exists";
+            if (normalizedPhone != null) {
+                sql = "SELECT * FROM [User] WHERE LTRIM(RTRIM(Phone)) = ? AND UserID != ?";
+                stm = connection.prepareStatement(sql);
+                stm.setString(1, normalizedPhone);
+                stm.setInt(2, userID);
+                if (stm.executeQuery().next()) {
+                    return "Số điện thoại đã được sử dụng bởi một tài khoản khác";
+                }
+            }
+
+            ContactIdentityDAO identityDAO = new ContactIdentityDAO();
+            String supplierConflict = identityDAO.validateUserAgainstActiveSuppliers(normalizedEmail, normalizedPhone);
+            if (supplierConflict != null) {
+                return supplierConflict;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null; // No duplicate
+        return null;
     }
 
     public List<User> getDeletedUsers() {
@@ -262,6 +302,7 @@ public class UserDAO extends DBContext {
                 u.setEmail(rs.getString("Email"));
                 u.setPhone(rs.getString("Phone"));
                 u.setCreateDate(rs.getDate("CreateDate"));
+                u.setIsActive(rs.getBoolean("IsActive"));
                 list.add(u);
             }
             return list;
@@ -269,6 +310,11 @@ public class UserDAO extends DBContext {
             e.printStackTrace();
         }
         return new ArrayList<>();
+    }
+
+    public String validateRestoreConflict(int userID) {
+        ContactIdentityDAO identityDAO = new ContactIdentityDAO();
+        return identityDAO.validateUserActivationAgainstActiveSuppliers(userID);
     }
 
     public boolean restoreUser(int userID) {
@@ -299,9 +345,11 @@ public class UserDAO extends DBContext {
                         rs.getString("Phone"),
                         rs.getBoolean("IsActive"));
                 user.setUserID(rs.getInt("UserID"));
+                user.setCreateDate(rs.getDate("CreateDate"));
                 return user;
             }
         } catch (Exception e) {
+            e.printStackTrace();
         }
         return null;
     }
@@ -310,11 +358,11 @@ public class UserDAO extends DBContext {
         String sql = "UPDATE [User] SET Username = ?, FullName = ?, RoleID = ?, Email = ?, Phone = ? WHERE UserID = ?";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
-            stm.setString(1, user.getUsername());
-            stm.setString(2, user.getFullName());
+            stm.setString(1, normalize(user.getUsername()));
+            stm.setString(2, normalize(user.getFullName()));
             stm.setInt(3, user.getRoleID());
-            stm.setString(4, user.getEmail());
-            stm.setString(5, user.getPhone());
+            stm.setString(4, normalize(user.getEmail()));
+            stm.setString(5, normalize(user.getPhone()));
             stm.setInt(6, user.getUserID());
             int rows = stm.executeUpdate();
             return rows > 0;
@@ -348,6 +396,32 @@ public class UserDAO extends DBContext {
                 return rs.getString("FullName");
             }
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public User getUserByUsername(String username) {
+        String sql = "SELECT * FROM [User] WHERE Username = ? AND IsActive = 1";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, username);
+            ResultSet rs = stm.executeQuery();
+            if (rs.next()) {
+                User u = new User();
+                u.setUserID(rs.getInt("UserID"));
+                u.setUsername(rs.getString("Username"));
+                u.setFullName(rs.getString("FullName"));
+                u.setRoleID(rs.getInt("RoleID"));
+                u.setEmail(rs.getString("Email"));
+                u.setPhone(rs.getString("Phone"));
+                u.setPasswordHash(rs.getString("PasswordHash"));
+                u.setCreateDate(rs.getDate("CreateDate"));
+                u.setIsActive(rs.getBoolean("IsActive"));
+                return u;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return null;
     }

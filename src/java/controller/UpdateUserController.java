@@ -46,64 +46,31 @@ public class UpdateUserController extends HttpServlet {
             throws ServletException, IOException {
         try {
             int id = Integer.parseInt(request.getParameter("id"));
-            String username = request.getParameter("username");
-            String fullname = request.getParameter("fullname");
-            String email = request.getParameter("email");
-            String phone = request.getParameter("phone");
+            UserDAO userDAO = new UserDAO();
+            User existingUser = userDAO.searchUserByID(id);
+
+            if (existingUser == null) {
+                request.setAttribute("error", "User not found!");
+                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
+                return;
+            }
+
             int roleID = Integer.parseInt(request.getParameter("role"));
 
+            // Admin is only allowed to change the Role during update.
+            // All other fields are preserved from existingUser to prevent tampering.
             User user = new User();
             user.setUserID(id);
-            user.setUsername(username);
-            user.setFullName(fullname);
-            user.setEmail(email);
-            user.setPhone(phone);
+            user.setUsername(existingUser.getUsername());
+            user.setFullName(existingUser.getFullName());
+            user.setEmail(existingUser.getEmail());
+            user.setPhone(existingUser.getPhone());
             user.setRoleID(roleID);
 
-            // Validate Phone Format
-            if (!utils.ValidationUtils.isValidPhone(phone)) {
-                request.setAttribute("error",
-                        "Invalid phone number format! Must be 10 digits starting with 03, 07, 08, 09.");
-                // Preserve input (user object is already populated above)
-                request.setAttribute("user", user);
-                // Load roles
-                RoleDAO roleDao = new RoleDAO();
-                List<Role> listOfRole = roleDao.getAllRole();
-                request.setAttribute("listOfRole", listOfRole);
-                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
-                return;
-            }
+            // Since we use current DB values for profile fields, 
+            // no need for validation or duplicate checks on those fields.
 
-            // Validate Email Format
-            if (!utils.ValidationUtils.isValidEmail(email)) {
-                request.setAttribute("error", "Invalid email format!");
-                // Preserve input
-                request.setAttribute("user", user);
-                // Load roles
-                RoleDAO roleDao = new RoleDAO();
-                List<Role> listOfRole = roleDao.getAllRole();
-                request.setAttribute("listOfRole", listOfRole);
-                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
-                return;
-            }
-
-            UserDAO dao = new UserDAO();
-
-            String error = dao.checkDuplicateForUpdate(id, username, email, phone);
-            if (error != null) {
-                request.setAttribute("error", error);
-
-                request.setAttribute("user", user);
-
-                RoleDAO roleDao = new RoleDAO();
-                List<Role> listOfRole = roleDao.getAllRole();
-                request.setAttribute("listOfRole", listOfRole);
-
-                request.getRequestDispatcher("userDetail.jsp").forward(request, response);
-                return;
-            }
-
-            boolean result = dao.updateUser(user);
+            boolean result = userDAO.updateUser(user);
 
             if (result) {
                 request.setAttribute("message", "Sửa tài khoản thành công");
@@ -119,12 +86,12 @@ public class UpdateUserController extends HttpServlet {
                 log.setUserID(adminId);
                 log.setAction("UPDATE_USER");
                 log.setTargetObject("User ID: " + id);
-                log.setDescription("Updated user profile: " + username);
+                log.setDescription("Updated user role for: " + existingUser.getUsername());
                 log.setIpAddress(request.getRemoteAddr());
                 logDAO.insertLog(log);
 
                 request.setAttribute("user", user);
-                // Load roles
+                // Load roles for the dropdown
                 RoleDAO roleDao = new RoleDAO();
                 List<Role> listOfRole = roleDao.getAllRole();
                 request.setAttribute("listOfRole", listOfRole);

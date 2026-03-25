@@ -415,6 +415,148 @@ public class StockInDAO extends DBContext {
         return false;
     }
 
+    public StockInDetail getStockInDetailByDetailId(int detailId) {
+        String sql = "SELECT d.DetailID, d.StockInID, d.ProductID, d.Quantity, d.ReceivedQuantity, "
+                + "d.UnitCost, d.SubTotal, p.Name AS ProductName, p.SKU, p.Unit "
+                + "FROM StockInDetails d "
+                + "INNER JOIN Products p ON d.ProductID = p.ProductID "
+                + "WHERE d.DetailID = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, detailId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    StockInDetail d = new StockInDetail();
+                    d.setDetailId(rs.getInt("DetailID"));
+                    d.setStockInId(rs.getInt("StockInID"));
+                    d.setProductId(rs.getInt("ProductID"));
+                    d.setQuantity(rs.getInt("Quantity"));
+                    d.setReceivedQuantity(rs.getInt("ReceivedQuantity"));
+                    d.setUnitCost(rs.getDouble("UnitCost"));
+                    d.setSubTotal(rs.getDouble("SubTotal"));
+                    d.setProductName(rs.getString("ProductName"));
+                    d.setSku(rs.getString("SKU"));
+                    d.setUnit(rs.getString("Unit"));
+                    return d;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<StockInDetail> searchReturnableStockInDetails(int supplierId, int productId, String keyword, int page, int pageSize) {
+        List<StockInDetail> list = new ArrayList<>();
+
+        String sql = "SELECT d.DetailID, d.StockInID, d.ProductID, d.Quantity, d.ReceivedQuantity, "
+                + "d.UnitCost, d.SubTotal, p.Name AS ProductName, p.SKU, p.Unit "
+                + "FROM StockInDetails d "
+                + "INNER JOIN StockIn s ON d.StockInID = s.StockInID "
+                + "INNER JOIN Products p ON d.ProductID = p.ProductID "
+                + "WHERE s.SupplierID = ? "
+                + "AND d.ProductID = ? "
+                + "AND s.StockStatus IN ('Pending', 'Completed') "
+                + "AND ISNULL(d.ReceivedQuantity, 0) > 0 "
+                + "AND (CAST(d.DetailID AS NVARCHAR) LIKE ? OR CAST(d.StockInID AS NVARCHAR) LIKE ?) "
+                + "AND (ISNULL(d.ReceivedQuantity, 0) - ISNULL(( "
+                + "    SELECT SUM(rtd.Quantity) "
+                + "    FROM ReturnToVendorDetails rtd "
+                + "    INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
+                + "    WHERE rtd.DetailID = d.DetailID "
+                + "      AND rtv.Status IN ('Pending', 'Approved', 'Completed') "
+                + "), 0)) > 0 "
+                + "ORDER BY d.DetailID DESC "
+                + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            String likeKeyword = "%" + (keyword == null ? "" : keyword.trim()) + "%";
+            ps.setInt(1, supplierId);
+            ps.setInt(2, productId);
+            ps.setString(3, likeKeyword);
+            ps.setString(4, likeKeyword);
+            ps.setInt(5, (page - 1) * pageSize);
+            ps.setInt(6, pageSize);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    StockInDetail d = new StockInDetail();
+                    d.setDetailId(rs.getInt("DetailID"));
+                    d.setStockInId(rs.getInt("StockInID"));
+                    d.setProductId(rs.getInt("ProductID"));
+                    d.setQuantity(rs.getInt("Quantity"));
+                    d.setReceivedQuantity(rs.getInt("ReceivedQuantity"));
+                    d.setUnitCost(rs.getDouble("UnitCost"));
+                    d.setSubTotal(rs.getDouble("SubTotal"));
+                    d.setProductName(rs.getString("ProductName"));
+                    d.setSku(rs.getString("SKU"));
+                    d.setUnit(rs.getString("Unit"));
+                    list.add(d);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    public boolean isValidStockInDetailForReturn(int detailId, int supplierId, int productId) {
+        String sql = "SELECT 1 "
+                + "FROM StockInDetails d "
+                + "INNER JOIN StockIn s ON d.StockInID = s.StockInID "
+                + "WHERE d.DetailID = ? "
+                + "AND s.SupplierID = ? "
+                + "AND d.ProductID = ? "
+                + "AND s.StockStatus IN ('Pending', 'Completed') "
+                + "AND ISNULL(d.ReceivedQuantity, 0) > 0";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, detailId);
+            ps.setInt(2, supplierId);
+            ps.setInt(3, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public int getRemainingReturnableQuantity(int detailId) {
+        String sql = "SELECT CASE "
+                + "    WHEN (ISNULL(d.ReceivedQuantity, 0) - ISNULL(("
+                + "        SELECT SUM(rtd.Quantity) "
+                + "        FROM ReturnToVendorDetails rtd "
+                + "        INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
+                + "        WHERE rtd.DetailID = d.DetailID "
+                + "          AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
+                + "    ), 0)) < 0 THEN 0 "
+                + "    ELSE (ISNULL(d.ReceivedQuantity, 0) - ISNULL(("
+                + "        SELECT SUM(rtd.Quantity) "
+                + "        FROM ReturnToVendorDetails rtd "
+                + "        INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
+                + "        WHERE rtd.DetailID = d.DetailID "
+                + "          AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
+                + "    ), 0)) "
+                + "END AS RemainingQty "
+                + "FROM StockInDetails d "
+                + "WHERE d.DetailID = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, detailId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("RemainingQty");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
     public List<StockInDetailReport> getStockInDetailsReport(String fromDate, String toDate) {
         List<StockInDetailReport> list = new ArrayList<>();
         String sql = """

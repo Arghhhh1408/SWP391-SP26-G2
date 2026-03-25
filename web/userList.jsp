@@ -1,119 +1,103 @@
 <%-- Document : userList --%>
-    <%@page contentType="text/html" pageEncoding="UTF-8" %>
-        <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-            <!DOCTYPE html>
-            <html lang="vi">
+<%@page contentType="text/html" pageEncoding="UTF-8" %>
+<%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<!DOCTYPE html>
+<html lang="vi">
 
-            <head>
-                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-                <title>Danh Sách Tài Khoản</title>
-            </head>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Danh sách người dùng | IMS PRO</title>
+</head>
 
-            <body>
-                <c:set var="currentPage" value="userList" scope="request" />
-                <jsp:include page="adminSidebar.jsp" />
+<body>
+    <c:set var="currentPage" value="userList" scope="request" />
+    <jsp:include page="adminSidebar.jsp" />
 
-                <div class="admin-main">
-                    <div class="admin-topbar">
-                        <div>
-                            <h1>Danh Sách Tài Khoản</h1>
-                            <small>Admin &rsaquo; Quản lý người dùng &rsaquo; Danh sách tài khoản</small>
+    <div class="admin-main">
+        <div class="admin-topbar">
+            <div class="topbar-left">
+                <h1>Quản lý người dùng</h1>
+                <p>Admin &rsaquo; Danh sách tất cả tài khoản</p>
+            </div>
+            <div class="user-profile">
+                <span>👤 ${sessionScope.acc.fullName}</span>
+            </div>
+        </div>
+
+        <div class="admin-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3>🔍 Bộ lọc tìm kiếm</h3>
+                    <a href="createuser" class="btn btn-primary" style="padding: 8px 15px; font-size: 13px;">+ Thêm mới</a>
+                </div>
+                <div class="card-body">
+                    <form action="userList" method="get">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: flex-end;">
+                            <div class="form-group">
+                                <label style="display:block; font-size:12px; font-weight:700; color:#b5b5c3; margin-bottom:8px; text-transform:uppercase;">Tìm tên / Username</label>
+                                <input type="text" name="name" value="${param.name}" class="form-control" placeholder="Từ khóa...">
+                            </div>
+                            <div class="form-group">
+                                <label style="display:block; font-size:12px; font-weight:700; color:#b5b5c3; margin-bottom:8px; text-transform:uppercase;">Vai trò</label>
+                                <select name="option" class="form-control">
+                                    <option value="All">Tất cả vai trò</option>
+                                    <c:forEach items="${requestScope.listOfRole}" var="r">
+                                        <option value="${r.roleName}" ${r.roleName eq param.option ? 'selected' : ''}>${r.roleName}</option>
+                                    </c:forEach>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-outline">Tìm kiếm</button>
                         </div>
-                        <div>Xin chào, <strong>${sessionScope.acc.fullName}</strong></div>
-                    </div>
+                    </form>
+                </div>
+            </div>
 
-                    <div class="admin-content">
-
-                        <h3>Tìm kiếm tài khoản</h3>
-                        <form action="userList">
-                            <table>
+            <div class="card">
+                <div class="card-body" style="padding: 0;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>#ID</th>
+                                <th>Tài khoản</th>
+                                <th>Họ tên</th>
+                                <th>Email/SĐT</th>
+                                <th>Vai trò</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach items="${requestScope.list}" var="u">
                                 <tr>
-                                    <td>Tên:</td>
-                                    <td><input type="text" name="name" value="${param.name}"
-                                            placeholder="Username or Fullname" /></td>
-                                    <td>Email:</td>
-                                    <td><input type="text" name="email" value="${param.email}" /></td>
-                                </tr>
-                                <tr>
-                                    <td>Phone:</td>
-                                    <td><input type="text" name="phone" value="${param.phone}" /></td>
-                                    <td>Role:</td>
+                                    <td><span style="color: #b5b5c3; font-weight: 700;">#${u.userID}</span></td>
+                                    <td style="font-weight: 700; color: #181c32;">${u.username}</td>
+                                    <td>${u.fullName}</td>
                                     <td>
-                                        <select name="option">
-                                            <option>All</option>
-                                            <c:forEach items="${requestScope.listOfRole}" var="i">
-                                                <option <c:if test="${i.getRoleName() eq param.option}">selected</c:if>>
-                                                    ${i.getRoleName()}
-                                                </option>
-                                            </c:forEach>
-                                        </select>
+                                        <div style="font-size: 13px;">${u.email}</div>
+                                        <div style="color: #b5b5c3; font-size: 11px;">${u.phone}</div>
+                                    </td>
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${u.roleID == 0}"><span class="badge badge-danger">Admin</span></c:when>
+                                            <c:when test="${u.roleID == 1}"><span class="badge badge-primary">Staff</span></c:when>
+                                            <c:when test="${u.roleID == 2}"><span class="badge badge-success">Manager</span></c:when>
+                                            <c:when test="${u.roleID == 3}"><span class="badge badge-warning">Sales</span></c:when>
+                                        </c:choose>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 10px;">
+                                            <a href="updateuser?id=${u.userID}" class="btn btn-outline" style="padding: 5px 12px; font-size: 11px;">Sửa</a>
+                                            <c:if test="${u.roleID != 0}">
+                                                <a href="deleteUser?id=${u.userID}" class="btn btn-outline" style="color: #f64e60; padding: 5px 12px; font-size: 11px;" onclick="return confirm('Xác nhận xóa tài khoản?');">Xóa</a>
+                                            </c:if>
+                                        </div>
                                     </td>
                                 </tr>
-                            </table>
-                            <input type="submit" value="Tìm Kiếm" />
-                        </form>
-
-                        <br>
-                        <a href="createuser">+ Thêm Tài Khoản Mới</a>
-                        <br><br>
-
-                        <table border="1">
-                            <thead>
-                                <tr>
-                                    <th>UserID</th>
-                                    <th>UserName</th>
-                                    <th>FullName</th>
-                                    <th>Role</th>
-                                    <th>Email</th>
-                                    <th>Phone</th>
-                                    <th>CreateDate</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <c:forEach items="${requestScope.list}" var="i">
-                                    <tr>
-                                        <td>${i.getUserID()}</td>
-                                        <td>${i.getUsername()}</td>
-                                        <td>${i.getFullName()}</td>
-                                        <td>
-                                            <c:if test="${i.getRoleID() == 0}">Admin</c:if>
-                                            <c:if test="${i.getRoleID() == 1}">Staff</c:if>
-                                            <c:if test="${i.getRoleID() == 2}">Manager</c:if>
-                                            <c:if test="${i.getRoleID() == 3}">Sales</c:if>
-                                        </td>
-                                        <td>${i.getEmail()}</td>
-                                        <td>${i.getPhone()}</td>
-                                        <td>${i.getCreateDate()}</td>
-                                        <td><a href="resetpassword?id=${i.getUserID()}">Reset Mật khẩu</a></td>
-                                        <td>
-                                            <c:if test="${i.getRoleID() != 0}">
-                                                <a href="updateuser?id=${i.getUserID()}">Sửa</a>
-                                            </c:if>
-                                        </td>
-                                        <td>
-                                            <c:if test="${i.getRoleID() != 0}">
-                                                <a href="deleteUser?id=${i.getUserID()}"
-                                                    onclick="return confirm('Are you sure you want to delete this user?');">Xóa</a>
-                                            </c:if>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
-                            </tbody>
-                        </table>
-
-                        <h3 style="color: green">${notification}</h3>
-
-                        <c:if test="${not empty message}">
-                            <h3 style="color: ${status == 'success' ? 'green' : 'red'}">${message}</h3>
-                            <a href="admin">Quay lại admin</a> |
-                            <a href="deletedUsers">Xem danh sách tài khoản đã xóa</a>
-                            <br><br>
-                        </c:if>
-
-                    </div><!-- /admin-content -->
-                </div><!-- /admin-main -->
-
-            </body>
-
-            </html>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

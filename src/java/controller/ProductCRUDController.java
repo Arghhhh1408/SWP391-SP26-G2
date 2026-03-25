@@ -1,6 +1,7 @@
 package controller;
 
 import dao.CategoryDAO;
+import dao.NotificationDAO;
 import dao.ProductDAO;
 import dao.SystemLogDAO;
 import java.io.IOException;
@@ -12,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.Category;
+import model.Notification;
 import model.Product;
 import model.SystemLog;
 import model.User;
@@ -94,26 +96,22 @@ public class ProductCRUDController extends HttpServlet {
 
             double cost = 0;
             double price = 0;
-            int quantity = 0;
             int lowStockThreshold = 10; // Default
 
             try {
                 categoryId = Integer.parseInt(request.getParameter("categoryId"));
                 String costStr = request.getParameter("cost");
                 String priceStr = request.getParameter("price");
-                String quantityStr = request.getParameter("quantity");
 
                 if (costStr != null && !costStr.isEmpty())
                     cost = Double.parseDouble(costStr);
                 if (priceStr != null && !priceStr.isEmpty())
                     price = Double.parseDouble(priceStr);
-                if (quantityStr != null && !quantityStr.isEmpty())
-                    quantity = Integer.parseInt(quantityStr);
                 if (lowStockThresholdStr != null && !lowStockThresholdStr.isEmpty())
                     lowStockThreshold = Integer.parseInt(lowStockThresholdStr);
 
             } catch (NumberFormatException e) {
-                request.setAttribute("error", "Invalid number format for Cost, Price, or Quantity");
+                request.setAttribute("error", "Invalid number format for Cost or Price");
                 List<Category> categories = dao.getHierarchicalList();
                 request.setAttribute("categories", categories);
 
@@ -132,8 +130,8 @@ public class ProductCRUDController extends HttpServlet {
                 return;
             }
 
-            if (cost < 0 || price < 0 || quantity < 0) {
-                request.setAttribute("error", "Cost, Price, and Quantity must be non-negative!");
+            if (cost < 0 || price < 0) {
+                request.setAttribute("error", "Cost and Price must be non-negative!");
                 List<Category> categories = dao.getHierarchicalList();
                 request.setAttribute("categories", categories);
 
@@ -142,7 +140,6 @@ public class ProductCRUDController extends HttpServlet {
                 pError.setSku(sku);
                 pError.setCost(cost);
                 pError.setPrice(price);
-                pError.setQuantity(quantity);
                 pError.setUnit(unit);
                 pError.setDescription(description);
                 pError.setImageURL(imageURL);
@@ -159,7 +156,6 @@ public class ProductCRUDController extends HttpServlet {
             p.setSku(sku);
             p.setCost(cost);
             p.setPrice(price);
-            p.setQuantity(quantity);
             p.setUnit(unit);
             p.setDescription(description);
             p.setImageURL(imageURL);
@@ -180,12 +176,38 @@ public class ProductCRUDController extends HttpServlet {
                 int newId = pDao.addProduct(p);
                 if (newId > 0) {
                     new dao.LowStockDAO().saveOrUpdateAlert(newId, lowStockThreshold);
+                    
+                    // Notify staff if added by Manager
+                    HttpSession session = request.getSession(false);
+                    User currentUser = (User) session.getAttribute("acc");
+                    if (currentUser != null && currentUser.getRoleID() == 2) {
+                        NotificationDAO nDao = new NotificationDAO();
+                        Category cat = dao.getCategoryById(p.getCategoryId());
+                        String categoryName = (cat != null) ? cat.getName() : "Không xác định";
+                        
+                        String message = String.format("Manager Đã thêm 1 sản phẩm | Tên sản phẩm: %s | Danh mục sản phẩm: %s",
+                                p.getName(), categoryName);
+                                
+                        List<Integer> staffIds = nDao.getStaffIds();
+                        for (int staffId : staffIds) {
+                            Notification n = new Notification();
+                            n.setUserId(staffId);
+                            n.setTitle("Sản phẩm mới");
+                            n.setMessage(message);
+                            n.setType("PRODUCT_ADDED");
+                            nDao.insert(n);
+                        }
+                    }
                 }
                 logProductAction(request, "ADD_PRODUCT", "Thêm sản phẩm mới: " + p.getName() + " | SKU: " + p.getSku() + " | ID: " + newId);
             } else {
                 int id = Integer.parseInt(idStr);
                 Product oldP = pDao.getProductById(id);
                 p.setId(id);
+                // Preserve existing stock quantity (managed via stock-in only)
+                if (oldP != null) {
+                    p.setQuantity(oldP.getQuantity());
+                }
                 pDao.updateProduct(p);
                 new dao.LowStockDAO().saveOrUpdateAlert(id, lowStockThreshold);
                 logProductEdit(request, oldP, p);
@@ -237,10 +259,7 @@ public class ProductCRUDController extends HttpServlet {
             changes.append("Cost [").append(oldP.getCost()).append(" -> ").append(newP.getCost()).append("], ");
             changed = true;
         }
-        if (oldP.getQuantity() != newP.getQuantity()) {
-            changes.append("Quantity [").append(oldP.getQuantity()).append(" -> ").append(newP.getQuantity()).append("], ");
-            changed = true;
-        }
+        // Quantity is no longer editable via product form (managed via stock-in)
         if (!oldP.getStatus().equals(newP.getStatus())) {
             changes.append("Status [").append(oldP.getStatus()).append(" -> ").append(newP.getStatus()).append("], ");
             changed = true;

@@ -445,7 +445,16 @@
     <div class="admin-topbar">
         <div class="topbar-left">
             <h1>Manager Overview</h1>
-            <small>Operations &rsaquo; ${tab == 'returns' ? 'Return Requests' : 'Warranty Claims'}</small>
+            <small>
+                Operations &rsaquo;
+                <c:choose>
+                    <c:when test="${tab == 'overview'}">Overview</c:when>
+                    <c:when test="${tab == 'returns'}">Return Requests</c:when>
+                    <c:when test="${tab == 'vendorReturns'}">Vendor Return Approvals</c:when>
+                    <c:when test="${tab == 'warranty'}">Warranty Claims</c:when>
+                    <c:otherwise>Manager Workspace</c:otherwise>
+                </c:choose>
+            </small>
         </div>
         <div class="user-profile">
             <span class="avatar">👤</span>
@@ -492,6 +501,13 @@
                         <div class="stat-info">
                             <span class="value">${pendingReturns}</span>
                             <span class="label">Trả hàng Chờ xử lý</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9;">🏭</div>
+                        <div class="stat-info">
+                            <span class="value">${pendingVendorReturns}</span>
+                            <span class="label">Phiếu trả NCC chờ duyệt</span>
                         </div>
                     </div>
                     <div class="stat-card" style="cursor: pointer; border: 1px solid ${not empty lowStockProducts ? '#f59e0b' : '#f1f5f9'}; box-shadow: ${not empty lowStockProducts ? '0 0 10px rgba(245, 158, 11, 0.2)' : 'none'};" onclick="toggleLowStockList()">
@@ -581,7 +597,7 @@
                 <!-- Low Stock Detailed List -->
                 <div id="lowStockDetails" class="glass-card" style="display: none; border: 2px solid #f59e0b; background: #fffcf0; margin-bottom: 32px;">
                     <div class="card-header" style="background: #fef3c7; border-bottom: 1px solid #fde68a;">
-                        <h3 style="color: #92400e; font-weight: 700;">Danh sách sản phẩm dưới mức an tồn (< 5 sản phẩm)</h3>
+                        <h3 style="color: #92400e; font-weight: 700;">Danh sách sản phẩm dưới mức an tồn</h3>
                         <button onclick="toggleLowStockList()" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; padding: 2px 8px; cursor: pointer; color: #92400e;">Đóng</button>
                     </div>
                     <div class="card-body">
@@ -650,13 +666,113 @@
             <c:otherwise>
                 <div class="glass-card">
                     <div class="card-header">
-                        <h3>${tab == 'returns' ? 'Danh sách yêu cầu trả hàng' : 'Danh sách yêu cầu bảo hành'}</h3>
+                        <c:choose>
+                            <c:when test="${tab == 'returns'}">
+                                <h3>Danh sách yêu cầu trả hàng</h3>
+                            </c:when>
+                            <c:when test="${tab == 'vendorReturns'}">
+                                <h3>Danh sách phiếu trả nhà cung cấp</h3>
+                            </c:when>
+                            <c:otherwise>
+                                <h3>Danh sách yêu cầu bảo hành</h3>
+                            </c:otherwise>
+                        </c:choose>
                         <div style="font-size: 12px; color: var(--text-muted); font-weight: 500;">
-                            ${tab == 'returns' ? returns.size() : claims.size()} total requests
+                            <c:choose>
+                                <c:when test="${tab == 'returns'}">${returns.size()} total requests</c:when>
+                                <c:when test="${tab == 'vendorReturns'}">${vendorReturns.size()} total requests</c:when>
+                                <c:otherwise>${claims.size()} total requests</c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
             <div class="card-body">
                 <c:choose>
+                    <c:when test="${tab == 'vendorReturns'}">
+                        <c:if test="${param.msg == 'approved'}">
+                            <div style="background:#dcfce7; border:1px solid #86efac; color:#166534; padding:12px 16px; border-radius:8px; margin:16px;">
+                                Duyệt phiếu trả NCC thành công.
+                            </div>
+                        </c:if>
+                        <c:if test="${param.msg == 'rejected'}">
+                            <div style="background:#dcfce7; border:1px solid #86efac; color:#166534; padding:12px 16px; border-radius:8px; margin:16px;">
+                                Từ chối phiếu trả NCC thành công.
+                            </div>
+                        </c:if>
+                        <c:if test="${not empty param.err}">
+                            <div style="background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; padding:12px 16px; border-radius:8px; margin:16px;">
+                                Thao tác duyệt phiếu trả NCC thất bại. Mã lỗi: ${param.err}
+                            </div>
+                        </c:if>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mã phiếu</th>
+                                    <th>Nhà cung cấp</th>
+                                    <th>Lý do</th>
+                                    <th>Thanh toán</th>
+                                    <th>Trạng thái</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Ngày tạo</th>
+                                    <th style="text-align: right;">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach items="${vendorReturns}" var="vr">
+                                    <tr>
+                                        <td><code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-weight: 700; color: #334155;">${vr.returnCode}</code></td>
+                                        <td>
+                                            <div style="font-weight: 600; color: #0f172a;">${vr.supplierName}</div>
+                                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">RTVID: ${vr.rtvID}</div>
+                                        </td>
+                                        <td>
+                                            <div style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${vr.reason}">
+                                                ${vr.reason}
+                                            </div>
+                                        </td>
+                                        <td>${vr.settlementType}</td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${vr.status == 'Completed'}"><span class="status-pill status-completed">Completed</span></c:when>
+                                                <c:when test="${vr.status == 'Approved'}"><span class="status-pill status-approved">Approved</span></c:when>
+                                                <c:when test="${vr.status == 'Rejected'}"><span class="status-pill status-rejected">Rejected</span></c:when>
+                                                <c:otherwise><span class="status-pill status-new">Pending</span></c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                        <td><fmt:formatNumber value="${vr.totalAmount}" type="number" minFractionDigits="0" maxFractionDigits="2"/></td>
+                                        <td>${vr.createdDate}</td>
+                                        <td style="text-align: right;">
+                                            <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+                                                <a href="return-to-vendor?action=detail&id=${vr.rtvID}&from=manager" class="btn btn-reject" style="text-decoration:none;">Chi tiết</a>
+                                                <c:if test="${vr.status == 'Pending'}">
+                                                    <form action="manager_dashboard" method="post" style="display:inline;">
+                                                        <input type="hidden" name="action" value="approveVendorReturn">
+                                                        <input type="hidden" name="rtvID" value="${vr.rtvID}">
+                                                        <button type="submit" class="btn btn-confirm" onclick="return confirm('Duyệt phiếu trả NCC này?');">Duyệt</button>
+                                                    </form>
+                                                    <form action="manager_dashboard" method="post" style="display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                                                        <input type="hidden" name="action" value="rejectVendorReturn">
+                                                        <input type="hidden" name="rtvID" value="${vr.rtvID}">
+                                                        <input type="text" name="rejectNote" placeholder="Lý do từ chối" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; min-width:160px;">
+                                                        <button type="submit" class="btn btn-reject" onclick="return confirm('Từ chối phiếu trả NCC này?');">Từ chối</button>
+                                                    </form>
+                                                </c:if>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                                <c:if test="${empty vendorReturns}">
+                                    <tr>
+                                        <td colspan="8">
+                                            <div class="empty-state">
+                                                <span class="icon">📫</span>
+                                                <p>Chưa có phiếu trả nhà cung cấp nào.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </c:if>
+                            </tbody>
+                        </table>
+                    </c:when>
                     <c:when test="${tab == 'returns'}">
                         <table>
                             <thead>

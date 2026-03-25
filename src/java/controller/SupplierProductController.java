@@ -107,7 +107,6 @@ public class SupplierProductController extends HttpServlet {
             ProductDAO productDAO = new ProductDAO();
             List<Product> productList = productDAO.getAllActiveProducts();
 
-            // Ghi log xem / tìm kiếm sản phẩm của NCC
             try {
                 SystemLogDAO logDao = new SystemLogDAO();
                 SystemLog log = new SystemLog();
@@ -177,8 +176,22 @@ public class SupplierProductController extends HttpServlet {
                     return;
                 }
 
+                if (supplyPriceRaw == null || supplyPriceRaw.trim().isEmpty()) {
+                    session.setAttribute("message", "Vui lòng nhập giá nhập!");
+                    session.setAttribute("status", "error");
+                    response.sendRedirect("supplierProduct?supplierId=" + supplierId);
+                    return;
+                }
+
                 int productId = Integer.parseInt(productIdRaw);
                 double supplyPrice = Double.parseDouble(supplyPriceRaw);
+
+                if (supplyPrice < 0) {
+                    session.setAttribute("message", "Giá nhập phải lớn hơn hoặc bằng 0!");
+                    session.setAttribute("status", "error");
+                    response.sendRedirect("supplierProduct?supplierId=" + supplierId);
+                    return;
+                }
 
                 if (dao.checkDuplicate(supplierId, productId)) {
                     session.setAttribute("message", "Sản phẩm này đã tồn tại trong nhà cung cấp!");
@@ -204,33 +217,55 @@ public class SupplierProductController extends HttpServlet {
                     }
                 }
 
-            } else if ("update".equals(action)) {
-                int supplierProductId = Integer.parseInt(request.getParameter("supplierProductId"));
-                double supplyPrice = Double.parseDouble(request.getParameter("supplyPrice"));
-                boolean isActive = request.getParameter("isActive") != null;
+            } else if ("editPrice".equals(action)) {
+                String supplierProductIdRaw = request.getParameter("supplierProductId");
+                String supplyPriceRaw = request.getParameter("supplyPrice");
 
-                boolean ok = dao.updateSupplierProduct(supplierProductId, supplyPrice, isActive);
+                if (supplierProductIdRaw == null || supplierProductIdRaw.trim().isEmpty()
+                        || supplyPriceRaw == null || supplyPriceRaw.trim().isEmpty()) {
+                    session.setAttribute("message", "Thiếu dữ liệu cập nhật giá nhập!");
+                    session.setAttribute("status", "error");
+                    response.sendRedirect("supplierProduct?supplierId=" + supplierId);
+                    return;
+                }
+
+                int supplierProductId = Integer.parseInt(supplierProductIdRaw);
+                double supplyPrice = Double.parseDouble(supplyPriceRaw);
+
+                if (supplyPrice < 0) {
+                    session.setAttribute("message", "Giá nhập phải lớn hơn hoặc bằng 0!");
+                    session.setAttribute("status", "error");
+                    response.sendRedirect("supplierProduct?supplierId=" + supplierId);
+                    return;
+                }
+
+                SupplierProduct oldData = dao.getSupplierProductById(supplierProductId);
+                boolean ok = dao.updateSupplyPrice(supplierProductId, supplyPrice);
 
                 if (ok) {
-                    session.setAttribute("message", "Cập nhật sản phẩm nhà cung cấp thành công!");
+                    session.setAttribute("message", "Cập nhật giá nhập thành công!");
                     session.setAttribute("status", "success");
 
                     SystemLogDAO logDao = new SystemLogDAO();
                     SystemLog log = new SystemLog();
                     log.setUserID(user.getUserID());
-                    log.setAction("UPDATE_SUPPLIER_PRODUCT");
+                    log.setAction("UPDATE_SUPPLY_PRICE");
                     log.setTargetObject("SupplierProduct ID: " + supplierProductId);
-                    log.setDescription("Updated supplier product with supplyPrice=" + supplyPrice
-                            + ", isActive=" + isActive);
+                    log.setDescription("Updated supply price from "
+                            + (oldData != null ? oldData.getSupplyPrice() : "unknown")
+                            + " to " + supplyPrice);
                     log.setIpAddress(request.getRemoteAddr());
                     logDao.insertLog(log);
-
                 } else {
-                    session.setAttribute("message", "Cập nhật thất bại!");
+                    session.setAttribute("message", "Cập nhật giá nhập thất bại!");
                     session.setAttribute("status", "error");
                 }
             }
 
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            session.setAttribute("message", "Dữ liệu nhập không hợp lệ!");
+            session.setAttribute("status", "error");
         } catch (Exception e) {
             e.printStackTrace();
             session.setAttribute("message", "Lỗi: " + e.getMessage());

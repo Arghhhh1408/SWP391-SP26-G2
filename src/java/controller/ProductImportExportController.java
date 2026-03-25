@@ -113,22 +113,21 @@ public class ProductImportExportController extends HttpServlet {
             
             List<Product> productsToInsert = new ArrayList<>();
             List<String> dataErrors = new ArrayList<>();
-            int rowNum = 1; // Counter for error messages
+            int totalAttempted = imported.size();
             
             for (ExcelUtils.ImportedProduct ip : imported) {
-                rowNum++;
                 // Validation (Logic moved from Utility to Controller)
                 if (ip.name == null || ip.name.isEmpty() || ip.sku == null || ip.sku.isEmpty()) {
-                    dataErrors.add("Dòng " + rowNum + ": Tên và SKU là bắt buộc.");
+                    dataErrors.add("Dòng " + ip.rowNum + ": Tên và SKU là bắt buộc.");
                     continue;
                 }
                 if (prodDao.isProductSkuExists(ip.sku)) {
-                    dataErrors.add("Dòng " + rowNum + ": SKU '" + ip.sku + "' đã tồn tại.");
+                    dataErrors.add("Dòng " + ip.rowNum + ": SKU '" + ip.sku + "' đã tồn tại.");
                     continue;
                 }
                 Integer categoryId = catDao.getCategoryIdByName(ip.categoryName);
                 if (categoryId == null) {
-                    dataErrors.add("Dòng " + rowNum + ": Không tìm thấy danh mục '" + ip.categoryName + "'.");
+                    dataErrors.add("Dòng " + ip.rowNum + ": Không tìm thấy danh mục '" + ip.categoryName + "'.");
                     continue;
                 }
 
@@ -163,11 +162,11 @@ public class ProductImportExportController extends HttpServlet {
             }
 
             request.setAttribute("successCount", successCount);
-            request.setAttribute("totalValid", productsToInsert.size());
+            request.setAttribute("totalAttempted", totalAttempted);
             request.setAttribute("errors", dataErrors);
             request.setAttribute("dbErrors", dbErrors);
             
-            logAction(request, "IMPORT_PRODUCTS", "Import sản phẩm: Thành công " + successCount + "/" + imported.size());
+            logAction(request, "IMPORT_PRODUCTS", "Import sản phẩm: Thành công " + successCount + "/" + totalAttempted);
             
             request.getRequestDispatcher("importResult.jsp").forward(request, response);
         } catch (Exception e) {

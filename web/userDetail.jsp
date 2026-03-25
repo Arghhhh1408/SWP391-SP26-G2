@@ -8,127 +8,180 @@
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <title>
                     <c:choose>
-                        <c:when test="${empty user}">Tạo Tài Khoản</c:when>
-                        <c:otherwise>Sửa Tài Khoản</c:otherwise>
+                        <c:when test="${empty user}">Tạo tài khoản mới | IMS ADMIN</c:when>
+                        <c:otherwise>Cập nhật tài khoản | IMS ADMIN</c:otherwise>
                     </c:choose>
                 </title>
+                <style>
+                    .form-container {
+                        max-width: 600px;
+                        margin: 0 auto;
+                    }
+
+                    .form-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 20px;
+                    }
+
+                    @media (max-width: 600px) {
+                        .form-grid {
+                            grid-template-columns: 1fr;
+                        }
+                    }
+
+                    .form-actions {
+                        margin-top: 32px;
+                        display: flex;
+                        gap: 12px;
+                        justify-content: flex-end;
+                        border-top: 1px solid #f1f5f9;
+                        padding-top: 24px;
+                    }
+
+                    .readonly-input {
+                        background-color: #f8fafc !important;
+                        color: #64748b !important;
+                        cursor: not-allowed;
+                    }
+                </style>
             </head>
 
             <body>
-                <c:set var="currentPage" value="createUser" scope="request" />
+                <c:set var="currentPage" value="${empty user ? 'createUser' : 'userList'}" scope="request" />
                 <jsp:include page="adminSidebar.jsp" />
 
                 <div class="admin-main">
                     <div class="admin-topbar">
                         <div>
                             <h1>
-                                <c:if test="${empty user}">Tạo tài khoản</c:if>
-                                <c:if test="${not empty user}">Sửa tài khoản</c:if>
+                                <c:choose>
+                                    <c:when test="${empty user}">🆕 Cấp tài khoản mới</c:when>
+                                    <c:otherwise>✏️ Chỉnh sửa tài khoản</c:otherwise>
+                                </c:choose>
                             </h1>
                             <small>Admin &rsaquo; Quản lý người dùng &rsaquo;
-                                <c:if test="${empty user}">Cấp tài khoản mới</c:if>
-                                <c:if test="${not empty user}">Cập nhật tài khoản</c:if>
+                                ${empty user ? 'Tạo mới' : 'Cập nhật thông tin'}
                             </small>
                         </div>
-                        <div>Xin chào, <strong>${sessionScope.acc.fullName}</strong></div>
+                        <div class="user-profile">
+                            <span style="font-size: 18px;">👤</span>
+                            <strong>${sessionScope.acc.fullName}</strong>
+                        </div>
                     </div>
 
                     <div class="admin-content">
+                        <div class="form-container">
+                            <div class="glass-card">
+                                <div class="card-header">
+                                    <h3>Thông tin tài khoản</h3>
+                                </div>
+                                <div class="card-body">
+                                    <form action="${not empty user ? 'updateuser' : 'createuser'}" method="post">
+                                        <c:if test="${not empty user}">
+                                            <input type="hidden" name="id" value="${user.userID}">
+                                        </c:if>
 
-                        <form action="${not empty user ? 'updateuser' : 'createuser'}" method="post">
-                            <c:if test="${not empty user}">
-                                <input type="hidden" name="id" value="${user.userID}">
-                            </c:if>
-                            <table>
-                                <c:choose>
-                                    <c:when test="${not empty user}">
-                                        <%-- UPDATE MODE --%>
-                                            <tr>
-                                                <td>User ID:</td>
-                                                <td><input type="text" value="${user.userID}" readonly
-                                                        style="background-color: #e9ecef;"></td>
-                                                <td>Username:</td>
-                                                <td><input type="text" name="username" value="${user.username}" readonly
-                                                        style="background-color: #e9ecef;"></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Họ tên:</td>
-                                                <td><input type="text" name="fullname" value="${user.fullName}"
-                                                        required></td>
-                                                <td>Số điện thoại:</td>
-                                                <td><input type="text" name="phone" value="${user.phone}" required></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Email:</td>
-                                                <td><input type="email" name="email" value="${user.email}" required>
-                                                </td>
-                                                <td>Vai trò: </td>
-                                                <td>
-                                                    <select name="role">
-                                                        <c:forEach items="${requestScope.listOfRole}" var="i">
-                                                            <option value="${i.getRoleID()}" <c:if
-                                                                test="${i.getRoleID() == user.roleID}">selected</c:if>
-                                                                >${i.getRoleName()}</option>
-                                                        </c:forEach>
-                                                    </select>
-                                                </td>
-                                            </tr>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <%-- CREATE MODE --%>
-                                            <tr>
-                                                <td>Họ tên:</td>
-                                                <td><input type="text" name="fullname" value="${param.fullname}"
-                                                        required></td>
-                                                <td>Số điện thoại:</td>
-                                                <td><input type="text" name="phone" value="${param.phone}" required>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Email:</td>
-                                                <td><input type="email" name="email" value="${param.email}" required>
-                                                </td>
-                                                <td>Username:</td>
-                                                <td><input type="text" name="username" value="${param.username}"
-                                                        required></td>
-                                            </tr>
-                                            <tr>
-                                                <td>Password:</td>
-                                                <td><input type="text" name="password" value="${param.password}"
-                                                        required></td>
-                                                <td>Vai trò: </td>
-                                                <td>
-                                                    <select name="role">
-                                                        <c:forEach items="${requestScope.listOfRole}" var="i">
-                                                            <option value="${i.getRoleID()}" <c:if
-                                                                test="${i.getRoleID() == param.role}">selected</c:if>
-                                                                >${i.getRoleName()}</option>
-                                                        </c:forEach>
-                                                    </select>
-                                                </td>
-                                            </tr>
-                                    </c:otherwise>
-                                </c:choose>
+                                        <div class="form-grid">
+                                            <c:if test="${not empty user}">
+                                                <div class="form-group">
+                                                    <label>User ID</label>
+                                                    <input type="text" value="${user.userID}"
+                                                        class="form-control readonly-input" readonly>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Username</label>
+                                                    <input type="text" name="username" value="${user.username}"
+                                                        class="form-control readonly-input" readonly>
+                                                </div>
+                                            </c:if>
 
-                                <tr>
-                                    <td><input type="submit" value="${not empty user ? 'Cập nhật' : 'Tạo tài khoản'}">
-                                    </td>
-                                </tr>
-                            </table>
-                        </form>
+                                            <c:if test="${empty user}">
+                                                <div class="form-group">
+                                                    <label>Username</label>
+                                                    <input type="text" name="username" value="${param.username}"
+                                                        class="form-control" placeholder="Nhập username" required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Mật khẩu mặc định</label>
+                                                    <input type="text" name="password" value="${param.password}"
+                                                        class="form-control" placeholder="Nhập mật khẩu" required>
+                                                </div>
+                                            </c:if>
 
-                        <c:if test="${not empty message}">
-                            <h3 style="color: ${status == 'success' ? 'green' : 'red'}">${message}</h3>
-                            <a href="admin">Quay lại admin</a> |
-                            <a href="userList">Xem danh sách tài khoản</a>
-                            <c:if test="${empty user}"> | <a href="createuser">Tiếp tục thêm tài khoản</a></c:if>
-                            <br><br>
-                        </c:if>
-                        <h3 style="color: red">${requestScope.error}</h3>
+                                            <div class="form-group" style="grid-column: span 2;">
+                                                <label>Họ và tên</label>
+                                                <input type="text" name="fullname"
+                                                    value="${not empty user ? user.fullName : param.fullname}"
+                                                    class="form-control ${not empty user ? 'readonly-input' : ''}" 
+                                                    placeholder="Nhập họ và tên đầy đủ" required
+                                                    ${not empty user ? 'readonly' : ''}>
+                                            </div>
 
-                    </div><!-- /admin-content -->
-                </div><!-- /admin-main -->
+                                            <div class="form-group">
+                                                <label>Email liên hệ</label>
+                                                <input type="email" name="email"
+                                                    value="${not empty user ? user.email : param.email}"
+                                                    class="form-control ${not empty user ? 'readonly-input' : ''}" 
+                                                    placeholder="example@domain.com" required
+                                                    ${not empty user ? 'readonly' : ''}>
+                                            </div>
 
+                                            <div class="form-group">
+                                                <label>Số điện thoại</label>
+                                                <input type="text" name="phone"
+                                                    value="${not empty user ? user.phone : param.phone}"
+                                                    class="form-control ${not empty user ? 'readonly-input' : ''}" 
+                                                    placeholder="0xxxxxxxxx" required
+                                                    ${not empty user ? 'readonly' : ''}>
+                                            </div>
+
+                                            <div class="form-group" style="grid-column: span 2;">
+                                                <label>Vai trò hệ thống</label>
+                                                <select name="role" class="form-control">
+                                                    <c:forEach items="${requestScope.listOfRole}" var="r">
+                                                        <option value="${r.roleID}" <c:if
+                                                            test="${(not empty user and r.roleID == user.roleID) or (empty user and r.roleID == param.role)}">
+                                                            selected</c:if>>
+                                                            ${r.roleName}
+                                                        </option>
+                                                    </c:forEach>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <c:if test="${not empty error}">
+                                            <div
+                                                style="color: #ef4444; background: #fee2e2; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 16px;">
+                                                ⚠️ ${error}
+                                            </div>
+                                        </c:if>
+
+                                        <c:if test="${not empty message}">
+                                            <div
+                                                style="color: #10b981; background: #dcfce7; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 16px;">
+                                                ✅ ${message}
+                                            </div>
+                                        </c:if>
+
+                                        <div class="form-actions">
+                                            <a href="userList" class="btn btn-outline">Hủy bỏ</a>
+                                            <button type="submit" class="btn btn-primary">
+                                                ${not empty user ? 'Cập nhật tài khoản' : 'Tạo tài khoản'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 20px; text-align: center;">
+                                <a href="userList"
+                                    style="color: var(--text-muted); font-size: 13px; text-decoration: none;">&larr;
+                                    Quay lại danh sách</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </body>
 
             </html>

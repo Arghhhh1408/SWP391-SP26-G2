@@ -6,7 +6,6 @@ package controller;
 
 import dao.UserDAO;
 import java.io.IOException;
-import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -26,18 +25,30 @@ public class RestoreUserController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
+        User currentUser = (User) session.getAttribute("acc");
+        if (currentUser == null || currentUser.getRoleID() != 0) {
+            response.sendRedirect("login");
+            return;
+        }
+
         int userID = Integer.parseInt(request.getParameter("id"));
         UserDAO dao = new UserDAO();
+
+        String conflictMessage = dao.validateRestoreConflict(userID);
+        if (conflictMessage != null) {
+            session.setAttribute("notification", "Không thể khôi phục tài khoản: " + conflictMessage);
+            response.sendRedirect("deletedUsers");
+            return;
+        }
+
         boolean success = dao.restoreUser(userID);
 
         if (success) {
             session.setAttribute("notification", "Khôi phục tài khoản thành công");
 
-            // Log the action
             dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
             model.SystemLog log = new model.SystemLog();
-            model.User admin = (model.User) session.getAttribute("acc");
-            int adminId = (admin != null) ? admin.getUserID() : 0;
+            int adminId = currentUser.getUserID();
 
             log.setUserID(adminId);
             log.setAction("RESTORE_USER");

@@ -121,6 +121,14 @@
                 background: #0d63e6;
             }
 
+            .btn-secondary {
+                background: #6b7280;
+            }
+
+            .btn-secondary:hover {
+                background: #4b5563;
+            }
+
             .dropdown-box {
                 position: absolute;
                 top: 100%;
@@ -154,7 +162,7 @@
             table {
                 width: 100%;
                 border-collapse: collapse;
-                min-width: 800px;
+                min-width: 900px;
             }
 
             thead {
@@ -188,6 +196,20 @@
                 color: #777;
             }
 
+            .edit-form {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .edit-form input[type="number"] {
+                padding: 8px 10px;
+                border: 1px solid #cfd9e6;
+                border-radius: 8px;
+                width: 150px;
+            }
+
             @media (max-width: 768px) {
                 .form-row {
                     grid-template-columns: 1fr;
@@ -211,11 +233,10 @@
             </c:if>
             <c:remove var="message" scope="session"/>
             <c:remove var="status" scope="session"/>
+
             <c:if test="${sessionScope.acc.roleID == 2}">
                 <div class="form-box">
-
                     <h3>Thêm mới sản phẩm cho nhà cung cấp</h3>
-
 
                     <form action="supplierProduct" method="post">
                         <input type="hidden" name="action" value="add">
@@ -239,17 +260,17 @@
 
                             <div class="form-group">
                                 <label>Giá nhập</label>
-                                <input type="number" step="0.01" name="supplyPrice" required>
+                                <input type="number" step="0.01" min="0" name="supplyPrice" required>
                             </div>
 
                             <div class="form-group">
                                 <button type="submit" class="btn">Thêm</button>
                             </div>
-
                         </div>
                     </form>
                 </div>
             </c:if>
+
             <c:if test="${sessionScope.acc.roleID == 1}">
                 <div class="form-box">
                     <h3>Tìm kiếm sản phẩm theo nhà cung cấp</h3>
@@ -258,7 +279,8 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Từ khóa</label>
-                                <input type="text" name="keyword" placeholder="Nhập tên sản phẩm, giá nhập, trạng thái..."
+                                <input type="text" name="keyword"
+                                       placeholder="Nhập tên sản phẩm, giá nhập, trạng thái..."
                                        value="${keyword}">
                             </div>
                             <div class="form-group">
@@ -272,6 +294,7 @@
                     </form>
                 </div>
             </c:if>
+
             <div class="table-wrapper">
                 <table>
                     <thead>
@@ -280,6 +303,9 @@
                             <th>Tên sản phẩm</th>
                             <th>Giá nhập</th>
                             <th>Trạng thái</th>
+                                <c:if test="${sessionScope.acc.roleID == 2}">
+                                <th>Thao tác</th>
+                                </c:if>
                         </tr>
                     </thead>
                     <tbody>
@@ -300,12 +326,54 @@
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
+
+                                        <c:if test="${sessionScope.acc.roleID == 2}">
+                                            <td>
+                                                <button type="button" class="btn"
+                                                        onclick="toggleEditForm('${sp.supplierProductID}')">
+                                                    Chỉnh sửa giá nhập
+                                                </button>
+                                            </td>
+                                        </c:if>
                                     </tr>
+
+                                    <c:if test="${sessionScope.acc.roleID == 2}">
+                                        <tr id="edit-row-${sp.supplierProductID}" style="display: none; background: #f9fbff;">
+                                            <td colspan="5">
+                                                <form action="supplierProduct" method="post" class="edit-form">
+                                                    <input type="hidden" name="action" value="editPrice">
+                                                    <input type="hidden" name="supplierId" value="${supplierId}">
+                                                    <input type="hidden" name="supplierProductId" value="${sp.supplierProductID}">
+
+                                                    <label style="font-weight:600;">Giá nhập mới:</label>
+                                                    <input type="number"
+                                                           name="supplyPrice"
+                                                           value="${sp.supplyPrice}"
+                                                           step="0.01"
+                                                           min="0"
+                                                           required>
+
+                                                    <button type="submit" class="btn">Lưu</button>
+                                                    <button type="button" class="btn btn-secondary"
+                                                            onclick="toggleEditForm('${sp.supplierProductID}')">
+                                                        Hủy
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    </c:if>
                                 </c:forEach>
                             </c:when>
                             <c:otherwise>
                                 <tr>
-                                    <td colspan="4" class="empty-row">Chưa có sản phẩm nào cho nhà cung cấp này.</td>
+                                    <c:choose>
+                                        <c:when test="${sessionScope.acc.roleID == 2}">
+                                            <td colspan="5" class="empty-row">Chưa có sản phẩm nào cho nhà cung cấp này.</td>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <td colspan="4" class="empty-row">Chưa có sản phẩm nào cho nhà cung cấp này.</td>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </tr>
                             </c:otherwise>
                         </c:choose>
@@ -320,35 +388,46 @@
             const hiddenProductId = document.getElementById("productId");
             const items = document.querySelectorAll(".dropdown-item");
 
-            searchInput.addEventListener("focus", function () {
-                dropdown.style.display = "block";
-            });
+            if (searchInput && dropdown && hiddenProductId) {
+                searchInput.addEventListener("focus", function () {
+                    dropdown.style.display = "block";
+                });
 
-            searchInput.addEventListener("input", function () {
-                const keyword = this.value.toLowerCase().trim();
-                dropdown.style.display = "block";
+                searchInput.addEventListener("input", function () {
+                    const keyword = this.value.toLowerCase().trim();
+                    dropdown.style.display = "block";
+
+                    items.forEach(item => {
+                        const name = item.dataset.name.toLowerCase();
+                        item.style.display = name.includes(keyword) ? "block" : "none";
+                    });
+
+                    hiddenProductId.value = "";
+                });
 
                 items.forEach(item => {
-                    const name = item.dataset.name.toLowerCase();
-                    item.style.display = name.includes(keyword) ? "block" : "none";
+                    item.addEventListener("click", function () {
+                        searchInput.value = this.dataset.name;
+                        hiddenProductId.value = this.dataset.id;
+                        dropdown.style.display = "none";
+                    });
                 });
 
-                hiddenProductId.value = "";
-            });
-
-            items.forEach(item => {
-                item.addEventListener("click", function () {
-                    searchInput.value = this.dataset.name;
-                    hiddenProductId.value = this.dataset.id;
-                    dropdown.style.display = "none";
+                document.addEventListener("click", function (e) {
+                    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.style.display = "none";
+                    }
                 });
-            });
+            }
 
-            document.addEventListener("click", function (e) {
-                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.style.display = "none";
+            function toggleEditForm(id) {
+                const row = document.getElementById("edit-row-" + id);
+                if (row.style.display === "none" || row.style.display === "") {
+                    row.style.display = "table-row";
+                } else {
+                    row.style.display = "none";
                 }
-            });
+            }
         </script>
     </body>
 </html>
