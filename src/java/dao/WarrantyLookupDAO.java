@@ -109,49 +109,17 @@ public class WarrantyLookupDAO extends DBContext {
         }
         String raw = keyword.trim();
         String k = "%" + raw + "%";
+        // Chỉ search theo: SKU, tên sản phẩm, và SĐT khách hàng.
         sql.append("""
                  AND (
                     p.SKU LIKE ?
                     OR p.Name LIKE ?
-                    OR (N'SN-' + CAST(o.StockOutID AS varchar(20)) + N'-' + CAST(d.DetailID AS varchar(20))) LIKE ?
-                    OR (c.Name IS NOT NULL AND c.Name LIKE ?)
                     OR (c.Phone IS NOT NULL AND c.Phone LIKE ?)
-                    OR (c.Email IS NOT NULL AND c.Email LIKE ?)
-                    OR CAST(o.StockOutID AS varchar(20)) LIKE ?
+                 ) 
                 """);
-        Integer stockOutExact = tryParsePositiveInt(raw);
-        if (stockOutExact != null) {
-            sql.append(" OR o.StockOutID = ? ");
-        }
-        sql.append(") ");
         params.add(k);
         params.add(k);
         params.add(k);
-        params.add(k);
-        params.add(k);
-        params.add(k);
-        params.add(k);
-        if (stockOutExact != null) {
-            params.add(stockOutExact);
-        }
-    }
-
-    /** Chỉ nhận số nguyên dương (VD: mã StockOutID), tránh parse nhầm SKU có chữ. */
-    private static Integer tryParsePositiveInt(String raw) {
-        if (raw == null || raw.isEmpty() || raw.length() > 9) {
-            return null;
-        }
-        for (int i = 0; i < raw.length(); i++) {
-            if (!Character.isDigit(raw.charAt(i))) {
-                return null;
-            }
-        }
-        try {
-            int v = Integer.parseInt(raw);
-            return v > 0 ? v : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     private void appendWarrantyFilter(StringBuilder sql, String warrantyFilter) {

@@ -279,7 +279,7 @@
 <c:set var="wlSubmitAction" value="${pageContext.request.contextPath}/sales-warranty-submit"/>
 
 <p class="wl-hint" style="font-size:13px;color:#64748b;margin-bottom:16px;">
-    Nhập <strong>serial</strong> (VD: SN-1-2), <strong>SKU</strong>, <strong>tên sản phẩm</strong>, <strong>tên / SĐT / email khách</strong>, hoặc <strong>mã phiếu xuất</strong> (StockOutID). Bảo hành <strong>12 tháng</strong> kể từ ngày bán.
+    Nhập <strong>SKU</strong>, <strong>tên sản phẩm</strong>, hoặc <strong>SĐT khách hàng</strong>. Bảo hành <strong>12 tháng</strong> kể từ ngày bán.
     <br/><span style="color:#b45309;">Trả hàng: chỉ trong <strong>7 ngày</strong> kể từ ngày mua (mục &quot;Trả hàng&quot; trong form chỉ bật khi còn hạn).</span>
 </p>
 
@@ -290,7 +290,7 @@
 
     <div class="wl-search-wrap">
         <span class="wl-icon">&#128269;</span>
-        <input type="text" name="q" class="wl-search-input" placeholder="Serial, SKU, tên SP, khách, SĐT, email hoặc mã phiếu xuất…"
+        <input type="text" name="q" class="wl-search-input" placeholder="SKU, tên SP hoặc SĐT khách…"
                value="${q}" autocomplete="off"/>
     </div>
     <div class="wl-search-actions">

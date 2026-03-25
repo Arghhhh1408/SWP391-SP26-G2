@@ -35,6 +35,90 @@ public class ReturnDAO extends DBContext {
         return list;
     }
 
+    /**
+     * Danh sách yêu cầu trả hàng dùng cho "Inventory Adjustment":
+     * loại các yêu cầu đã bị hủy (CANCELLED).
+     */
+    public List<ReturnRequest> listNotCancelled() {
+        List<ReturnRequest> list = new ArrayList<>();
+        try {
+            PreparedStatement stm = connection.prepareStatement("""
+                        SELECT r.ReturnID, r.ReturnCode, r.SKU, r.ProductName, r.CustomerName, r.CustomerPhone,
+                               r.Reason, r.ConditionNote, r.Status,
+                               r.RefundAmount, r.RefundMethod, r.RefundReference, r.RefundedAt,
+                               r.CreatedAt, r.UpdatedAt,
+                               p.Price AS ProductPrice
+                        FROM dbo.ReturnRequests r
+                        LEFT JOIN dbo.Products p ON p.SKU = r.SKU
+                        WHERE r.Status <> 'CANCELLED'
+                        ORDER BY r.UpdatedAt DESC, r.ReturnID DESC
+                    """);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                list.add(mapReturn(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public int countNotCancelled() {
+        String sql = """
+                SELECT COUNT(*) AS cnt
+                FROM dbo.ReturnRequests r
+                WHERE r.Status <> 'CANCELLED'
+                """;
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            ResultSet rs = stm.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("cnt");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public List<ReturnRequest> listNotCancelledPaged(int page, int pageSize) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (pageSize < 1) {
+            pageSize = 10;
+        }
+        if (pageSize > 50) {
+            pageSize = 50;
+        }
+        int offset = (page - 1) * pageSize;
+
+        List<ReturnRequest> list = new ArrayList<>();
+        try {
+            PreparedStatement stm = connection.prepareStatement("""
+                        SELECT r.ReturnID, r.ReturnCode, r.SKU, r.ProductName, r.CustomerName, r.CustomerPhone,
+                               r.Reason, r.ConditionNote, r.Status,
+                               r.RefundAmount, r.RefundMethod, r.RefundReference, r.RefundedAt,
+                               r.CreatedAt, r.UpdatedAt,
+                               p.Price AS ProductPrice
+                        FROM dbo.ReturnRequests r
+                        LEFT JOIN dbo.Products p ON p.SKU = r.SKU
+                        WHERE r.Status <> 'CANCELLED'
+                        ORDER BY r.UpdatedAt DESC, r.ReturnID DESC
+                        OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+                    """);
+            stm.setInt(1, offset);
+            stm.setInt(2, pageSize);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                list.add(mapReturn(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     public List<ReturnRequest> listByCreator(String actor, String keyword) {
         List<ReturnRequest> list = new ArrayList<>();
         if (actor == null || actor.isBlank()) {
@@ -297,6 +381,16 @@ public class ReturnDAO extends DBContext {
         r.setReturnCode(rs.getString("ReturnCode"));
         r.setSku(rs.getString("SKU"));
         r.setProductName(rs.getString("ProductName"));
+
+        // Optional column: only present in some queries (vd: listNotCancelled join Products)
+        try {
+            double pp = rs.getDouble("ProductPrice");
+            if (!rs.wasNull()) {
+                r.setProductPrice(pp);
+            }
+        } catch (Exception ignored) {
+        }
+
         r.setCustomerName(rs.getString("CustomerName"));
         r.setCustomerPhone(rs.getString("CustomerPhone"));
         r.setReason(rs.getString("Reason"));

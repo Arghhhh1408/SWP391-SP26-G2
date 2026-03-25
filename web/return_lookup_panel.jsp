@@ -157,7 +157,7 @@
 <c:set var="rlModalEmbedSalesDash" value="${rlAction == 'sales_dashboard'}"/>
 
 <p style="font-size:13px;color:#64748b;margin-bottom:16px;">
-    Nhập <strong>serial</strong> (VD: SN-1-2), <strong>SKU</strong>, <strong>tên sản phẩm</strong>, <strong>khách / SĐT / email</strong>, hoặc <strong>mã phiếu xuất</strong>.
+    Nhập <strong>SKU</strong>, <strong>tên sản phẩm</strong>, hoặc <strong>SĐT khách hàng</strong>.
     <br/><span style="color:#b45309;">Chỉ được tạo yêu cầu trả hàng trong <strong>7 ngày</strong> kể từ <strong>ngày mua</strong> của đúng dòng phiếu (theo cột ngày mua).</span>
 </p>
 
@@ -168,7 +168,7 @@
     <div class="rl-search-wrap">
         <span class="rl-icon">&#128269;</span>
         <input type="text" name="q" class="rl-search-input"
-               placeholder="Serial, SKU, tên SP, khách, SĐT, email hoặc mã phiếu xuất…"
+               placeholder="SKU, tên SP hoặc SĐT khách…"
                value="${rlq}" autocomplete="off"/>
     </div>
     <div class="rl-search-actions">

@@ -51,6 +51,20 @@ public class StaffController extends HttpServlet {
         } else if ("returns".equals(tab)) {
             ReturnDAO dao = new ReturnDAO();
             request.setAttribute("returns", dao.listAll());
+        } else if ("inventory-adjustment".equals(tab)) {
+            ReturnDAO dao = new ReturnDAO();
+            Integer p = tryParseInt(safeTrim(request.getParameter("iaPage")));
+            int page = p == null || p < 1 ? 1 : p;
+            int pageSize = 10;
+            int total = dao.countNotCancelled();
+            int totalPages = total <= 0 ? 1 : (int) Math.ceil((double) total / pageSize);
+            if (page > totalPages) {
+                page = totalPages;
+            }
+            request.setAttribute("inventoryAdjustments", dao.listNotCancelledPaged(page, pageSize));
+            request.setAttribute("iaPage", page);
+            request.setAttribute("iaTotalPages", totalPages);
+            request.setAttribute("iaTotal", total);
         } else if ("products".equals(tab)) {
             try {
                 CategoryDAO dao = new CategoryDAO();
@@ -198,7 +212,28 @@ public class StaffController extends HttpServlet {
         request.setAttribute("staffTotalSalesRevenueFormatted",
                 formatCurrencyVi(dashboardDAO.getTotalCompletedStockOutRevenue()));
         request.setAttribute("staffTotalSoldUnits", dashboardDAO.getTotalSoldUnitsFromStockOut());
-        request.setAttribute("staffHomeFeed", dashboardDAO.getWarrantyAndReturnFeed(80));
+        Integer shP = tryParseInt(safeTrim(request.getParameter("shPage")));
+        int shPage = shP == null || shP < 1 ? 1 : shP;
+        int shPageSize = 5;
+        int shTotal = dashboardDAO.countWarrantyAndReturnFeedAll();
+        int shTotalPages = shTotal <= 0 ? 1 : (int) Math.ceil((double) shTotal / shPageSize);
+        if (shPage > shTotalPages) {
+            shPage = shTotalPages;
+        }
+        request.setAttribute("staffHomeFeed", dashboardDAO.getWarrantyAndReturnFeedPaged(shPage, shPageSize));
+        request.setAttribute("shPage", shPage);
+        request.setAttribute("shTotalPages", shTotalPages);
+        request.setAttribute("shTotal", shTotal);
+
+        double revW = dashboardDAO.getCompletedRevenueThisWeek();
+        double revM = dashboardDAO.getCompletedRevenueThisMonth();
+        double revY = dashboardDAO.getCompletedRevenueThisYear();
+        request.setAttribute("staffRevenueWeek", revW);
+        request.setAttribute("staffRevenueMonth", revM);
+        request.setAttribute("staffRevenueYear", revY);
+        request.setAttribute("staffRevenueWeekFormatted", formatCurrencyVi(revW));
+        request.setAttribute("staffRevenueMonthFormatted", formatCurrencyVi(revM));
+        request.setAttribute("staffRevenueYearFormatted", formatCurrencyVi(revY));
     }
 
     private String formatCurrencyVi(double amount) {
@@ -219,7 +254,7 @@ public class StaffController extends HttpServlet {
 
     private Integer tryParseInt(String s) {
         try {
-            return Integer.parseInt(s);
+            return s == null ? null : Integer.valueOf(s);
         } catch (Exception e) {
             return null;
         }

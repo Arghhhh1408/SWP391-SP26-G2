@@ -406,6 +406,25 @@
             .st-feed-table tr:hover td {
                 background: #f8fafc;
             }
+            .st-feed-pager {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                justify-content: flex-end;
+                padding: 12px 16px 16px;
+                color: #64748b;
+                font-size: 13px;
+                flex-wrap: wrap;
+            }
+            .st-feed-pager a {
+                padding: 8px 12px;
+                border-radius: 10px;
+                border: 1px solid #e2e8f0;
+                background: #fff;
+                color: #0284c7;
+                font-weight: 700;
+            }
+            .st-feed-pager a:hover { background: #f8fafc; }
             .st-type-pill {
                 display: inline-flex;
                 align-items: center;
@@ -451,6 +470,63 @@
                 color: #94a3b8;
                 font-size: 14px;
             }
+
+            .st-chart-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin: 18px 0 22px;
+            }
+            @media (max-width: 1024px) {
+                .st-chart-grid { grid-template-columns: 1fr; }
+            }
+            .st-chart-card {
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 20px;
+                box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+                overflow: hidden;
+            }
+            .st-chart-head {
+                padding: 18px 22px;
+                border-bottom: 1px solid #e2e8f0;
+                background: linear-gradient(90deg, #f8fafc, #fff);
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .st-chart-head h3 {
+                margin: 0;
+                font-size: 16px;
+                color: #0f172a;
+            }
+            .st-chart-sub {
+                font-size: 12px;
+                color: #64748b;
+            }
+            .st-chart-body {
+                padding: 12px 16px 16px;
+            }
+            .st-chart-canvas-wrap {
+                height: 220px;
+            }
+            .st-kpis {
+                display: flex;
+                gap: 10px 14px;
+                flex-wrap: wrap;
+                margin-top: 10px;
+                font-size: 12px;
+                color: #475569;
+            }
+            .st-kpi-pill {
+                padding: 6px 10px;
+                border-radius: 999px;
+                border: 1px solid #e2e8f0;
+                background: #f8fafc;
+                font-weight: 700;
+            }
         </style>
     </head>
     <body>
@@ -481,9 +557,9 @@
                                 <div class="st-stat-hint">Số dòng sản phẩm đang hoạt động (Active) trong hệ thống.</div>
                             </div>
                             <div class="st-stat-card">
-                                <div class="st-stat-label">Tổng tiền bán hàng</div>
-                                <div class="st-stat-value">${staffTotalSalesRevenueFormatted}</div>
-                                <div class="st-stat-hint">Tổng giá trị các phiếu xuất kho đã hoàn thành (Completed).</div>
+                                <div class="st-stat-label">Doanh thu tháng này</div>
+                                <div class="st-stat-value">${staffRevenueMonthFormatted}</div>
+                                <div class="st-stat-hint">Tổng tiền các phiếu xuất kho hoàn thành (Completed) từ đầu tháng đến hiện tại.</div>
                             </div>
                             <div class="st-stat-card">
                                 <div class="st-stat-label">Tổng số lượng đã bán</div>
@@ -502,6 +578,38 @@
                             <a href="staff_dashboard?tab=warranty">Bảo hành</a>
                             <span>·</span>
                             <a href="staff_dashboard?tab=returns">Đổi / trả</a>
+                            <span>·</span>
+                            <a href="exportStaffReport">Xuất báo cáo Excel</a>
+                        </div>
+
+                        <div class="st-chart-grid">
+                            <div class="st-chart-card">
+                                <div class="st-chart-head">
+                                    <h3>Doanh thu bán hàng (tuần/tháng/năm)</h3>
+                                    <div class="st-chart-sub">Biểu đồ tròn</div>
+                                </div>
+                                <div class="st-chart-body">
+                                    <div class="st-chart-canvas-wrap">
+                                        <canvas id="staffRevPie"></canvas>
+                                    </div>
+                                    <div class="st-kpis">
+                                        <span class="st-kpi-pill">Tuần: ${staffRevenueWeekFormatted}</span>
+                                        <span class="st-kpi-pill">Tháng: ${staffRevenueMonthFormatted}</span>
+                                        <span class="st-kpi-pill">Năm: ${staffRevenueYearFormatted}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="st-chart-card">
+                                <div class="st-chart-head">
+                                    <h3>So sánh doanh thu</h3>
+                                    <div class="st-chart-sub">Biểu đồ cột</div>
+                                </div>
+                                <div class="st-chart-body">
+                                    <div class="st-chart-canvas-wrap">
+                                        <canvas id="staffRevBar"></canvas>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <section class="st-feed-panel">
@@ -562,8 +670,116 @@
                                     </c:otherwise>
                                 </c:choose>
                             </div>
+                            <c:if test="${shTotalPages != null && shTotalPages > 1}">
+                                <div class="st-feed-pager">
+                                    <c:if test="${shPage > 1}">
+                                        <c:url var="shPrev" value="staff_dashboard">
+                                            <c:param name="tab" value="dashboard"/>
+                                            <c:param name="shPage" value="${shPage - 1}"/>
+                                        </c:url>
+                                        <a href="${shPrev}">« Trang trước</a>
+                                    </c:if>
+
+                                    <span>Trang ${shPage} / ${shTotalPages}<c:if test="${shTotal != null}"> · ${shTotal} dòng</c:if></span>
+
+                                    <c:if test="${shPage < shTotalPages}">
+                                        <c:url var="shNext" value="staff_dashboard">
+                                            <c:param name="tab" value="dashboard"/>
+                                            <c:param name="shPage" value="${shPage + 1}"/>
+                                        </c:url>
+                                        <a href="${shNext}">Trang sau »</a>
+                                    </c:if>
+                                </div>
+                            </c:if>
                         </section>
                     </div>
+
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+                    <script>
+                        (function() {
+                            if (!window.Chart) return;
+                            var labels = ['Tuần này', 'Tháng này', 'Năm nay'];
+                            var data = [
+                                Number('${staffRevenueWeek}'),
+                                Number('${staffRevenueMonth}'),
+                                Number('${staffRevenueYear}')
+                            ].map(function(v){ return isFinite(v) ? v : 0; });
+
+                            var pieEl = document.getElementById('staffRevPie');
+                            if (pieEl) {
+                                new Chart(pieEl, {
+                                    type: 'pie',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            data: data,
+                                            backgroundColor: ['#38bdf8', '#22c55e', '#f59e0b'],
+                                            borderColor: '#ffffff',
+                                            borderWidth: 2
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { position: 'bottom' },
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: function(ctx) {
+                                                        var v = ctx.parsed || 0;
+                                                        return ctx.label + ': ' + v.toLocaleString('vi-VN') + ' đ';
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+
+                            var barEl = document.getElementById('staffRevBar');
+                            if (barEl) {
+                                new Chart(barEl, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: 'Doanh thu (đ)',
+                                            data: data,
+                                            backgroundColor: ['rgba(56, 189, 248, 0.8)', 'rgba(34, 197, 94, 0.8)', 'rgba(245, 158, 11, 0.85)'],
+                                            borderColor: ['#38bdf8', '#22c55e', '#f59e0b'],
+                                            borderWidth: 1,
+                                            borderRadius: 10
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        scales: {
+                                            y: {
+                                                beginAtZero: true,
+                                                ticks: {
+                                                    callback: function(value) {
+                                                        return Number(value).toLocaleString('vi-VN');
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        plugins: {
+                                            legend: { display: false },
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: function(ctx) {
+                                                        var v = ctx.parsed.y || 0;
+                                                        return v.toLocaleString('vi-VN') + ' đ';
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                        })();
+                    </script>
                 </c:when>
 
                 <c:when test="${tab == 'returns'}">
@@ -615,6 +831,80 @@
                                     </tr>
                                 </c:forEach>
                             </table>
+                        </div>
+                    </section>
+                </c:when>
+
+                <c:when test="${tab == 'inventory-adjustment'}">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div><h3>Inventory Adjustment — Khách hàng đã trả</h3></div>
+                        </div>
+                        <div class="panel-body" style="padding-top:0;">
+                            <table>
+                                <tr>
+                                    <th>Mã yêu cầu</th>
+                                    <th>SKU</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Khách hàng</th>
+                                    <th>SĐT</th>
+                                    <th>Giá tiền (hoàn)</th>
+                                    <th>Lý do</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                                <c:forEach items="${inventoryAdjustments}" var="r">
+                                    <tr>
+                                        <td>${r.returnCode}</td>
+                                        <td>${r.sku}</td>
+                                        <td>${r.productName}</td>
+                                        <td>${r.customerName}</td>
+                                        <td>${r.customerPhone}</td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${r.refundAmount != null}">
+                                                    <fmt:formatNumber value="${r.refundAmount}" type="number" maxFractionDigits="0"/> đ
+                                                </c:when>
+                                                <c:when test="${r.productPrice != null}">
+                                                    <fmt:formatNumber value="${r.productPrice}" type="number" maxFractionDigits="0"/> đ
+                                                </c:when>
+                                                <c:otherwise>—</c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                        <td>${r.reason}</td>
+                                        <td>${r.status}</td>
+                                    </tr>
+                                </c:forEach>
+                                <c:if test="${empty inventoryAdjustments}">
+                                    <tr>
+                                        <td colspan="8" style="text-align:center; color:#94a3b8; padding:22px 10px;">
+                                            Chưa có yêu cầu trả hàng để điều chỉnh tồn kho.
+                                        </td>
+                                    </tr>
+                                </c:if>
+                            </table>
+
+                            <c:if test="${iaTotalPages != null && iaTotalPages > 1}">
+                                <div class="wl-pager" style="margin-top:16px;">
+                                    <c:if test="${iaPage > 1}">
+                                        <c:url var="iaPrev" value="staff_dashboard">
+                                            <c:param name="tab" value="inventory-adjustment"/>
+                                            <c:param name="iaPage" value="${iaPage - 1}"/>
+                                        </c:url>
+                                        <a href="${iaPrev}">« Trang trước</a>
+                                    </c:if>
+                                    <span style="color:#64748b; font-size:13px;">
+                                        Trang ${iaPage} / ${iaTotalPages}
+                                        <c:if test="${iaTotal != null}"> · ${iaTotal} dòng</c:if>
+                                    </span>
+                                    <c:if test="${iaPage < iaTotalPages}">
+                                        <c:url var="iaNext" value="staff_dashboard">
+                                            <c:param name="tab" value="inventory-adjustment"/>
+                                            <c:param name="iaPage" value="${iaPage + 1}"/>
+                                        </c:url>
+                                        <a href="${iaNext}">Trang sau »</a>
+                                    </c:if>
+                                </div>
+                            </c:if>
                         </div>
                     </section>
                 </c:when>

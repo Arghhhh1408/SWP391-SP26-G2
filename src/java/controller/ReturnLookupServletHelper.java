@@ -33,6 +33,20 @@ final class ReturnLookupServletHelper {
         Integer ps = tryParseInt(trim(request.getParameter("rlPageSize")));
         int pageSize = ps == null ? 10 : Math.min(50, Math.max(1, ps));
 
+        // Giá trị số âm (vd: "-1") không bao giờ là mã hợp lệ.
+        // Nếu chạy LIKE với chuỗi "-1" thì có thể khớp serial kiểu "SN-1-2".
+        if (keyword != null && isNegativeInteger(keyword)) {
+            request.setAttribute("rlq", keyword);
+            request.setAttribute("returnLookupSort", sort);
+            request.setAttribute("returnLookupPage", 1);
+            request.setAttribute("returnLookupPageSize", pageSize);
+            request.setAttribute("returnLookupResults", Collections.emptyList());
+            request.setAttribute("returnLookupTotal", 0);
+            request.setAttribute("returnLookupTotalPages", 1);
+            request.setAttribute("returnLookupHasFilter", true);
+            return;
+        }
+
         boolean runSearch = keyword != null;
 
         request.setAttribute("rlq", keyword == null ? "" : keyword);
@@ -83,7 +97,7 @@ final class ReturnLookupServletHelper {
             return null;
         }
         try {
-            return Integer.parseInt(s);
+            return Integer.valueOf(s);
         } catch (NumberFormatException e) {
             return null;
         }
@@ -94,5 +108,20 @@ final class ReturnLookupServletHelper {
             return def;
         }
         return p;
+    }
+
+    private static boolean isNegativeInteger(String s) {
+        if (s == null) {
+            return false;
+        }
+        String v = s.trim();
+        if (!v.matches("^-\\d+$")) {
+            return false;
+        }
+        try {
+            return Integer.parseInt(v) < 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 }
