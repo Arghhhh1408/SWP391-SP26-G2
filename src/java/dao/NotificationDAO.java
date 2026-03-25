@@ -116,6 +116,20 @@ public class NotificationDAO extends DBContext {
         return ids;
     }
 
+    /** Get all active staff user IDs (RoleID = 1) */
+    public List<Integer> getStaffIds() {
+        List<Integer> ids = new ArrayList<>();
+        String sql = "SELECT UserID FROM [User] WHERE RoleID = 1 AND IsActive = 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery()) {
+            while (rs.next())
+                ids.add(rs.getInt("UserID"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return ids;
+    }
+
     /** Get a single notification by ID */
     public Notification getNotificationById(int id) {
         String sql = "SELECT * FROM Notifications WHERE NotificationID = ?";
