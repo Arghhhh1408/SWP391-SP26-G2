@@ -99,9 +99,9 @@
                         <div style="margin-bottom:15px;">
                             <label style="font-size:12px; color:#ef4444; font-weight:bold;">Khách trả (đ):</label>
                             <input type="text" id="amountPaid" name="amountPaid" 
-                                   oninput="this.value = Number(this.value.replace(/\D/g,'')).toLocaleString('vi-VN')" 
-                                   onchange="calculateDebt()" 
-                                   style="width:100%; padding:10px; border:2px solid #ef4444; border-radius:8px; font-size: 18px; font-weight: bold; color: #ef4444;">
+       oninput="formatCurrency(this)" 
+       onchange="calculateDebt()" 
+       style="width:100%; padding:10px; border:2px solid #ef4444; border-radius:8px; font-size: 18px; font-weight: bold; color: #ef4444;">
                         </div>
                         <button type="submit" style="width:100%; background:#3b82f6; color:white; padding:15px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">XÁC NHẬN THANH TOÁN</button>
                     </form>
@@ -235,25 +235,35 @@
 
     // 4. TÍNH NỢ
     function calculateDebt() {
-        const total = parseInt(document.getElementById('hidden-total-val')?.value || 0);
-        const paid = parseInt(document.getElementById('amountPaid').value.replace(/\./g, '')) || 0;
-        const diff = total - paid;
-        
-        const debtDisp = document.getElementById("debt-display");
-        const changeDisp = document.getElementById("change-display");
-        const rowDebt = document.getElementById("row-debt");
-        const rowChange = document.getElementById("row-change");
+    // 1. Lấy tổng tiền từ ô hidden (số thuần túy, ví dụ: 10200000)
+    const total = parseInt(document.getElementById('hidden-total-val')?.value || 0);
+    
+    // 2. Lấy số tiền khách trả và XÓA TẤT CẢ DẤU CHẤM (quan trọng nhất)
+    // Dùng regex /\./g để đảm bảo xóa sạch mọi dấu chấm trong chuỗi
+    const paidRaw = document.getElementById('amountPaid').value || "0";
+    const paid = parseInt(paidRaw.replace(/\./g, '')) || 0; 
+    
+    // 3. Tính toán chênh lệch
+    const diff = total - paid;
+    
+    const debtDisp = document.getElementById("debt-display");
+    const changeDisp = document.getElementById("change-display");
+    const rowDebt = document.getElementById("row-debt");
+    const rowChange = document.getElementById("row-change");
 
-        if (diff > 0) {
-            if(rowDebt) rowDebt.style.display = "flex";
-            if(rowChange) rowChange.style.display = "none";
-            if(debtDisp) debtDisp.innerText = diff.toLocaleString() + " đ";
-        } else {
-            if(rowDebt) rowDebt.style.display = "none";
-            if(rowChange) rowChange.style.display = "flex";
-            if(changeDisp) changeDisp.innerText = Math.abs(diff).toLocaleString() + " đ";
-        }
+    // 4. Hiển thị thông minh
+    if (diff > 0) {
+        // Trường hợp còn NỢ
+        if(rowDebt) rowDebt.style.display = "flex";
+        if(rowChange) rowChange.style.display = "none";
+        if(debtDisp) debtDisp.innerText = diff.toLocaleString('vi-VN') + " đ";
+    } else {
+        // Trường hợp THỪA tiền
+        if(rowDebt) rowDebt.style.display = "none";
+        if(rowChange) rowChange.style.display = "flex";
+        if(changeDisp) changeDisp.innerText = Math.abs(diff).toLocaleString('vi-VN') + " đ";
     }
+}
 
     // 5. SUBMIT & MODAL
     document.getElementById('checkout-form').addEventListener('submit', function (e) {
@@ -326,35 +336,27 @@ document.getElementById('display-totalPrice').innerText = finalTotal.toLocaleStr
     });
     function updateQtyManual(input, id) {
     let newQty = parseInt(input.value);
-    
-    // Tìm sản phẩm trong danh sách 'products' (đã có sẵn từ lúc load trang)
     const p = products.find(item => String(item.id) === String(id));
     
-    if (p) {
-        // TÍNH TOÁN: Số lượng tối đa được bán = Tồn kho - Ngưỡng thấp
-        const maxAvailable = p.quantity - p.minStockLevel;
+    if (!p) return;
 
-        if (newQty > maxAvailable) {
-            // Hiển thị thông báo lỗi ngay lập tức
-            alert("⚠️ KHÔNG THỂ BÁN VƯỢT NGƯỠNG TỒN!\n" +
-                  "--------------------------------\n" +
-                  "📦 Tồn thực tế: " + p.quantity + "\n" +
-                  "🛑 Ngưỡng tối thiểu: " + p.minStockLevel + "\n" +
-                  "✅ Chỉ được bán tối đa: " + (maxAvailable > 0 ? maxAvailable : 0));
+    const maxCanSell = p.quantity - p.minStockLevel;
 
-            // Ép số lượng về mức tối đa cho phép
-            newQty = (maxAvailable > 0) ? maxAvailable : 1;
-            input.value = newQty; 
-        }
+    // Chặn vượt ngưỡng
+    if (newQty > maxCanSell) {
+        alert("⚠️ Vượt quá tồn kho cho phép! Tối đa: " + maxCanSell);
+        newQty = maxCanSell > 0 ? maxCanSell : 1;
+        input.value = newQty;
     }
 
-    if (newQty < 1 || isNaN(newQty)) {
+    // Nếu số lượng hợp lệ (ví dụ gõ 5 và 5 <= maxCanSell)
+    if (newQty >= 1) {
+        // Gửi CHÍNH XÁC chuỗi này lên Servlet
+        updateCartAjax(id, 'update&quantity=' + newQty);
+    } else {
         input.value = 1;
-        newQty = 1;
+        updateCartAjax(id, 'update&quantity=1');
     }
-
-    // Gọi Ajax cập nhật giỏ hàng để tổng tiền nhảy đúng
-    updateCartAjax(id, 'update&quantity=' + newQty);
 }
 </script>
 </body>
