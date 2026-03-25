@@ -275,6 +275,29 @@ public class SupplierDAO extends DBContext {
         return false;
     }
 
+    public List<Supplier> searchActiveSuppliersForLookup(String keyword, int page, int pageSize) {
+        List<Supplier> list = new ArrayList<>();
+        String sql = "SELECT SupplierID, Name, Phone, Address, Email, IsActive "
+                + "FROM Suppliers "
+                + "WHERE IsActive = 1 AND Name LIKE ? "
+                + "ORDER BY Name ASC "
+                + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, "%" + (keyword == null ? "" : keyword.trim()) + "%");
+            ps.setInt(2, (page - 1) * pageSize);
+            ps.setInt(3, pageSize);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapResultSetToSupplier(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     // Xóa mềm theo DB mới
     public boolean deactivateSupplier(int id) {
         String sql = "UPDATE Suppliers SET IsActive = 0 WHERE SupplierID = ?";

@@ -79,4 +79,67 @@ public class SupplierDebtDAO extends DBContext {
 
         return list;
     }
+
+    public SupplierDebt getLatestOffsettableDebtBySupplier(int supplierId) {
+        String sql = """
+        SELECT TOP 1 d.DebtID, d.SupplierID, d.StockInID, d.Amount, d.DueDate, d.Status,
+               s.Name AS SupplierName
+        FROM SupplierDebts d
+        JOIN Suppliers s ON d.SupplierID = s.SupplierID
+        WHERE d.SupplierID = ? AND d.Status IN ('Partial', 'Pending')
+        ORDER BY d.DebtID DESC
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, supplierId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    SupplierDebt d = new SupplierDebt();
+                    d.setDebtID(rs.getInt("DebtID"));
+                    d.setSupplierID(rs.getInt("SupplierID"));
+                    d.setStockInID(rs.getInt("StockInID"));
+                    d.setAmount(rs.getDouble("Amount"));
+                    d.setDueDate(rs.getDate("DueDate"));
+                    d.setStatus(rs.getString("Status"));
+                    d.setSupplierName(rs.getString("SupplierName"));
+                    return d;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public boolean reduceDebtAmount(int debtId, double reduceAmount) {
+        String selectSql = "SELECT Amount FROM SupplierDebts WHERE DebtID = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(selectSql)) {
+            ps.setInt(1, debtId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    double currentAmount = rs.getDouble("Amount");
+                    double newAmount = currentAmount - reduceAmount;
+                    if (newAmount < 0) {
+                        newAmount = 0;
+                    }
+
+                    String newStatus = newAmount == 0 ? "Paid" : "Partial";
+
+                    String updateSql = "UPDATE SupplierDebts SET Amount = ?, Status = ? WHERE DebtID = ?";
+                    try (PreparedStatement ups = connection.prepareStatement(updateSql)) {
+                        ups.setDouble(1, newAmount);
+                        ups.setString(2, newStatus);
+                        ups.setInt(3, debtId);
+                        return ups.executeUpdate() > 0;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
 }

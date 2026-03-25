@@ -203,6 +203,7 @@
                     <div class="submenu">
                         <a href="createStockIn">Create Stock-In</a>
                         <a href="stockinList">Stock-In History</a>
+                        <a href="return-to-vendor">Return To Vendor</a>
                     </div>
                     <a href="#">📋 Inventory</a>
                     <div class="submenu">
