@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import model.ReturnRequest;
 import model.Product;
 import model.OrderHistory;
+import dao.OrderHistoryDAO;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -237,6 +239,104 @@ public class ExcelUtils {
             autoSize(sheet, 5);
             workbook.write(out);
         }
+    }
+
+    /**
+     * Staff dashboard report (multi-sheet workbook).
+     * Each dataset is exported as a separate sheet.
+     */
+    public static void exportStaffMultiSheetReport(
+            List<Product> products,
+            Map<Integer, String> categoryMap,
+            List<OrderHistoryDAO.DailyReport> dailySales,
+            List<OrderHistoryDAO.StockOrderDetail> soldDetails,
+            List<ReturnRequest> returns,
+            OutputStream out
+    ) throws Exception {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            // Sheet 1: Inventory (current products)
+            Sheet sInv = workbook.createSheet("Tồn kho hiện có");
+            setupHeader(workbook, sInv, new String[]{"SKU", "Tên sản phẩm", "Danh mục", "Đơn vị", "Tồn kho", "Giá vốn", "Giá bán", "Trạng thái"});
+            int r1 = 1;
+            if (products != null) {
+                for (Product p : products) {
+                    Row row = sInv.createRow(r1++);
+                    row.createCell(0).setCellValue(nz(p.getSku()));
+                    row.createCell(1).setCellValue(nz(p.getName()));
+                    row.createCell(2).setCellValue(categoryMap == null ? "" : categoryMap.getOrDefault(p.getCategoryId(), "---"));
+                    row.createCell(3).setCellValue(nz(p.getUnit()));
+                    row.createCell(4).setCellValue(p.getQuantity());
+                    row.createCell(5).setCellValue(p.getCost());
+                    row.createCell(6).setCellValue(p.getPrice());
+                    row.createCell(7).setCellValue(nz(p.getStatus()));
+                }
+            }
+            autoSize(sInv, 8);
+
+            // Sheet 2: Revenue from orders (daily)
+            Sheet sRev = workbook.createSheet("Doanh thu từ đơn");
+            setupHeader(workbook, sRev, new String[]{"Ngày", "Số đơn", "Doanh thu", "Giá vốn", "Lợi nhuận"});
+            int r2 = 1;
+            if (dailySales != null) {
+                for (OrderHistoryDAO.DailyReport d : dailySales) {
+                    Row row = sRev.createRow(r2++);
+                    row.createCell(0).setCellValue(d.getDate() == null ? "" : d.getDate().toString());
+                    row.createCell(1).setCellValue(d.getOrderCount());
+                    row.createCell(2).setCellValue(d.getRevenue());
+                    row.createCell(3).setCellValue(d.getCost());
+                    row.createCell(4).setCellValue(d.getProfit());
+                }
+            }
+            autoSize(sRev, 5);
+
+            // Sheet 3: Sold products / orders
+            Sheet sSold = workbook.createSheet("Sản phẩm đã bán");
+            setupHeader(workbook, sSold, new String[]{"Ngày", "Mã đơn", "Sản phẩm", "Số lượng", "Đơn giá", "Doanh thu"});
+            int r3 = 1;
+            if (soldDetails != null) {
+                for (OrderHistoryDAO.StockOrderDetail d : soldDetails) {
+                    Row row = sSold.createRow(r3++);
+                    row.createCell(0).setCellValue(d.getDate() == null ? "" : d.getDate().toString());
+                    row.createCell(1).setCellValue(d.getOrderId());
+                    row.createCell(2).setCellValue(nz(d.getProductName()));
+                    row.createCell(3).setCellValue(d.getQuantity());
+                    row.createCell(4).setCellValue(d.getPrice());
+                    row.createCell(5).setCellValue(d.getTotal());
+                }
+            }
+            autoSize(sSold, 6);
+
+            // Sheet 4: Returned products
+            Sheet sRet = workbook.createSheet("Sản phẩm trả hàng");
+            setupHeader(workbook, sRet, new String[]{"Mã yêu cầu", "SKU", "Sản phẩm", "Khách hàng", "SĐT", "Giá sản phẩm", "Số tiền hoàn", "Lý do", "Trạng thái", "Cập nhật"});
+            int r4 = 1;
+            if (returns != null) {
+                for (ReturnRequest rr : returns) {
+                    Row row = sRet.createRow(r4++);
+                    row.createCell(0).setCellValue(nz(rr.getReturnCode()));
+                    row.createCell(1).setCellValue(nz(rr.getSku()));
+                    row.createCell(2).setCellValue(nz(rr.getProductName()));
+                    row.createCell(3).setCellValue(nz(rr.getCustomerName()));
+                    row.createCell(4).setCellValue(nz(rr.getCustomerPhone()));
+                    Double pp = rr.getProductPrice();
+                    Double ra = rr.getRefundAmount();
+                    double ppv = pp == null ? 0d : pp;
+                    double rav = ra == null ? 0d : ra;
+                    row.createCell(5).setCellValue(ppv);
+                    row.createCell(6).setCellValue(rav);
+                    row.createCell(7).setCellValue(nz(rr.getReason()));
+                    row.createCell(8).setCellValue(rr.getStatus() == null ? "" : rr.getStatus().name());
+                    row.createCell(9).setCellValue(rr.getUpdatedAt() == null ? "" : rr.getUpdatedAt().toString());
+                }
+            }
+            autoSize(sRet, 10);
+
+            workbook.write(out);
+        }
+    }
+
+    private static String nz(String s) {
+        return s == null ? "" : s;
     }
 
     private static void setupHeader(Workbook wb, Sheet sheet, String[] columns) {
