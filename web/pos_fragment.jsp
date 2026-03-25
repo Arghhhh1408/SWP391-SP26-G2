@@ -329,35 +329,43 @@
             // 5. HÀM SUBMIT CHÍNH (Đã sửa lỗi không hiện hóa đơn)
             // 5. HÀM SUBMIT CHÍNH (Đã tích hợp Chặn khách lẻ nợ)
             document.getElementById('checkout-form').addEventListener('submit', function (e) {
-                const totalVal = parseInt(document.getElementById('hidden-total-val').value) || 0;
+                // 1. KIỂM TRA GIỎ HÀNG TRỐNG (MỚI THÊM)
+                const hiddenTotalEl = document.getElementById('hidden-total-val');
+                const totalVal = hiddenTotalEl ? parseInt(hiddenTotalEl.value) : 0;
+
+                // Nếu không có thẻ hidden-total-val hoặc tổng tiền bằng 0/không có hàng
+                if (!hiddenTotalEl || totalVal <= 0) {
+                    e.preventDefault(); // Chặn gửi form
+                    alert("⚠️ GIỎ HÀNG ĐANG TRỐNG!\nVui lòng thêm sản phẩm trước khi thanh toán.");
+                    return; // Thoát hàm
+                }
+
                 const paidInput = document.getElementById('amountPaid').value;
                 const paidVal = parseInt(paidInput) || 0;
                 const phoneInput = document.getElementById('cusPhone').value.trim();
                 const diff = totalVal - paidVal;
 
-                // --- BẮT ĐẦU LOGIC CHẶN NỢ ---
+                // --- LOGIC CHẶN NỢ KHÁCH LẺ (Giữ nguyên của bạn) ---
                 if (phoneInput === "" || phoneInput === null) {
                     if (paidVal < totalVal) {
-                        e.preventDefault(); // Dừng việc hiện hóa đơn
+                        e.preventDefault();
                         alert("⚠️ KHÁCH LẺ KHÔNG ĐƯỢC NỢ!\nVui lòng nhập đủ số tiền: " + totalVal.toLocaleString() + " đ");
-
-                        // Tự động sửa lại số tiền cho đúng để nhân viên nhấn lại cho nhanh
                         document.getElementById('amountPaid').value = totalVal;
                         calculateDebt();
-                        return; // Thoát hàm, không chạy đoạn hiện Modal bên dưới
+                        return;
                     }
                 }
-                // --- KẾT THÚC LOGIC CHẶN NỢ ---
 
-                // Nếu vượt qua kiểm tra (trả đủ hoặc là khách có SĐT) thì mới chạy đoạn dưới
-                e.preventDefault(); // Ngăn form gửi đi để hiện Modal trước
-
+                // Nếu mọi thứ ok thì mới hiện Modal
+                e.preventDefault();
                 const tempOrderId = "SIM" + Date.now();
+                // ... (Các đoạn code đổ dữ liệu lên Modal bên dưới giữ nguyên) ...
+
+                // Đổ dữ liệu lên Modal Hóa đơn
                 let nameInput = document.getElementById('cusName').value.trim();
                 let finalPhone = (phoneInput === "") ? "---" : phoneInput;
                 let finalName = (phoneInput === "") ? "Khách lẻ" : (nameInput === "" ? "Khách vãng lai" : nameInput);
 
-                // Đổ dữ liệu lên Modal Hóa đơn
                 document.getElementById('display-cusName').innerText = finalName;
                 document.getElementById('display-cusPhone').innerText = finalPhone;
                 document.getElementById('display-date').innerText = new Date().toLocaleString('vi-VN');
@@ -376,23 +384,24 @@
                     val.style.color = "#10b981";
                 }
 
-                // Quét danh sách món hàng hiện lên Bill
                 let htmlItems = '';
                 document.querySelectorAll('#cart-list > div').forEach(item => {
-                    const name = item.querySelector('div div:first-child').innerText;
-                    // Chú ý: dùng item.qty như mình đã sửa ở file _cart_content
-                    const qty = item.querySelector('input[type="number"]').value;
-                    const price = item.querySelector('div[style*="font-weight:bold"]').innerText;
-                    htmlItems += "<tr><td>" + name + "</td><td style='text-align:center'>" + qty + "</td><td style='text-align:right'>" + price + "</td></tr>";
+                    const nameNode = item.querySelector('div div:first-child');
+                    const qtyNode = item.querySelector('input[type="number"]') || item.querySelector('span'); // Cân bằng cả 2 cách hiển thị SL
+                    const priceNode = item.querySelector('div[style*="font-weight:bold"]');
+
+                    if (nameNode && qtyNode && priceNode) {
+                        const name = nameNode.innerText;
+                        const qty = qtyNode.value || qtyNode.innerText;
+                        const price = priceNode.innerText;
+                        htmlItems += "<tr><td>" + name + "</td><td style='text-align:center'>" + qty + "</td><td style='text-align:right'>" + price + "</td></tr>";
+                    }
                 });
                 document.getElementById('invoice-items-list').innerHTML = htmlItems;
 
-                // Cập nhật QR và Barcode
                 const qrAmount = (paidVal > 0) ? paidVal : totalVal;
                 generateQR(qrAmount, tempOrderId);
                 generateBarcode(tempOrderId);
-
-                // Hiện Popup hóa đơn
                 document.getElementById('invoiceModal').style.display = 'block';
             });
 
