@@ -13,7 +13,7 @@
             <div style="flex:1;">
                 <div style="font-weight:600; font-size:13px; color:#1e293b;">${item.name}</div>
                 <div style="font-size:11px; color:#64748b;">
-                    <fmt:formatNumber value="${item.price}" type="number"/>đ / món
+                    <fmt:formatNumber value="${item.price}" type="number"/>đ 
                 </div>
             </div>
 

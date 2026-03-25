@@ -118,16 +118,35 @@ public class CheckoutController extends HttpServlet {
         }
 
         // 3) Xử lý ID khách hàng (Dùng hàm tự động bạn đã viết trong CustomerDAO)
+        // 3) Xử lý khách hàng: ĐẢM BẢO KHÔNG BỊ GHI ĐÈ TÊN KHÁCH CŨ
         dao.CustomerDAO customerDAO = new dao.CustomerDAO();
-        int finalCustomerId;
+        int finalCustomerId = 1; // Mặc định là khách lẻ
+
         try {
-            // Hàm này tự check: có SĐT thì lấy ID, chưa có thì tạo mới rồi lấy ID
-            finalCustomerId = customerDAO.getOrCreateCustomerId(name, phone);
+            if (phone != null && !phone.trim().isEmpty()) {
+                // Luôn tìm lại trong DB dựa trên SĐT gửi lên
+                model.Customer existingCustomer = customerDAO.getCustomerByPhone(phone.trim());
+
+                if (existingCustomer != null) {
+                    // TRƯỜNG HỢP KHÁCH CŨ: 
+                    // Lấy ID và Tên trực tiếp từ DB, bỏ qua cái "name" mà Form gửi lên
+                    finalCustomerId = existingCustomer.getCustomerId();
+                    name = existingCustomer.getName();
+                    System.out.println("Hệ thống tự động dùng tên gốc: " + name);
+                } else {
+                    // TRƯỜNG HỢP KHÁCH MỚI:
+                    // Lúc này mới tin tưởng cái "name" gửi từ Form để tạo khách mới
+                    finalCustomerId = customerDAO.getOrCreateCustomerId(name, phone);
+                }
+            } else {
+                // Khách lẻ không để lại SĐT
+                finalCustomerId = 1;
+                name = "Khách lẻ";
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            finalCustomerId = 1; // Fallback về Khách lẻ nếu lỗi
+            finalCustomerId = 1;
         }
-
         utils.DBContext db = new utils.DBContext();
         Connection con = db.connection;
 
