@@ -280,7 +280,7 @@
                                     <div class="checkbox-wrap">
                                         <input type="checkbox"
                                                name="status"
-                                               <c:if test="${param.status != null}">checked</c:if>>
+                                               <c:if test="${formStatus == null || formStatus}">checked</c:if>>
                                                <span>Hoạt động</span>
                                         </div>
                                     </td>

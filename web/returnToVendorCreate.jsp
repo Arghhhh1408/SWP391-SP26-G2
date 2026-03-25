@@ -179,9 +179,9 @@
                         <div class="col">
                             <label>Settlement Type</label>
                             <select name="settlementType">
-                                <option value="OFFSET_DEBT">OFFSET_DEBT</option>
-                                <option value="REFUND">REFUND</option>
-                                <option value="REPLACEMENT">REPLACEMENT</option>
+                                <option value="OFFSET_DEBT">OFFSET_DEBT - Cấn trừ công nợ</option>
+                                <option value="REFUND">REFUND - Hoàn tiền</option>
+                                <option value="REPLACEMENT">REPLACEMENT - Đổi hàng</option>
                             </select>
                         </div>
 

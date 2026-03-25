@@ -77,6 +77,13 @@
 
                     <div class="admin-content">
 
+
+                        <c:if test="${not empty notification}">
+                            <div style="margin-bottom: 16px; padding: 14px 16px; border-radius: 10px; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; font-weight: 600;">
+                                ${notification}
+                            </div>
+                        </c:if>
+
                         <!-- Search Card -->
                         <div class="glass-card">
                             <div class="card-header">

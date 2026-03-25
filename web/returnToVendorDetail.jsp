@@ -143,6 +143,11 @@
                 <p><strong>Reason:</strong> <%= rtv.getReason() %></p>
                 <p><strong>Note:</strong> <%= rtv.getNote() %></p>
                 <p><strong>Settlement Type:</strong> <%= rtv.getSettlementType() %></p>
+                <% if ("REPLACEMENT".equalsIgnoreCase(rtv.getSettlementType())) { %>
+                <p><strong>Inventory Flow:</strong> Approved =&gt; trừ tồn kho lỗi, Completed =&gt; cộng lại hàng thay thế.</p>
+                <% } else if ("OFFSET_DEBT".equalsIgnoreCase(rtv.getSettlementType())) { %>
+                <p><strong>Inventory Flow:</strong> Completed =&gt; trừ tồn kho, đồng thời cấn trừ công nợ nếu có.</p>
+                <% } %>
                 <p><strong>Total Amount:</strong> <%= String.format("%,.2f", rtv.getTotalAmount()) %></p>
                 <p><strong>Created Date:</strong> <%= rtv.getCreatedDate() %></p>
                 <p><strong>Approved Date:</strong> <%= rtv.getApprovedDate() != null ? rtv.getApprovedDate() : "-" %></p>

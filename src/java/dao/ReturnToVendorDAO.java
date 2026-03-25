@@ -20,6 +20,111 @@ import java.util.List;
 
 public class ReturnToVendorDAO extends DBContext {
 
+    private static final String SETTLEMENT_OFFSET_DEBT = "OFFSET_DEBT";
+    private static final String SETTLEMENT_REFUND = "REFUND";
+    private static final String SETTLEMENT_REPLACEMENT = "REPLACEMENT";
+
+    private String normalizeSettlementType(String settlementType) {
+        if (settlementType == null || settlementType.trim().isEmpty()) {
+            return SETTLEMENT_OFFSET_DEBT;
+        }
+        return settlementType.trim().toUpperCase();
+    }
+
+    private boolean isOffsetDebtSettlement(String settlementType) {
+        return SETTLEMENT_OFFSET_DEBT.equalsIgnoreCase(normalizeSettlementType(settlementType));
+    }
+
+    private boolean isReplacementSettlement(String settlementType) {
+        return SETTLEMENT_REPLACEMENT.equalsIgnoreCase(normalizeSettlementType(settlementType));
+    }
+
+    private boolean hasEnoughStock(int productId, int requiredQty) {
+        String sql = "SELECT StockQuantity FROM Products WHERE ProductID = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("StockQuantity") >= requiredQty;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    private boolean decreaseProductStock(int productId, int quantity) {
+        if (quantity <= 0) {
+            return false;
+        }
+
+        String sql = "UPDATE Products "
+                + "SET StockQuantity = StockQuantity - ?, UpdatedDate = GETDATE() "
+                + "WHERE ProductID = ? AND StockQuantity >= ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setInt(2, productId);
+            ps.setInt(3, quantity);
+
+            if (ps.executeUpdate() <= 0) {
+                return false;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        String deactivateSql = "UPDATE Products "
+                + "SET Status = 'Deactivated', UpdatedDate = GETDATE() "
+                + "WHERE ProductID = ? AND StockQuantity = 0";
+
+        try (PreparedStatement ps = connection.prepareStatement(deactivateSql)) {
+            ps.setInt(1, productId);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean increaseProductStock(int productId, int quantity) {
+        if (quantity <= 0) {
+            return false;
+        }
+
+        String sql = "UPDATE Products "
+                + "SET StockQuantity = StockQuantity + ?, "
+                + "    UpdatedDate = GETDATE(), "
+                + "    Status = CASE WHEN Status = 'Deactivated' THEN 'Active' ELSE Status END "
+                + "WHERE ProductID = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setInt(2, productId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    private boolean adjustProductStock(int productId, int delta) {
+        if (delta == 0) {
+            return true;
+        }
+        if (delta > 0) {
+            return increaseProductStock(productId, delta);
+        }
+        return decreaseProductStock(productId, -delta);
+    }
+
     public int createReturnWithDetails(ReturnToVendor rtv, List<ReturnToVendorDetail> details, String ipAddress) {
         SupplierDAO supplierDAO = new SupplierDAO();
         SupplierProductDAO supplierProductDAO = new SupplierProductDAO();
@@ -36,6 +141,7 @@ public class ReturnToVendorDAO extends DBContext {
                 return -1;
             }
 
+            rtv.setSettlementType(normalizeSettlementType(rtv.getSettlementType()));
             connection.setAutoCommit(false);
 
             String insertHeaderSql = "INSERT INTO ReturnToVendors "
@@ -132,7 +238,7 @@ public class ReturnToVendorDAO extends DBContext {
                     rtv.getCreatedBy(),
                     "CREATE_RETURN_VENDOR",
                     "ReturnToVendor ID: " + rtvID,
-                    "Created return to vendor. ReturnCode: " + rtv.getReturnCode() + ", TotalAmount: " + totalAmount,
+                    "Created return to vendor. ReturnCode: " + rtv.getReturnCode() + ", SettlementType: " + rtv.getSettlementType() + ", TotalAmount: " + totalAmount,
                     ipAddress
             );
 
@@ -282,28 +388,83 @@ public class ReturnToVendorDAO extends DBContext {
     }
 
     public boolean approveReturn(int rtvID, int approvedBy, String ipAddress) {
-        String sql = "UPDATE ReturnToVendors "
-                + "SET Status = 'Approved', ApprovedBy = ?, ApprovedDate = GETDATE() "
-                + "WHERE RTVID = ? AND Status = 'Pending'";
+        try {
+            connection.setAutoCommit(false);
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, approvedBy);
-            ps.setInt(2, rtvID);
-
-            boolean ok = ps.executeUpdate() > 0;
-            if (ok) {
-                insertSystemLog(
-                        approvedBy,
-                        "APPROVE_RETURN_VENDOR",
-                        "ReturnToVendor ID: " + rtvID,
-                        "Approved return to vendor request.",
-                        ipAddress
-                );
+            ReturnToVendor rtv = getById(rtvID);
+            if (rtv == null || !"Pending".equalsIgnoreCase(rtv.getStatus())) {
+                connection.rollback();
+                return false;
             }
-            return ok;
+
+            List<ReturnToVendorDetail> details = getDetailsByRTVID(rtvID);
+            if (details == null || details.isEmpty()) {
+                connection.rollback();
+                return false;
+            }
+
+            String settlementType = normalizeSettlementType(rtv.getSettlementType());
+            boolean inventoryAdjustedOnApprove = false;
+
+            if (isReplacementSettlement(settlementType)) {
+                for (ReturnToVendorDetail d : details) {
+                    if (!hasEnoughStock(d.getProductID(), d.getQuantity())) {
+                        connection.rollback();
+                        return false;
+                    }
+                }
+
+                for (ReturnToVendorDetail d : details) {
+                    if (!adjustProductStock(d.getProductID(), -d.getQuantity())) {
+                        connection.rollback();
+                        return false;
+                    }
+                }
+
+                inventoryAdjustedOnApprove = true;
+            }
+
+            String sql = "UPDATE ReturnToVendors "
+                    + "SET Status = 'Approved', ApprovedBy = ?, ApprovedDate = GETDATE(), IsInventoryAdjusted = ? "
+                    + "WHERE RTVID = ? AND Status = 'Pending'";
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, approvedBy);
+                ps.setBoolean(2, inventoryAdjustedOnApprove);
+                ps.setInt(3, rtvID);
+
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            insertSystemLog(
+                    approvedBy,
+                    "APPROVE_RETURN_VENDOR",
+                    "ReturnToVendor ID: " + rtvID,
+                    isReplacementSettlement(settlementType)
+                            ? "Approved replacement return. Inventory deducted immediately while waiting for replacement goods."
+                            : "Approved return to vendor request.",
+                    ipAddress
+            );
+
+            connection.commit();
+            return true;
 
         } catch (Exception e) {
             e.printStackTrace();
+            try {
+                connection.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         return false;
@@ -354,68 +515,82 @@ public class ReturnToVendorDAO extends DBContext {
                 return false;
             }
 
-            for (ReturnToVendorDetail d : details) {
-                String checkStockSql = "SELECT StockQuantity FROM Products WHERE ProductID = ?";
-                try (PreparedStatement psCheck = connection.prepareStatement(checkStockSql)) {
-                    psCheck.setInt(1, d.getProductID());
+            String settlementType = normalizeSettlementType(rtv.getSettlementType());
+            boolean inventoryAdjustedFlag = rtv.isInventoryAdjusted();
+            boolean financialAdjustedFlag = rtv.isFinancialAdjusted();
+            Integer relatedDebtID = rtv.getRelatedDebtID();
 
-                    try (ResultSet rs = psCheck.executeQuery()) {
-                        if (!rs.next()) {
-                            connection.rollback();
-                            return false;
-                        }
-
-                        int currentStock = rs.getInt("StockQuantity");
-                        if (currentStock < d.getQuantity()) {
+            if (isReplacementSettlement(settlementType)) {
+                if (rtv.isInventoryAdjusted()) {
+                    for (ReturnToVendorDetail d : details) {
+                        if (!adjustProductStock(d.getProductID(), d.getQuantity())) {
                             connection.rollback();
                             return false;
                         }
                     }
                 }
+                inventoryAdjustedFlag = rtv.isInventoryAdjusted();
+            } else {
+                if (!rtv.isInventoryAdjusted()) {
+                    for (ReturnToVendorDetail d : details) {
+                        if (!hasEnoughStock(d.getProductID(), d.getQuantity())) {
+                            connection.rollback();
+                            return false;
+                        }
+                    }
 
-                String updateStockSql = "UPDATE Products SET StockQuantity = StockQuantity - ? WHERE ProductID = ?";
-                try (PreparedStatement psUpdate = connection.prepareStatement(updateStockSql)) {
-                    psUpdate.setInt(1, d.getQuantity());
-                    psUpdate.setInt(2, d.getProductID());
-                    psUpdate.executeUpdate();
+                    for (ReturnToVendorDetail d : details) {
+                        if (!adjustProductStock(d.getProductID(), -d.getQuantity())) {
+                            connection.rollback();
+                            return false;
+                        }
+                    }
                 }
+                inventoryAdjustedFlag = true;
             }
 
-            if (!rtv.isFinancialAdjusted() && "OFFSET_DEBT".equalsIgnoreCase(rtv.getSettlementType())) {
+            if (!financialAdjustedFlag && isOffsetDebtSettlement(settlementType)) {
                 SupplierDebtDAO debtDAO = new SupplierDebtDAO();
                 SupplierDebt debt = debtDAO.getLatestOffsettableDebtBySupplier(rtv.getSupplierID());
 
                 if (debt != null) {
                     boolean updated = debtDAO.reduceDebtAmount(debt.getDebtID(), rtv.getTotalAmount());
                     if (updated) {
-                        String updateDebtLinkSql = "UPDATE ReturnToVendors "
-                                + "SET RelatedDebtID = ?, IsFinancialAdjusted = 1 "
-                                + "WHERE RTVID = ?";
-
-                        try (PreparedStatement psDebt = connection.prepareStatement(updateDebtLinkSql)) {
-                            psDebt.setInt(1, debt.getDebtID());
-                            psDebt.setInt(2, rtvID);
-                            psDebt.executeUpdate();
-                        }
+                        relatedDebtID = debt.getDebtID();
+                        financialAdjustedFlag = true;
                     }
                 }
             }
 
             String completeSql = "UPDATE ReturnToVendors "
-                    + "SET Status = 'Completed', CompletedBy = ?, CompletedDate = GETDATE(), IsInventoryAdjusted = 1 "
-                    + "WHERE RTVID = ?";
+                    + "SET Status = 'Completed', CompletedBy = ?, CompletedDate = GETDATE(), "
+                    + "    IsInventoryAdjusted = ?, IsFinancialAdjusted = ?, RelatedDebtID = ? "
+                    + "WHERE RTVID = ? AND Status = 'Approved'";
 
             try (PreparedStatement psComplete = connection.prepareStatement(completeSql)) {
                 psComplete.setInt(1, completedBy);
-                psComplete.setInt(2, rtvID);
-                psComplete.executeUpdate();
+                psComplete.setBoolean(2, inventoryAdjustedFlag);
+                psComplete.setBoolean(3, financialAdjustedFlag);
+                if (relatedDebtID == null) {
+                    psComplete.setNull(4, Types.INTEGER);
+                } else {
+                    psComplete.setInt(4, relatedDebtID);
+                }
+                psComplete.setInt(5, rtvID);
+
+                if (psComplete.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
             }
 
             insertSystemLog(
                     completedBy,
                     "COMPLETE_RETURN_VENDOR",
                     "ReturnToVendor ID: " + rtvID,
-                    "Completed return to vendor. ReturnCode: " + rtv.getReturnCode() + ", TotalAmount: " + rtv.getTotalAmount(),
+                    isReplacementSettlement(settlementType)
+                            ? "Completed replacement return. Replacement goods were added back to inventory."
+                            : "Completed return to vendor. ReturnCode: " + rtv.getReturnCode() + ", TotalAmount: " + rtv.getTotalAmount(),
                     ipAddress
             );
 

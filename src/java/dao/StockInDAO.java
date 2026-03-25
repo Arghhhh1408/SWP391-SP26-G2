@@ -456,7 +456,7 @@ public class StockInDAO extends DBContext {
                 + "INNER JOIN Products p ON d.ProductID = p.ProductID "
                 + "WHERE s.SupplierID = ? "
                 + "AND d.ProductID = ? "
-                + "AND s.StockStatus = 'Completed' "
+                + "AND s.StockStatus IN ('Pending', 'Completed') "
                 + "AND ISNULL(d.ReceivedQuantity, 0) > 0 "
                 + "AND (CAST(d.DetailID AS NVARCHAR) LIKE ? OR CAST(d.StockInID AS NVARCHAR) LIKE ?) "
                 + "AND (ISNULL(d.ReceivedQuantity, 0) - ISNULL(( "
@@ -508,7 +508,8 @@ public class StockInDAO extends DBContext {
                 + "WHERE d.DetailID = ? "
                 + "AND s.SupplierID = ? "
                 + "AND d.ProductID = ? "
-                + "AND s.StockStatus = 'Completed'";
+                + "AND s.StockStatus IN ('Pending', 'Completed') "
+                + "AND ISNULL(d.ReceivedQuantity, 0) > 0";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, detailId);

@@ -32,6 +32,30 @@ public class addSupplierController extends HttpServlet {
         dao = new SupplierDAO();
     }
 
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void forwardAddFormError(HttpServletRequest request, HttpServletResponse response,
+            String errorMessage, boolean formStatus)
+            throws ServletException, IOException {
+        request.setAttribute("error", errorMessage);
+        request.setAttribute("formStatus", formStatus);
+        request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
+    }
+
+    private void forwardEditFormError(HttpServletRequest request, HttpServletResponse response,
+            Supplier supplierForm, String errorMessage)
+            throws ServletException, IOException {
+        request.setAttribute("supplier", supplierForm);
+        request.setAttribute("error", errorMessage);
+        request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
+    }
+
     /**
      * Handles the HTTP <code>GET</code> method.
      *
@@ -104,6 +128,7 @@ public class addSupplierController extends HttpServlet {
         }
 
         if ("add".equals(action)) {
+            request.setAttribute("formStatus", true);
             request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
             return;
         }
@@ -162,87 +187,92 @@ public class addSupplierController extends HttpServlet {
 
         try {
             if ("addSupplier".equals(action)) {
-                String name = request.getParameter("supplierName");
-                String phone = request.getParameter("phone");
-                String address = request.getParameter("address");
-                String email = request.getParameter("email");
+                String name = trimToNull(request.getParameter("supplierName"));
+                String phone = trimToNull(request.getParameter("phone"));
+                String address = trimToNull(request.getParameter("address"));
+                String email = trimToNull(request.getParameter("email"));
+                boolean supplierActive = request.getParameter("status") != null;
 
                 if (!ValidationUtils.isValidPhone(phone)) {
-                    message = "Số điện thoại không hợp lệ!";
-                    status = "error";
-                } else if (!ValidationUtils.isValidEmail(email)) {
-                    message = "Email không hợp lệ!";
-                    status = "error";
-                } else {
-                    String error = dao.checkDuplicate(name, email, phone);
-                    if (error != null) {
-                        message = error;
-                        status = "error";
-                    } else {
-                        boolean ok = dao.addSupplier(name, phone, address, email);
-                        if (ok) {
-                            message = "Thêm nhà cung cấp thành công!";
-                            status = "success";
+                    forwardAddFormError(request, response, "Số điện thoại không hợp lệ!", supplierActive);
+                    return;
+                }
+                if (!ValidationUtils.isValidEmail(email)) {
+                    forwardAddFormError(request, response, "Email không hợp lệ!", supplierActive);
+                    return;
+                }
 
-                            SystemLogDAO logDao = new SystemLogDAO();
-                            SystemLog log = new SystemLog();
-                            log.setUserID(user.getUserID());
-                            log.setAction("CREATE_SUPPLIER");
-                            log.setTargetObject("Supplier: " + name);
-                            log.setDescription("Thêm nhà cung cấp mới: " + name);
-                            log.setIpAddress(request.getRemoteAddr());
-                            logDao.insertLog(log);
-                        } else {
-                            message = "Thêm nhà cung cấp thất bại!";
-                            status = "error";
-                        }
-                    }
+                String error = dao.checkDuplicate(name, email, phone, supplierActive);
+                if (error != null) {
+                    forwardAddFormError(request, response, error, supplierActive);
+                    return;
+                }
+
+                boolean ok = dao.addSupplier(name, phone, address, email, supplierActive);
+                if (ok) {
+                    message = "Thêm nhà cung cấp thành công!";
+                    status = "success";
+
+                    SystemLogDAO logDao = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+                    log.setUserID(user.getUserID());
+                    log.setAction("CREATE_SUPPLIER");
+                    log.setTargetObject("Supplier: " + name);
+                    log.setDescription("Thêm nhà cung cấp mới: " + name + " | Active=" + supplierActive);
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDao.insertLog(log);
+                } else {
+                    forwardAddFormError(request, response, "Thêm nhà cung cấp thất bại!", supplierActive);
+                    return;
                 }
 
             } else if ("updateSupplier".equals(action)) {
                 int id = Integer.parseInt(request.getParameter("supplierID"));
-                String newName = request.getParameter("supplierName");
-                String newPhone = request.getParameter("phone");
-                String newAddress = request.getParameter("address");
-                String newEmail = request.getParameter("email");
+                String newName = trimToNull(request.getParameter("supplierName"));
+                String newPhone = trimToNull(request.getParameter("phone"));
+                String newAddress = trimToNull(request.getParameter("address"));
+                String newEmail = trimToNull(request.getParameter("email"));
                 boolean newStatus = request.getParameter("status") != null;
 
-                if (!ValidationUtils.isValidPhone(newPhone)) {
-                    message = "Số điện thoại không hợp lệ!";
-                    status = "error";
-                } else if (!ValidationUtils.isValidEmail(newEmail)) {
-                    message = "Email không hợp lệ!";
-                    status = "error";
-                } else {
-                    Supplier oldSupplier = dao.getSupplierById(id);
-                    if (oldSupplier == null) {
-                        message = "Không tìm thấy nhà cung cấp!";
-                        status = "error";
-                    } else {
-                        String duplicateError = dao.checkDuplicateForUpdate(id, newName, newEmail, newPhone);
-                        if (duplicateError != null) {
-                            message = duplicateError;
-                            status = "error";
-                        } else {
-                            boolean ok = dao.updateSupplier(id, newName, newPhone, newEmail, newAddress, newStatus);
-                            if (ok) {
-                                message = "Cập nhật nhà cung cấp thành công!";
-                                status = "success";
+                Supplier supplierForm = new Supplier(id, newName, newPhone, newAddress, newEmail, newStatus);
 
-                                SystemLogDAO logDAO = new SystemLogDAO();
-                                SystemLog log = new SystemLog();
-                                log.setUserID(user.getUserID());
-                                log.setAction("UPDATE_SUPPLIER");
-                                log.setTargetObject("Supplier ID: " + id);
-                                log.setDescription("Cập nhật thông tin nhà cung cấp: " + newName + " (ID: " + id + ")");
-                                log.setIpAddress(request.getRemoteAddr());
-                                logDAO.insertLog(log);
-                            } else {
-                                message = "Cập nhật nhà cung cấp thất bại!";
-                                status = "error";
-                            }
-                        }
-                    }
+                if (!ValidationUtils.isValidPhone(newPhone)) {
+                    forwardEditFormError(request, response, supplierForm, "Số điện thoại không hợp lệ!");
+                    return;
+                }
+                if (!ValidationUtils.isValidEmail(newEmail)) {
+                    forwardEditFormError(request, response, supplierForm, "Email không hợp lệ!");
+                    return;
+                }
+
+                Supplier oldSupplier = dao.getSupplierById(id);
+                if (oldSupplier == null) {
+                    forwardEditFormError(request, response, supplierForm, "Không tìm thấy nhà cung cấp!");
+                    return;
+                }
+
+                String duplicateError = dao.checkDuplicateForUpdate(id, newName, newEmail, newPhone, newStatus);
+                if (duplicateError != null) {
+                    forwardEditFormError(request, response, supplierForm, duplicateError);
+                    return;
+                }
+
+                boolean ok = dao.updateSupplier(id, newName, newPhone, newEmail, newAddress, newStatus);
+                if (ok) {
+                    message = "Cập nhật nhà cung cấp thành công!";
+                    status = "success";
+
+                    SystemLogDAO logDAO = new SystemLogDAO();
+                    SystemLog log = new SystemLog();
+                    log.setUserID(user.getUserID());
+                    log.setAction("UPDATE_SUPPLIER");
+                    log.setTargetObject("Supplier ID: " + id);
+                    log.setDescription("Cập nhật thông tin nhà cung cấp: " + newName + " (ID: " + id + ") | Active=" + newStatus);
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDAO.insertLog(log);
+                } else {
+                    forwardEditFormError(request, response, supplierForm, "Cập nhật nhà cung cấp thất bại!");
+                    return;
                 }
 
             } else {
@@ -251,11 +281,13 @@ public class addSupplierController extends HttpServlet {
             }
 
         } catch (NumberFormatException e) {
-            message = "Lỗi định dạng số: " + e.getMessage();
-            status = "error";
+            request.setAttribute("error", "Lỗi định dạng số: " + e.getMessage());
+            request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
+            return;
         } catch (Exception e) {
-            message = "Lỗi: " + e.getMessage();
-            status = "error";
+            request.setAttribute("error", "Lỗi: " + e.getMessage());
+            request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
+            return;
         }
 
         session.setAttribute("message", message);

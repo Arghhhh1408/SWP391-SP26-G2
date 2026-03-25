@@ -12,6 +12,14 @@ import utils.DBContext;
 
 public class SupplierDAO extends DBContext {
 
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     public String getSupplierNameById(int supplierId) {
         String sql = "SELECT Name FROM Suppliers WHERE SupplierID = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -39,28 +47,47 @@ public class SupplierDAO extends DBContext {
     }
 
     public String checkDuplicate(String supplierName, String email, String phone) {
+        return checkDuplicate(supplierName, email, phone, true);
+    }
+
+    public String checkDuplicate(String supplierName, String email, String phone, boolean targetActive) {
         String sqlName = "SELECT 1 FROM Suppliers WHERE Name = ?";
-        String sqlEmail = "SELECT 1 FROM Suppliers WHERE Email = ?";
-        String sqlPhone = "SELECT 1 FROM Suppliers WHERE Phone = ?";
+        String sqlEmail = "SELECT 1 FROM Suppliers WHERE LOWER(LTRIM(RTRIM(Email))) = LOWER(?)";
+        String sqlPhone = "SELECT 1 FROM Suppliers WHERE LTRIM(RTRIM(Phone)) = ?";
+
+        String normalizedName = normalize(supplierName);
+        String normalizedEmail = normalize(email);
+        String normalizedPhone = normalize(phone);
 
         try (
-                PreparedStatement psName = connection.prepareStatement(sqlName); PreparedStatement psEmail = connection.prepareStatement(sqlEmail); PreparedStatement psPhone = connection.prepareStatement(sqlPhone)) {
-            psName.setString(1, supplierName);
+                PreparedStatement psName = connection.prepareStatement(sqlName);
+                PreparedStatement psEmail = connection.prepareStatement(sqlEmail);
+                PreparedStatement psPhone = connection.prepareStatement(sqlPhone)) {
+
+            psName.setString(1, normalizedName);
             if (psName.executeQuery().next()) {
                 return "Tên nhà cung cấp đã tồn tại!";
             }
 
-            if (email != null && !email.trim().isEmpty()) {
-                psEmail.setString(1, email);
+            if (normalizedEmail != null) {
+                psEmail.setString(1, normalizedEmail);
                 if (psEmail.executeQuery().next()) {
-                    return "Email đã tồn tại!";
+                    return "Email nhà cung cấp đã tồn tại!";
                 }
             }
 
-            if (phone != null && !phone.trim().isEmpty()) {
-                psPhone.setString(1, phone);
+            if (normalizedPhone != null) {
+                psPhone.setString(1, normalizedPhone);
                 if (psPhone.executeQuery().next()) {
-                    return "Số điện thoại đã tồn tại!";
+                    return "Số điện thoại nhà cung cấp đã tồn tại!";
+                }
+            }
+
+            if (targetActive) {
+                ContactIdentityDAO identityDAO = new ContactIdentityDAO();
+                String crossConflict = identityDAO.validateSupplierAgainstActiveUsers(normalizedEmail, normalizedPhone);
+                if (crossConflict != null) {
+                    return crossConflict;
                 }
             }
 
@@ -72,31 +99,50 @@ public class SupplierDAO extends DBContext {
     }
 
     public String checkDuplicateForUpdate(int id, String supplierName, String email, String phone) {
+        return checkDuplicateForUpdate(id, supplierName, email, phone, true);
+    }
+
+    public String checkDuplicateForUpdate(int id, String supplierName, String email, String phone, boolean targetActive) {
         String sqlName = "SELECT 1 FROM Suppliers WHERE Name = ? AND SupplierID <> ?";
-        String sqlEmail = "SELECT 1 FROM Suppliers WHERE Email = ? AND SupplierID <> ?";
-        String sqlPhone = "SELECT 1 FROM Suppliers WHERE Phone = ? AND SupplierID <> ?";
+        String sqlEmail = "SELECT 1 FROM Suppliers WHERE LOWER(LTRIM(RTRIM(Email))) = LOWER(?) AND SupplierID <> ?";
+        String sqlPhone = "SELECT 1 FROM Suppliers WHERE LTRIM(RTRIM(Phone)) = ? AND SupplierID <> ?";
+
+        String normalizedName = normalize(supplierName);
+        String normalizedEmail = normalize(email);
+        String normalizedPhone = normalize(phone);
 
         try (
-                PreparedStatement psName = connection.prepareStatement(sqlName); PreparedStatement psEmail = connection.prepareStatement(sqlEmail); PreparedStatement psPhone = connection.prepareStatement(sqlPhone)) {
-            psName.setString(1, supplierName);
+                PreparedStatement psName = connection.prepareStatement(sqlName);
+                PreparedStatement psEmail = connection.prepareStatement(sqlEmail);
+                PreparedStatement psPhone = connection.prepareStatement(sqlPhone)) {
+
+            psName.setString(1, normalizedName);
             psName.setInt(2, id);
             if (psName.executeQuery().next()) {
                 return "Tên nhà cung cấp đã tồn tại!";
             }
 
-            if (email != null && !email.trim().isEmpty()) {
-                psEmail.setString(1, email);
+            if (normalizedEmail != null) {
+                psEmail.setString(1, normalizedEmail);
                 psEmail.setInt(2, id);
                 if (psEmail.executeQuery().next()) {
-                    return "Email đã tồn tại!";
+                    return "Email nhà cung cấp đã tồn tại!";
                 }
             }
 
-            if (phone != null && !phone.trim().isEmpty()) {
-                psPhone.setString(1, phone);
+            if (normalizedPhone != null) {
+                psPhone.setString(1, normalizedPhone);
                 psPhone.setInt(2, id);
                 if (psPhone.executeQuery().next()) {
-                    return "Số điện thoại đã tồn tại!";
+                    return "Số điện thoại nhà cung cấp đã tồn tại!";
+                }
+            }
+
+            if (targetActive) {
+                ContactIdentityDAO identityDAO = new ContactIdentityDAO();
+                String crossConflict = identityDAO.validateSupplierAgainstActiveUsers(normalizedEmail, normalizedPhone);
+                if (crossConflict != null) {
+                    return crossConflict;
                 }
             }
 
@@ -241,12 +287,17 @@ public class SupplierDAO extends DBContext {
     }
 
     public boolean addSupplier(String supplierName, String supplierPhone, String supplierAddress, String supplierEmail) {
-        String sql = "INSERT INTO Suppliers (Name, Phone, Address, Email, IsActive) VALUES (?, ?, ?, ?, 1)";
+        return addSupplier(supplierName, supplierPhone, supplierAddress, supplierEmail, true);
+    }
+
+    public boolean addSupplier(String supplierName, String supplierPhone, String supplierAddress, String supplierEmail, boolean isActive) {
+        String sql = "INSERT INTO Suppliers (Name, Phone, Address, Email, IsActive) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, supplierName);
-            ps.setString(2, supplierPhone);
-            ps.setString(3, supplierAddress);
-            ps.setString(4, supplierEmail);
+            ps.setString(1, normalize(supplierName));
+            ps.setString(2, normalize(supplierPhone));
+            ps.setString(3, normalize(supplierAddress));
+            ps.setString(4, normalize(supplierEmail));
+            ps.setBoolean(5, isActive);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -262,10 +313,10 @@ public class SupplierDAO extends DBContext {
         """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, name);
-            ps.setString(2, phone);
-            ps.setString(3, email);
-            ps.setString(4, address);
+            ps.setString(1, normalize(name));
+            ps.setString(2, normalize(phone));
+            ps.setString(3, normalize(email));
+            ps.setString(4, normalize(address));
             ps.setBoolean(5, isActive);
             ps.setInt(6, id);
             return ps.executeUpdate() > 0;
@@ -298,6 +349,15 @@ public class SupplierDAO extends DBContext {
         return list;
     }
 
+    public String validateActivationConflict(int supplierId) {
+        Supplier supplier = getSupplierById(supplierId);
+        if (supplier == null) {
+            return "Không tìm thấy nhà cung cấp để kích hoạt.";
+        }
+        ContactIdentityDAO identityDAO = new ContactIdentityDAO();
+        return identityDAO.validateSupplierAgainstActiveUsers(supplier.getEmail(), supplier.getPhone());
+    }
+
     // Xóa mềm theo DB mới
     public boolean deactivateSupplier(int id) {
         String sql = "UPDATE Suppliers SET IsActive = 0 WHERE SupplierID = ?";
@@ -311,6 +371,10 @@ public class SupplierDAO extends DBContext {
     }
 
     public boolean activateSupplier(int id) {
+        String conflict = validateActivationConflict(id);
+        if (conflict != null) {
+            return false;
+        }
         String sql = "UPDATE Suppliers SET IsActive = 1 WHERE SupplierID = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
