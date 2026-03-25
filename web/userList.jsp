@@ -6,35 +6,7 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>Quản lý tài khoản | IMS ADMIN</title>
-    <style>
-        .search-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-        .role-badge {
-            font-size: 11px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
-        .role-admin { background: #fee2e2; color: #991b1b; }
-        .role-manager { background: #dcfce7; color: #166534; }
-        .role-staff { background: #dbeafe; color: #1e40af; }
-        .role-sales { background: #fef9c3; color: #854d0e; }
-        
-        .action-link {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--primary);
-            text-decoration: none;
-            margin-right: 12px;
-        }
-        .action-link:hover { text-decoration: underline; }
-        .delete-link { color: #ef4444; }
-    </style>
+    <title>Danh sách người dùng | IMS PRO</title>
 </head>
 
 <body>
@@ -43,105 +15,79 @@
 
     <div class="admin-main">
         <div class="admin-topbar">
-            <div>
-                <h1>Danh sách tài khoản</h1>
-                <small>Admin &rsaquo; Quản lý người dùng</small>
+            <div class="topbar-left">
+                <h1>Quản lý người dùng</h1>
+                <p>Admin &rsaquo; Danh sách tất cả tài khoản</p>
             </div>
             <div class="user-profile">
-                <span style="font-size: 18px;">👤</span>
-                <strong>${sessionScope.acc.fullName}</strong>
+                <span>👤 ${sessionScope.acc.fullName}</span>
             </div>
         </div>
 
         <div class="admin-content">
-
-            <!-- Search Card -->
-            <div class="glass-card">
+            <div class="card">
                 <div class="card-header">
-                    <h3>🔍 Tìm kiếm & Bộ lọc</h3>
+                    <h3>🔍 Bộ lọc tìm kiếm</h3>
+                    <a href="createuser" class="btn btn-primary" style="padding: 8px 15px; font-size: 13px;">+ Thêm mới</a>
                 </div>
                 <div class="card-body">
                     <form action="userList" method="get">
-                        <div class="search-grid">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: flex-end;">
                             <div class="form-group">
-                                <label>Tên / Username</label>
-                                <input type="text" name="name" value="${param.name}" class="form-control" placeholder="Nhập tên...">
+                                <label style="display:block; font-size:12px; font-weight:700; color:#b5b5c3; margin-bottom:8px; text-transform:uppercase;">Tìm tên / Username</label>
+                                <input type="text" name="name" value="${param.name}" class="form-control" placeholder="Từ khóa...">
                             </div>
                             <div class="form-group">
-                                <label>Email</label>
-                                <input type="text" name="email" value="${param.email}" class="form-control" placeholder="Nhập email...">
-                            </div>
-                            <div class="form-group">
-                                <label>Số điện thoại</label>
-                                <input type="text" name="phone" value="${param.phone}" class="form-control" placeholder="Nhập SĐT...">
-                            </div>
-                            <div class="form-group">
-                                <label>Vai trò</label>
+                                <label style="display:block; font-size:12px; font-weight:700; color:#b5b5c3; margin-bottom:8px; text-transform:uppercase;">Vai trò</label>
                                 <select name="option" class="form-control">
-                                    <option value="All">Tất cả</option>
+                                    <option value="All">Tất cả vai trò</option>
                                     <c:forEach items="${requestScope.listOfRole}" var="r">
-                                        <option value="${r.roleName}" ${r.roleName eq param.option ? 'selected' : ''}>
-                                            ${r.roleName}
-                                        </option>
+                                        <option value="${r.roleName}" ${r.roleName eq param.option ? 'selected' : ''}>${r.roleName}</option>
                                     </c:forEach>
                                 </select>
                             </div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <button type="submit" class="btn btn-primary">Tìm kiếm ngay</button>
-                            <a href="createuser" class="btn btn-outline" style="text-decoration: none;">➕ Cấp tài khoản mới</a>
+                            <button type="submit" class="btn btn-outline">Tìm kiếm</button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <c:if test="${not empty notification}">
-                <div style="background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; padding: 12px 16px; border-radius: 12px; margin-bottom: 24px;">
-                    ✅ ${notification}
-                </div>
-            </c:if>
-
-            <!-- Table Card -->
-            <div class="glass-card">
-                <div class="card-header">
-                    <h3>👥 Danh sách hiển thị (${list.size()})</h3>
-                </div>
+            <div class="card">
                 <div class="card-body" style="padding: 0;">
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th>#ID</th>
                                 <th>Tài khoản</th>
                                 <th>Họ tên</th>
+                                <th>Email/SĐT</th>
                                 <th>Vai trò</th>
-                                <th>Email</th>
-                                <th>SĐT</th>
-                                <th>Thao tác</th>
+                                <th>Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
                             <c:forEach items="${requestScope.list}" var="u">
                                 <tr>
-                                    <td>#${u.userID}</td>
-                                    <td style="font-weight: 600;">${u.username}</td>
+                                    <td><span style="color: #b5b5c3; font-weight: 700;">#${u.userID}</span></td>
+                                    <td style="font-weight: 700; color: #181c32;">${u.username}</td>
                                     <td>${u.fullName}</td>
                                     <td>
+                                        <div style="font-size: 13px;">${u.email}</div>
+                                        <div style="color: #b5b5c3; font-size: 11px;">${u.phone}</div>
+                                    </td>
+                                    <td>
                                         <c:choose>
-                                            <c:when test="${u.roleID == 0}"><span class="role-badge role-admin">Admin</span></c:when>
-                                            <c:when test="${u.roleID == 1}"><span class="role-badge role-staff">Staff</span></c:when>
-                                            <c:when test="${u.roleID == 2}"><span class="role-badge role-manager">Manager</span></c:when>
-                                            <c:when test="${u.roleID == 3}"><span class="role-badge role-sales">Sales</span></c:when>
+                                            <c:when test="${u.roleID == 0}"><span class="badge badge-danger">Admin</span></c:when>
+                                            <c:when test="${u.roleID == 1}"><span class="badge badge-primary">Staff</span></c:when>
+                                            <c:when test="${u.roleID == 2}"><span class="badge badge-success">Manager</span></c:when>
+                                            <c:when test="${u.roleID == 3}"><span class="badge badge-warning">Sales</span></c:when>
                                         </c:choose>
                                     </td>
-                                    <td style="font-size: 13px; color: var(--text-muted);">${u.email}</td>
-                                    <td style="font-size: 13px;">${u.phone}</td>
                                     <td>
-                                        <div style="display: flex; gap: 8px;">
-                                            <a href="resetpassword?id=${u.userID}" class="action-link" title="Reset về 123">Reset</a>
+                                        <div style="display: flex; gap: 10px;">
+                                            <a href="updateuser?id=${u.userID}" class="btn btn-outline" style="padding: 5px 12px; font-size: 11px;">Sửa</a>
                                             <c:if test="${u.roleID != 0}">
-                                                <a href="updateuser?id=${u.userID}" class="action-link">Sửa</a>
-                                                <a href="deleteUser?id=${u.userID}" class="action-link delete-link" 
-                                                   onclick="return confirm('Bạn có chắc muốn xóa tài khoản này?');">Xóa</a>
+                                                <a href="deleteUser?id=${u.userID}" class="btn btn-outline" style="color: #f64e60; padding: 5px 12px; font-size: 11px;" onclick="return confirm('Xác nhận xóa tài khoản?');">Xóa</a>
                                             </c:if>
                                         </div>
                                     </td>
@@ -151,7 +97,6 @@
                     </table>
                 </div>
             </div>
-
         </div>
     </div>
 </body>
