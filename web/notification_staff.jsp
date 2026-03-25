@@ -257,6 +257,22 @@
                                             </a>
                                         </c:if>
 
+                                        <c:if test="${n.type == 'PRODUCT_ADDED'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToProductCatalog(this, ${n.notificationId}, ${n.read}); return false;">
+                                                📦 Xem danh sách sản phẩm
+                                            </a>
+                                        </c:if>
+
+                                        <c:if test="${n.type == 'SUPPLIER_ADDED'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToSupplierList(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🏢 Xem danh sách nhà cung cấp
+                                            </a>
+                                        </c:if>
+
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
                                                 <button class="btn-mark-read"
@@ -303,6 +319,20 @@
                             await markAsRead(notifId);
                         }
                         window.location.href = ctx + '/personalProfile';
+                    }
+
+                    async function goToProductCatalog(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/staff_dashboard?tab=products';
+                    }
+
+                    async function goToSupplierList(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/supplierList';
                     }
 
                     function markAsRead(notifId) {

@@ -1,6 +1,7 @@
 package controller;
 
 import dao.CategoryDAO;
+import dao.NotificationDAO;
 import dao.ProductDAO;
 import dao.SystemLogDAO;
 import java.io.IOException;
@@ -12,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.Category;
+import model.Notification;
 import model.Product;
 import model.SystemLog;
 import model.User;
@@ -174,6 +176,28 @@ public class ProductCRUDController extends HttpServlet {
                 int newId = pDao.addProduct(p);
                 if (newId > 0) {
                     new dao.LowStockDAO().saveOrUpdateAlert(newId, lowStockThreshold);
+                    
+                    // Notify staff if added by Manager
+                    HttpSession session = request.getSession(false);
+                    User currentUser = (User) session.getAttribute("acc");
+                    if (currentUser != null && currentUser.getRoleID() == 2) {
+                        NotificationDAO nDao = new NotificationDAO();
+                        Category cat = dao.getCategoryById(p.getCategoryId());
+                        String categoryName = (cat != null) ? cat.getName() : "Không xác định";
+                        
+                        String message = String.format("Manager Đã thêm 1 sản phẩm | Tên sản phẩm: %s | Danh mục sản phẩm: %s",
+                                p.getName(), categoryName);
+                                
+                        List<Integer> staffIds = nDao.getStaffIds();
+                        for (int staffId : staffIds) {
+                            Notification n = new Notification();
+                            n.setUserId(staffId);
+                            n.setTitle("Sản phẩm mới");
+                            n.setMessage(message);
+                            n.setType("PRODUCT_ADDED");
+                            nDao.insert(n);
+                        }
+                    }
                 }
                 logProductAction(request, "ADD_PRODUCT", "Thêm sản phẩm mới: " + p.getName() + " | SKU: " + p.getSku() + " | ID: " + newId);
             } else {

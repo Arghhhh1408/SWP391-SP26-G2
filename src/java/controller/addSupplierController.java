@@ -5,14 +5,17 @@
 package controller;
 
 import dao.SupplierDAO;
+import dao.NotificationDAO;
 import dao.SystemLogDAO;
 import java.io.IOException;
+import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import model.Notification;
 import model.Supplier;
 import model.SystemLog;
 import model.User;
@@ -192,6 +195,19 @@ public class addSupplierController extends HttpServlet {
                             log.setDescription("Thêm nhà cung cấp mới: " + name);
                             log.setIpAddress(request.getRemoteAddr());
                             logDao.insertLog(log);
+
+                            // Notify staff
+                            NotificationDAO nDao = new NotificationDAO();
+                            String notifMessage = "Manager Đã thêm 1 nhà cung cấp | tên nhà cung cấp: " + name;
+                            List<Integer> staffIds = nDao.getStaffIds();
+                            for (int staffId : staffIds) {
+                                Notification n = new Notification();
+                                n.setUserId(staffId);
+                                n.setTitle("Nhà cung cấp mới");
+                                n.setMessage(notifMessage);
+                                n.setType("SUPPLIER_ADDED");
+                                nDao.insert(n);
+                            }
                         } else {
                             message = "Thêm nhà cung cấp thất bại!";
                             status = "error";
