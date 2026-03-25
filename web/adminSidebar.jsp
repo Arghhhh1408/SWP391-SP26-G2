@@ -1,12 +1,4 @@
 <%-- Shared Admin Sidebar Fragment --%>
-    <%@page contentType="text/html" pageEncoding="UTF-8" %>
-        <%@taglib uri="jakarta.tags.core" prefix="c" %>
-            <style>
-                /* ===== RESET & BASE ===== */
-                * {
-                    box-sizing: border-box;
-                    margin: 0;
-                    padding: 0;
                 }
 
                 body {

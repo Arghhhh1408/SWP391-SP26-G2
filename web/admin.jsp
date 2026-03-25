@@ -7,271 +7,170 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>Admin Hệ Thống – Dashboard</title>
-    <!-- CSS is included in adminSidebar.jsp, we just add dashboard-specific CSS here -->
+    <title>Admin Dashboard | Modern IMS</title>
     <style>
-        /* ===== NOTIFICATION ===== */
-        .notification-box {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            border-radius: 6px;
-            padding: 10px 16px;
-            margin-bottom: 20px;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
         }
 
-        /* ===== SUMMARY CARDS ===== */
-        .cards-row {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
-        }
-
-        .card {
-            flex: 1;
-            min-width: 160px;
+        .stat-card {
             background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 18px 20px;
-        }
-
-        .card .card-label {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 6px;
-        }
-
-        .card .card-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #1a1a2e;
-        }
-
-        .card .card-icon {
-            font-size: 22px;
-            margin-bottom: 8px;
-        }
-
-        /* ===== DASHBOARD GRID ===== */
-        .dashboard-grid {
+            padding: 28px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border: 1px solid #f1f5f9;
             display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .dashboard-grid .left {
-            flex: 2;
-            min-width: 280px;
-        }
-
-        .dashboard-grid .right {
-            flex: 1;
-            min-width: 220px;
-        }
-
-        /* ===== SECTION BOX ===== */
-        .box {
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .box-header {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 14px 18px;
-            border-bottom: 1px solid #e0e0e0;
+            gap: 20px;
+            transition: all 0.3s ease;
         }
 
-        .box-header h3 {
-            font-size: 15px;
-            color: #1a1a2e;
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
         }
 
-        .box-header a {
-            font-size: 12px;
-            color: #007bff;
-            text-decoration: none;
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
         }
 
-        .box-body {
-            padding: 16px 18px;
+        .stat-info .value {
+            display: block;
+            font-size: 28px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
         }
 
-        /* ===== LOG TABLE ===== */
-        .log-table {
-            width: 100%;
-            border-collapse: collapse;
+        .stat-info .label {
             font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+            margin-top: 4px;
         }
 
-        .log-table th {
-            text-align: left;
-            padding: 8px 10px;
-            background: #f8f9fa;
-            color: #555;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 12px;
+        .role-distribution {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .log-table td {
-            padding: 10px;
-            border-bottom: 1px solid #f0f0f0;
-            color: #333;
-            vertical-align: top;
-        }
-
-        .log-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .log-table tr:hover td {
-            background: #f8f9fa;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            background: #e8f4fd;
-            color: #0056b3;
-        }
-
-        /* ===== ROLE DISTRIBUTION ===== */
         .role-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            gap: 12px;
         }
 
-        .role-row .role-name {
+        .role-name {
+            width: 120px;
             font-size: 13px;
-            color: #333;
-            flex: 1;
+            font-weight: 600;
+            color: #475569;
         }
 
-        .role-bar-wrap {
-            flex: 2;
-            background: #f0f0f0;
-            border-radius: 4px;
+        .role-bar-container {
+            flex: 1;
             height: 8px;
-            margin: 0 10px;
+            background: #f1f5f9;
+            border-radius: 4px;
             overflow: hidden;
         }
 
         .role-bar {
             height: 100%;
+            background: var(--primary);
             border-radius: 4px;
-            background: #007bff;
         }
 
         .role-count {
-            font-size: 13px;
-            font-weight: bold;
-            color: #333;
-            min-width: 20px;
+            width: 30px;
             text-align: right;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- Bắt đầu include sidebar (sẽ chứa luôn CSS layout toàn trang) -->
     <jsp:include page="adminSidebar.jsp">
         <jsp:param name="currentPage" value="dashboard" />
     </jsp:include>
-    <!-- Kết thúc include sidebar -->
 
-    <!-- ===== MAIN ===== -->
     <div class="admin-main">
         <div class="admin-topbar">
-            <div>
-                <h1>Dashboard Quản trị</h1>
+            <div class="topbar-left">
+                <h1>Hệ thống Quản trị</h1>
                 <small>Admin &rsaquo; Tổng quan hệ thống</small>
             </div>
-            <div>
-                Xin chào, <strong>${sessionScope.acc.fullName}</strong>
+            <div class="user-profile">
+                <span style="font-size: 18px;">👤</span>
+                <strong>${sessionScope.acc.fullName}</strong>
             </div>
         </div>
 
         <div class="admin-content">
 
-            <!-- Notification -->
             <c:if test="${not empty notification}">
-                <div class="notification-box">&#10004; ${notification}</div>
+                <div style="background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; padding: 12px 16px; border-radius: 12px; margin-bottom: 24px;">
+                    ✅ ${notification}
+                </div>
             </c:if>
 
-            <!-- ROW 1: Tổng số tài khoản + Phân bổ vai trò ngang nhau -->
-            <div class="dashboard-grid">
-
-                <!-- Left: Total Accounts card -->
-                <div class="left">
-                    <div class="box">
-                        <div class="box-body"
-                            style="display:flex; align-items:center; gap:16px; padding:24px;">
-                            <div style="font-size:40px;">&#128101;</div>
-                            <div>
-                                <div style="font-size:12px; color:#888; margin-bottom:4px;">Tổng số tài
-                                    khoản</div>
-                                <div style="font-size:38px; font-weight:bold; color:#1a1a2e;">
-                                    ${totalAccounts}</div>
-                            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">👥</div>
+                    <div class="stat-info">
+                        <span class="value">${totalAccounts}</span>
+                        <span class="label">Tổng số tài khoản</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card" style="flex: 2;">
+                    <div class="stat-info" style="width: 100%;">
+                        <div class="role-distribution">
+                            <c:forEach var="entry" items="${roleDistribution}">
+                                <c:set var="pct" value="${totalAccounts > 0 ? (entry.value * 100 / totalAccounts) : 0}" />
+                                <div class="role-row">
+                                    <span class="role-name">${entry.key}</span>
+                                    <div class="role-bar-container">
+                                        <div class="role-bar" style="width: ${pct}%"></div>
+                                    </div>
+                                    <span class="role-count">${entry.value}</span>
+                                </div>
+                            </c:forEach>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Right: Role Distribution -->
-                <div class="right">
-                    <div class="box">
-                        <div class="box-header">
-                            <h3>&#128100; Phân bổ vai trò</h3>
-                        </div>
-                        <div class="box-body">
-                            <c:choose>
-                                <c:when test="${empty roleDistribution}">
-                                    <p style="color:#888; font-size:13px;">Không có dữ liệu.</p>
-                                </c:when>
-                                <c:otherwise>
-                                    <c:forEach var="entry" items="${roleDistribution}">
-                                        <c:set var="pct"
-                                            value="${totalAccounts > 0 ? (entry.value * 100 / totalAccounts) : 0}" />
-                                        <div class="role-row">
-                                            <span class="role-name">${entry.key}</span>
-                                            <div class="role-bar-wrap">
-                                                <div class="role-bar" style="width: ${pct}%">
-                                                </div>
-                                            </div>
-                                            <span class="role-count">${entry.value}</span>
-                                        </div>
-                                    </c:forEach>
-                                </c:otherwise>
-                            </c:choose>
-                        </div>
+            <div class="glass-card">
+                <div class="card-header">
+                    <h3>📋 Lịch sử hoạt động gần đây</h3>
+                    <div style="display: flex; gap: 8px;">
+                        <a href="systemlog" class="btn btn-outline" style="padding: 6px 14px; font-size: 12px;">Xem tất cả</a>
                     </div>
                 </div>
-
-            </div><!-- /dashboard-grid row 1 -->
-
-            <!-- ROW 2: System Log full width -->
-            <div class="box">
-                <div class="box-header">
-                    <h3>&#128196; System Log – Gần đây</h3>
-                    <a href="systemlog">Tất cả &#8594;</a>
-                </div>
-                <div class="box-body">
+                <div class="card-body" style="padding: 0;">
                     <c:choose>
                         <c:when test="${empty recentLogs}">
-                            <p style="color:#888; font-size:13px;">Chưa có log nào.</p>
+                            <div style="padding: 40px; text-align: center; color: var(--text-muted);">
+                                <span style="font-size: 40px; display: block; margin-bottom: 10px;">📄</span>
+                                Chưa có hoạt động nào được ghi lại.
+                            </div>
                         </c:when>
                         <c:otherwise>
-                            <table class="log-table">
+                            <table class="admin-table">
                                 <thead>
                                     <tr>
                                         <th>Hành động</th>
@@ -283,12 +182,15 @@
                                 <tbody>
                                     <c:forEach var="log" items="${recentLogs}">
                                         <tr>
-                                            <td><span class="badge">${log.action}</span></td>
-                                            <td>${log.targetObject}</td>
-                                            <td>${log.description}</td>
-                                            <td style="white-space:nowrap; color:#888; font-size:12px;">
-                                                <fmt:formatDate value="${log.logDate}"
-                                                    pattern="dd/MM/yyyy HH:mm" />
+                                            <td>
+                                                <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                                                    ${log.action}
+                                                </span>
+                                            </td>
+                                            <td style="font-weight: 500;">${log.targetObject}</td>
+                                            <td style="color: var(--text-muted); font-size: 13px;">${log.description}</td>
+                                            <td style="white-space:nowrap; color: var(--text-muted); font-size: 12px;">
+                                                <fmt:formatDate value="${log.logDate}" pattern="dd/MM/yyyy HH:mm" />
                                             </td>
                                         </tr>
                                     </c:forEach>
@@ -297,12 +199,10 @@
                         </c:otherwise>
                     </c:choose>
                 </div>
-            </div><!-- /system log box -->
+            </div>
 
-
-
-        </div><!-- /content -->
-    </div><!-- /main -->
+        </div>
+    </div>
 
 </body>
 
