@@ -24,7 +24,7 @@
                 </c:if>
 
                 <c:if test="${empty error}">
-                    <p class="success">Import thành công: ${successCount} / ${totalValid} sản phẩm hợp lệ.</p>
+                    <p class="success">Import thành công: ${successCount} / ${totalAttempted} sản phẩm.</p>
                     
                     <c:if test="${not empty errors}">
                         <div class="error-list">
