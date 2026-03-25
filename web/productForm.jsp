@@ -150,11 +150,6 @@
                                     <input type="number" step="0.01" name="price" class="form-control" value="${product.price}" min="0" required>
                                 </div>
 
-                                <div class="form-group">
-                                    <label>Số lượng:</label>
-                                    <input type="number" name="quantity" class="form-control" value="${product.quantity}" min="0" required>
-                                </div>
-
                                  <div class="form-group">
                                     <label>Bảo hành (tháng):</label>
                                     <input type="number" name="warrantyPeriod" class="form-control" value="${product.warrantyPeriod}" min="0" required>
