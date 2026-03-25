@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import model.Notification;
+import dao.SystemLogDAO;
+import model.SystemLog;
 import model.User;
 import utils.SecurityUtils;
 import websocket.NotificationEndpoint;
@@ -103,9 +105,19 @@ public class NotificationController extends HttpServlet {
                             feedback.setType("PASSWORD_RESET_RESULT");
                             dao.insert(feedback);
 
-                            // Push WebSocket update to requester
-                            int unreadReq = dao.countUnread(requester.getUserID());
-                            NotificationEndpoint.sendToUser(requester.getUserID(), "{\"unreadCount\":" + unreadReq + "}");
+                             // Push WebSocket update to requester
+                             int unreadReq = dao.countUnread(requester.getUserID());
+                             NotificationEndpoint.sendToUser(requester.getUserID(), "{\"unreadCount\":" + unreadReq + "}");
+
+                             // Log action
+                             SystemLogDAO logDAO = new SystemLogDAO();
+                             SystemLog log = new SystemLog();
+                             log.setUserID(user.getUserID());
+                             log.setAction("PASSWORD_RESET");
+                             log.setTargetObject("User: " + username);
+                             log.setDescription("Admin reset password for user: " + username);
+                             log.setIpAddress(request.getRemoteAddr());
+                             logDAO.insertLog(log);
                         }
                     }
                 }
@@ -136,6 +148,16 @@ public class NotificationController extends HttpServlet {
 
                             int unreadReq = dao.countUnread(requester.getUserID());
                             NotificationEndpoint.sendToUser(requester.getUserID(), "{\"unreadCount\":" + unreadReq + "}");
+
+                            // Log action
+                            SystemLogDAO logDAO = new SystemLogDAO();
+                            SystemLog log = new SystemLog();
+                            log.setUserID(user.getUserID());
+                            log.setAction("PASSWORD_REJECT");
+                            log.setTargetObject("User: " + username);
+                            log.setDescription("Admin rejected password reset request for user: " + username);
+                            log.setIpAddress(request.getRemoteAddr());
+                            logDAO.insertLog(log);
                         }
                     }
                 }

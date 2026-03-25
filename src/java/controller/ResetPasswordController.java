@@ -43,13 +43,16 @@ public class ResetPasswordController extends HttpServlet {
         if (success) {
             request.setAttribute("notification", "Reset password successfully.");
             
+            User resetUser = userDAO.searchUserByID(id);
+            String targetUser = (resetUser != null) ? resetUser.getUsername() : "ID: " + id;
+
             dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
             model.SystemLog log = new model.SystemLog();
            
             log.setUserID(adminId);
-            log.setAction("RESET_PASSWORD");
-            log.setTargetObject("User ID: " + id);
-            log.setDescription("Reset password to 123");
+            log.setAction("PASSWORD_RESET");
+            log.setTargetObject("User: " + targetUser);
+            log.setDescription("Admin reset password for user: " + targetUser);
             log.setIpAddress(request.getRemoteAddr());
             logDAO.insertLog(log);
         } else {

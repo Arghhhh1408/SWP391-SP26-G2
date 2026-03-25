@@ -113,21 +113,27 @@
                                                 <label>Họ và tên</label>
                                                 <input type="text" name="fullname"
                                                     value="${not empty user ? user.fullName : param.fullname}"
-                                                    class="form-control" placeholder="Nhập họ và tên đầy đủ" required>
+                                                    class="form-control ${not empty user ? 'readonly-input' : ''}" 
+                                                    placeholder="Nhập họ và tên đầy đủ" required
+                                                    ${not empty user ? 'readonly' : ''}>
                                             </div>
 
                                             <div class="form-group">
                                                 <label>Email liên hệ</label>
                                                 <input type="email" name="email"
                                                     value="${not empty user ? user.email : param.email}"
-                                                    class="form-control" placeholder="example@domain.com" required>
+                                                    class="form-control ${not empty user ? 'readonly-input' : ''}" 
+                                                    placeholder="example@domain.com" required
+                                                    ${not empty user ? 'readonly' : ''}>
                                             </div>
 
                                             <div class="form-group">
                                                 <label>Số điện thoại</label>
                                                 <input type="text" name="phone"
                                                     value="${not empty user ? user.phone : param.phone}"
-                                                    class="form-control" placeholder="0xxxxxxxxx" required>
+                                                    class="form-control ${not empty user ? 'readonly-input' : ''}" 
+                                                    placeholder="0xxxxxxxxx" required
+                                                    ${not empty user ? 'readonly' : ''}>
                                             </div>
 
                                             <div class="form-group" style="grid-column: span 2;">

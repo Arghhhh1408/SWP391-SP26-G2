@@ -322,7 +322,11 @@
             <span class="menu-icon">📊</span> Dashboard
         </a>
         <a href="notifications" class="menu-item ${param.currentPage == 'notifications' ? 'active' : ''}">
-            <span class="menu-icon">🔔</span> Thông báo
+            <span class="menu-icon">🔔</span>
+            <div style="flex: 1; display: flex; justify-content: space-between; align-items: center;">
+                Thông báo
+                <span id="admin-notif-badge" class="badge badge-danger" style="display:none; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 800; line-height: 1;">0</span>
+            </div>
         </a>
 
         <div class="menu-section-title">Quản lý</div>
@@ -351,3 +355,32 @@
         </a>
     </div>
 </aside>
+
+<script>
+    (function () {
+        var ctx = '${pageContext.request.contextPath}';
+        var badge = document.getElementById('admin-notif-badge');
+        var wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+        var ws;
+        function connect() {
+            ws = new WebSocket(wsProtocol + '://' + location.host + ctx + '/notifications');
+            ws.onmessage = function (e) {
+                try {
+                    var data = JSON.parse(e.data);
+                    var count = parseInt(data.unreadCount || 0);
+                    if (!badge) return;
+                    if (count > 0) { 
+                        badge.textContent = count > 99 ? '99+' : count; 
+                        badge.style.display = 'inline-block'; 
+                    }
+                    else { 
+                        badge.style.display = 'none'; 
+                    }
+                } catch (ex) { }
+            };
+            ws.onclose = function () { setTimeout(connect, 5000); };
+            ws.onerror = function () { ws.close(); };
+        }
+        connect();
+    })();
+</script>
