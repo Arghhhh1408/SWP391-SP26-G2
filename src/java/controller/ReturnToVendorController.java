@@ -1,13 +1,11 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package controller;
 
 import dao.ReturnToVendorDAO;
 import dao.StockInDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -23,27 +21,13 @@ import model.ReturnToVendorDetail;
 import model.StockInDetail;
 import model.User;
 
-/**
- *
- * @author dotha
- */
 @WebServlet(name = "ReturnToVendorController", urlPatterns = {"/return-to-vendor"})
 public class ReturnToVendorController extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
@@ -60,15 +44,45 @@ public class ReturnToVendorController extends HttpServlet {
         return "RTV-" + System.currentTimeMillis();
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+    private boolean isWarehouseOrAdmin(User acc) {
+        return acc != null && (acc.getRoleID() == 0 || acc.getRoleID() == 1);
+    }
+
+    private boolean isManagerOrAdmin(User acc) {
+        return acc != null && (acc.getRoleID() == 0 || acc.getRoleID() == 2);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String valueAt(String[] values, int index) {
+        if (values == null || index < 0 || index >= values.length) {
+            return null;
+        }
+        return values[index];
+    }
+
+    private String buildDetailRedirect(HttpServletRequest request, int rtvID, String extraQuery) {
+        StringBuilder url = new StringBuilder("return-to-vendor?action=detail&id=").append(rtvID);
+        String from = trimToNull(request.getParameter("from"));
+        if (from != null) {
+            url.append("&from=")
+                    .append(URLEncoder.encode(from, StandardCharsets.UTF_8));
+        }
+        if (extraQuery != null && !extraQuery.trim().isEmpty()) {
+            if (extraQuery.charAt(0) != '&') {
+                url.append('&');
+            }
+            url.append(extraQuery);
+        }
+        return url.toString();
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -86,6 +100,10 @@ public class ReturnToVendorController extends HttpServlet {
 
         try {
             if ("create".equals(action)) {
+                if (!isWarehouseOrAdmin(acc)) {
+                    response.sendRedirect("return-to-vendor?error=forbidden_create");
+                    return;
+                }
                 request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                 return;
             }
@@ -108,14 +126,6 @@ public class ReturnToVendorController extends HttpServlet {
         }
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -130,35 +140,51 @@ public class ReturnToVendorController extends HttpServlet {
             return;
         }
 
-        String action = request.getParameter("action");
+        String action = trimToNull(request.getParameter("action"));
         String ipAddress = request.getRemoteAddr();
         ReturnToVendorDAO dao = new ReturnToVendorDAO();
 
         try {
             if ("create".equals(action)) {
+                if (!isWarehouseOrAdmin(acc)) {
+                    response.sendRedirect("return-to-vendor?error=forbidden_create");
+                    return;
+                }
                 handleCreate(request, response, dao, acc, ipAddress);
                 return;
             }
 
             if ("approve".equals(action)) {
                 int rtvID = Integer.parseInt(request.getParameter("rtvID"));
+                if (!isManagerOrAdmin(acc)) {
+                    response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_approve"));
+                    return;
+                }
                 boolean ok = dao.approveReturn(rtvID, acc.getUserID(), ipAddress);
-                response.sendRedirect("return-to-vendor?action=detail&id=" + rtvID + (ok ? "&msg=approved" : "&error=approve_failed"));
+                response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=approved" : "error=approve_failed"));
                 return;
             }
 
             if ("reject".equals(action)) {
                 int rtvID = Integer.parseInt(request.getParameter("rtvID"));
-                String rejectNote = request.getParameter("rejectNote");
+                if (!isManagerOrAdmin(acc)) {
+                    response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_reject"));
+                    return;
+                }
+                String rejectNote = trimToNull(request.getParameter("rejectNote"));
                 boolean ok = dao.rejectReturn(rtvID, acc.getUserID(), rejectNote, ipAddress);
-                response.sendRedirect("return-to-vendor?action=detail&id=" + rtvID + (ok ? "&msg=rejected" : "&error=reject_failed"));
+                response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=rejected" : "error=reject_failed"));
                 return;
             }
 
             if ("complete".equals(action)) {
                 int rtvID = Integer.parseInt(request.getParameter("rtvID"));
+                if (!isWarehouseOrAdmin(acc)) {
+                    response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_complete"));
+                    return;
+                }
                 boolean ok = dao.completeReturnToVendor(rtvID, acc.getUserID(), ipAddress);
-                response.sendRedirect("return-to-vendor?action=detail&id=" + rtvID + (ok ? "&msg=completed" : "&error=complete_failed"));
+                response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=completed" : "error=complete_failed"));
                 return;
             }
 
@@ -175,10 +201,27 @@ public class ReturnToVendorController extends HttpServlet {
             throws ServletException, IOException {
 
         try {
-            int supplierID = Integer.parseInt(request.getParameter("supplierID"));
-            String reason = request.getParameter("reason");
-            String note = request.getParameter("note");
-            String settlementType = request.getParameter("settlementType");
+            String supplierRaw = trimToNull(request.getParameter("supplierID"));
+            String reason = trimToNull(request.getParameter("reason"));
+            String note = trimToNull(request.getParameter("note"));
+            String settlementType = trimToNull(request.getParameter("settlementType"));
+
+            if (supplierRaw == null) {
+                request.setAttribute("error", "Please select a supplier.");
+                request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                return;
+            }
+
+            if (reason == null) {
+                request.setAttribute("error", "Please enter a return reason.");
+                request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                return;
+            }
+
+            int supplierID = Integer.parseInt(supplierRaw);
+            if (settlementType == null) {
+                settlementType = "OFFSET_DEBT";
+            }
 
             String[] stockInDetailIDs = request.getParameterValues("stockInDetailID");
             String[] productIDs = request.getParameterValues("productID");
@@ -202,34 +245,57 @@ public class ReturnToVendorController extends HttpServlet {
             rtv.setSettlementType(settlementType);
 
             List<ReturnToVendorDetail> details = new ArrayList<>();
-            Set<Integer> usedStockInDetailIDs  = new HashSet<>();
+            Set<Integer> usedStockInDetailIDs = new HashSet<>();
             StockInDAO stockInDAO = new StockInDAO();
 
             for (int i = 0; i < stockInDetailIDs.length; i++) {
-                if (stockInDetailIDs[i] == null || stockInDetailIDs[i].trim().isEmpty()) {
-                    continue;
-                }
-                if (productIDs[i] == null || productIDs[i].trim().isEmpty()) {
-                    continue;
-                }
-                if (quantities[i] == null || quantities[i].trim().isEmpty()) {
+                String stockInDetailRaw = trimToNull(valueAt(stockInDetailIDs, i));
+                String productRaw = trimToNull(valueAt(productIDs, i));
+                String quantityRaw = trimToNull(valueAt(quantities, i));
+                String reasonDetail = trimToNull(valueAt(reasonDetails, i));
+                String itemCondition = trimToNull(valueAt(itemConditions, i));
+
+                boolean rowCompletelyEmpty = stockInDetailRaw == null
+                        && productRaw == null
+                        && quantityRaw == null
+                        && reasonDetail == null;
+                if (rowCompletelyEmpty) {
                     continue;
                 }
 
-                int stockInDetailID = Integer.parseInt(stockInDetailIDs[i]);
-                int productID = Integer.parseInt(productIDs[i]);
-                int quantity = Integer.parseInt(quantities[i]);
+                if (stockInDetailRaw == null || productRaw == null || quantityRaw == null) {
+                    request.setAttribute("error", "Please complete product, stock-in detail and quantity for every used row.");
+                    request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                    return;
+                }
+
+                int stockInDetailID = Integer.parseInt(stockInDetailRaw);
+                int productID = Integer.parseInt(productRaw);
+                int quantity = Integer.parseInt(quantityRaw);
 
                 if (quantity <= 0) {
-                    continue;
+                    request.setAttribute("error", "Return quantity must be greater than 0.");
+                    request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                    return;
                 }
+
                 if (usedStockInDetailIDs.contains(stockInDetailID)) {
-                    continue;
+                    request.setAttribute("error", "A stock-in detail cannot be selected more than once.");
+                    request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                    return;
                 }
 
                 StockInDetail sid = stockInDAO.getStockInDetailByDetailId(stockInDetailID);
                 if (sid == null) {
-                    continue;
+                    request.setAttribute("error", "Selected stock-in detail does not exist.");
+                    request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                    return;
+                }
+
+                if (sid.getProductId() != productID) {
+                    request.setAttribute("error", "Selected stock-in detail does not belong to the selected product.");
+                    request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                    return;
                 }
 
                 ReturnToVendorDetail detail = new ReturnToVendorDetail();
@@ -239,15 +305,15 @@ public class ReturnToVendorController extends HttpServlet {
                 detail.setQuantity(quantity);
                 detail.setUnitCost(sid.getUnitCost());
                 detail.setLineTotal(quantity * sid.getUnitCost());
-                detail.setReasonDetail(reasonDetails != null && reasonDetails.length > i ? reasonDetails[i] : null);
-                detail.setItemCondition(itemConditions != null && itemConditions.length > i ? itemConditions[i] : null);
+                detail.setReasonDetail(reasonDetail);
+                detail.setItemCondition(itemCondition);
 
                 details.add(detail);
-                usedStockInDetailIDs .add(stockInDetailID);
+                usedStockInDetailIDs.add(stockInDetailID);
             }
 
             if (details.isEmpty()) {
-                request.setAttribute("error", "Invalid return details.");
+                request.setAttribute("error", "Please add at least one valid return item.");
                 request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                 return;
             }
@@ -255,12 +321,16 @@ public class ReturnToVendorController extends HttpServlet {
             int rtvID = dao.createReturnWithDetails(rtv, details, ipAddress);
 
             if (rtvID > 0) {
-                response.sendRedirect("return-to-vendor?action=detail&id=" + rtvID + "&msg=created");
+                response.sendRedirect(buildDetailRedirect(request, rtvID, "msg=created"));
             } else {
                 request.setAttribute("error", "Create return to vendor failed.");
                 request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
             }
 
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Input data contains invalid numeric values.");
+            request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("error", "Invalid input data.");
@@ -268,14 +338,8 @@ public class ReturnToVendorController extends HttpServlet {
         }
     }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
     @Override
     public String getServletInfo() {
         return "Short description";
-    }// </editor-fold>
-
+    }
 }

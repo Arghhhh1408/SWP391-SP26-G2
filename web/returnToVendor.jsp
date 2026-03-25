@@ -136,7 +136,9 @@
                     <h2>Return To Vendor List</h2>
                     <div class="actions">
                         <a class="btn btn-back" href="<%= backUrl %>"><%= backLabel %></a>
+                        <% if (acc != null && (acc.getRoleID() == 0 || acc.getRoleID() == 1)) { %>
                         <a class="btn btn-create" href="return-to-vendor?action=create">Create New Return</a>
+                        <% } %>
                     </div>
                 </div>
             </div>

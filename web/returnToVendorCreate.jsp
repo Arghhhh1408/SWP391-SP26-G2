@@ -155,7 +155,7 @@
             <div class="error"><%= request.getAttribute("error") %></div>
             <% } %>
 
-            <form action="return-to-vendor" method="post">
+            <form action="return-to-vendor" method="post" id="returnToVendorForm" onsubmit="return validateReturnToVendorForm()">
                 <input type="hidden" name="action" value="create"/>
 
                 <div class="card">
@@ -243,17 +243,18 @@
 
             function openSupplierLookup() {
                 const popup = document.getElementById("supplierPopup");
-                if (!popup)
+                if (!popup) {
                     return;
+                }
                 popup.style.display = "block";
                 loadSuppliers(1);
             }
 
             function loadSuppliers(page) {
-                supplierPage = page;
+                supplierPage = page < 1 ? 1 : page;
                 const keyword = document.getElementById("supplierSearch").value || "";
 
-                fetch(contextPath + "/rtv-lookup?type=supplier&keyword=" + encodeURIComponent(keyword) + "&page=" + page)
+                fetch(contextPath + "/rtv-lookup?type=supplier&keyword=" + encodeURIComponent(keyword) + "&page=" + supplierPage)
                         .then(res => res.text())
                         .then(html => {
                             document.getElementById("supplierList").innerHTML = html;
@@ -273,20 +274,37 @@
                 loadSuppliers(supplierPage + 1);
             }
 
+            function clearRowSelection(idx) {
+                const fields = [
+                    ["productID_", ""],
+                    ["productDisplay_", ""],
+                    ["stockInDetailID_", ""],
+                    ["detailDisplay_", ""],
+                    ["availableQty_", ""],
+                    ["quantity_", ""],
+                    ["unitCost_", ""],
+                    ["lineTotal_", ""]
+                ];
+
+                fields.forEach(([prefix, value]) => {
+                    const el = document.getElementById(prefix + idx);
+                    if (el) {
+                        el.value = value;
+                    }
+                });
+            }
+
             function selectSupplier(id, name) {
                 document.getElementById("supplierID").value = id;
                 document.getElementById("supplierDisplay").value = id + " - " + name;
                 document.getElementById("supplierPopup").style.display = "none";
 
-                document.querySelectorAll("[id^='productID_']").forEach(e => e.value = "");
-                document.querySelectorAll("[id^='productDisplay_']").forEach(e => e.value = "");
-                document.querySelectorAll("[id^='stockInDetailID_']").forEach(e => e.value = "");
-                document.querySelectorAll("[id^='detailDisplay_']").forEach(e => e.value = "");
-                document.querySelectorAll("[id^='availableQty_']").forEach(e => e.value = "");
-                document.querySelectorAll("[id^='unitCost_']").forEach(e => e.value = "");
-                document.querySelectorAll("[id^='lineTotal_']").forEach(e => e.value = "");
-                document.querySelectorAll("[id^='quantity_']").forEach(e => e.value = "");
+                document.querySelectorAll("[id^='productID_']").forEach(input => {
+                    const idx = input.id.replace("productID_", "");
+                    clearRowSelection(idx);
+                });
 
+                document.querySelectorAll("[id^='productPopup_'], [id^='detailPopup_']").forEach(p => p.style.display = "none");
                 calculateGrandTotal();
             }
 
@@ -355,20 +373,14 @@
 
             function openProductLookup(idx) {
                 const supplierID = document.getElementById("supplierID").value;
-
-                if (idx === undefined || idx === null) {
-                    console.error("openProductLookup: idx is undefined");
-                    return;
-                }
-
                 if (!supplierID) {
                     alert("Please select supplier first.");
+                    openSupplierLookup();
                     return;
                 }
 
                 const popup = document.getElementById("productPopup_" + idx);
                 if (!popup) {
-                    console.error("Cannot find productPopup_" + idx);
                     return;
                 }
 
@@ -377,19 +389,19 @@
             }
 
             function loadProducts(idx, page) {
-                productPages[idx] = page;
+                productPages[idx] = page < 1 ? 1 : page;
 
                 const supplierID = document.getElementById("supplierID").value;
                 const searchInput = document.getElementById("productSearch_" + idx);
                 const keyword = searchInput ? searchInput.value : "";
 
                 const url = contextPath + "/rtv-lookup?type=product&supplierID="
-                        + supplierID + "&keyword=" + encodeURIComponent(keyword) + "&page=" + page;
+                        + supplierID + "&keyword=" + encodeURIComponent(keyword) + "&page=" + productPages[idx];
 
                 fetch(url)
                         .then(res => res.text())
                         .then(html => {
-                            html = html.replaceAll("CURRENT_ROW_INDEX", idx);
+                            html = html.split("CURRENT_ROW_INDEX").join(String(idx));
                             const listBox = document.getElementById("productList_" + idx);
                             if (listBox) {
                                 listBox.innerHTML = html;
@@ -418,7 +430,6 @@
                 const productPopup = document.getElementById("productPopup_" + idx);
 
                 if (!productIDInput || !productDisplayInput || !productPopup) {
-                    console.error("selectProduct: missing element for row", idx);
                     return;
                 }
 
@@ -426,13 +437,13 @@
                 productDisplayInput.value = productID + " - " + productName;
                 productPopup.style.display = "none";
 
-                document.getElementById("stockInDetailID_" + idx).value = "";
-                document.getElementById("detailDisplay_" + idx).value = "";
-                document.getElementById("availableQty_" + idx).value = "";
-                document.getElementById("unitCost_" + idx).value = "";
-                document.getElementById("lineTotal_" + idx).value = "";
-                document.getElementById("quantity_" + idx).value = "";
-
+                const quantityInput = document.getElementById("quantity_" + idx);
+                clearRowSelection(idx);
+                productIDInput.value = productID;
+                productDisplayInput.value = productID + " - " + productName;
+                if (quantityInput) {
+                    quantityInput.value = "";
+                }
                 calculateGrandTotal();
             }
 
@@ -447,7 +458,6 @@
 
                 const popup = document.getElementById("detailPopup_" + idx);
                 if (!popup) {
-                    console.error("Cannot find detailPopup_" + idx);
                     return;
                 }
 
@@ -456,7 +466,7 @@
             }
 
             function loadDetails(idx, page) {
-                detailPages[idx] = page;
+                detailPages[idx] = page < 1 ? 1 : page;
 
                 const supplierID = document.getElementById("supplierID").value;
                 const productID = document.getElementById("productID_" + idx).value;
@@ -467,12 +477,12 @@
                         + "&supplierID=" + supplierID
                         + "&productID=" + productID
                         + "&keyword=" + encodeURIComponent(keyword)
-                        + "&page=" + page;
+                        + "&page=" + detailPages[idx];
 
                 fetch(url)
                         .then(res => res.text())
                         .then(html => {
-                            html = html.replaceAll("CURRENT_ROW_INDEX", idx);
+                            html = html.split("CURRENT_ROW_INDEX").join(String(idx));
                             const listBox = document.getElementById("detailList_" + idx);
                             if (listBox) {
                                 listBox.innerHTML = html;
@@ -495,16 +505,7 @@
                 loadDetails(idx, page + 1);
             }
 
-            function function selectDetail(idx, stockInDetailID, stockInID, productID, remainingQuantity, unitCost) {
-                console.log("selectDetail:", {
-                    idx: idx,
-                    stockInDetailID: stockInDetailID,
-                    stockInID: stockInID,
-                    productID: productID,
-                    remainingQuantity: remainingQuantity,
-                    unitCost: unitCost
-                });
-
+            function selectDetail(idx, stockInDetailID, stockInID, productID, remainingQuantity, unitCost) {
                 if (isDetailAlreadyUsed(stockInDetailID, idx)) {
                     alert("This StockIn Detail has already been selected in another row.");
                     return;
@@ -516,11 +517,13 @@
                 document.getElementById("unitCost_" + idx).value = unitCost;
                 document.getElementById("detailPopup_" + idx).style.display = "none";
 
-                console.log("after set:", {
-                    stockInDetailIDValue: document.getElementById("stockInDetailID_" + idx).value,
-                    availableQtyValue: document.getElementById("availableQty_" + idx).value,
-                    unitCostValue: document.getElementById("unitCost_" + idx).value
-                });
+                const quantityInput = document.getElementById("quantity_" + idx);
+                if (quantityInput && quantityInput.value) {
+                    calculateLineTotal(idx);
+                } else {
+                    document.getElementById("lineTotal_" + idx).value = "";
+                    calculateGrandTotal();
+                }
             }
 
             function isDetailAlreadyUsed(stockInDetailID, currentIdx) {
@@ -535,49 +538,45 @@
 
             function calculateLineTotal(idx) {
                 const stockInDetailID = document.getElementById("stockInDetailID_" + idx).value;
-                const qty = parseFloat(document.getElementById("quantity_" + idx).value || 0);
+                const qtyInput = document.getElementById("quantity_" + idx);
+                const lineTotalInput = document.getElementById("lineTotal_" + idx);
+                const qty = parseFloat(qtyInput.value || 0);
                 const unitCost = parseFloat(document.getElementById("unitCost_" + idx).value || 0);
                 const availableQty = parseFloat(document.getElementById("availableQty_" + idx).value || 0);
 
-                console.log("calculateLineTotal:", {
-                    idx: idx,
-                    stockInDetailID: stockInDetailID,
-                    qty: qty,
-                    unitCost: unitCost,
-                    availableQty: availableQty
-                });
-
                 if (!stockInDetailID) {
-                    alert("Please choose StockIn Detail first.");
-                    document.getElementById("quantity_" + idx).value = "";
-                    document.getElementById("lineTotal_" + idx).value = "";
+                    if (qtyInput.value !== "") {
+                        alert("Please choose StockIn Detail first.");
+                    }
+                    qtyInput.value = "";
+                    lineTotalInput.value = "";
                     calculateGrandTotal();
                     return;
                 }
 
                 if (qty <= 0) {
-                    document.getElementById("lineTotal_" + idx).value = "";
+                    lineTotalInput.value = "";
                     calculateGrandTotal();
                     return;
                 }
 
                 if (availableQty <= 0) {
                     alert("This StockIn Detail has no remaining quantity to return.");
-                    document.getElementById("quantity_" + idx).value = "";
-                    document.getElementById("lineTotal_" + idx).value = "";
+                    qtyInput.value = "";
+                    lineTotalInput.value = "";
                     calculateGrandTotal();
                     return;
                 }
 
                 if (qty > availableQty) {
                     alert("Quantity cannot exceed available quantity (" + availableQty + ").");
-                    document.getElementById("quantity_" + idx).value = "";
-                    document.getElementById("lineTotal_" + idx).value = "";
+                    qtyInput.value = "";
+                    lineTotalInput.value = "";
                     calculateGrandTotal();
                     return;
                 }
 
-                document.getElementById("lineTotal_" + idx).value = qty * unitCost;
+                lineTotalInput.value = (qty * unitCost).toFixed(2);
                 calculateGrandTotal();
             }
 
@@ -586,7 +585,68 @@
                 document.querySelectorAll("[id^='lineTotal_']").forEach(input => {
                     total += parseFloat(input.value || 0);
                 });
-                document.getElementById("grandTotal").innerText = total.toLocaleString();
+                document.getElementById("grandTotal").innerText = total.toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            function validateReturnToVendorForm() {
+                const supplierID = document.getElementById("supplierID").value;
+                if (!supplierID) {
+                    alert("Please select supplier first.");
+                    openSupplierLookup();
+                    return false;
+                }
+
+                let validRowCount = 0;
+                for (let idx = 0; idx < rowIndex; idx++) {
+                    const productInput = document.getElementById("productID_" + idx);
+                    const detailInput = document.getElementById("stockInDetailID_" + idx);
+                    const quantityInput = document.getElementById("quantity_" + idx);
+                    const availableQtyInput = document.getElementById("availableQty_" + idx);
+
+                    if (!productInput || !detailInput || !quantityInput || !availableQtyInput) {
+                        continue;
+                    }
+
+                    const hasAnyValue = Boolean(productInput.value || detailInput.value || quantityInput.value);
+                    if (!hasAnyValue) {
+                        continue;
+                    }
+
+                    validRowCount++;
+
+                    if (!productInput.value) {
+                        alert("Please select product for every used row.");
+                        return false;
+                    }
+
+                    if (!detailInput.value) {
+                        alert("Please select StockIn Detail for every used row.");
+                        return false;
+                    }
+
+                    const qty = parseFloat(quantityInput.value || 0);
+                    const availableQty = parseFloat(availableQtyInput.value || 0);
+
+                    if (!quantityInput.value || qty <= 0) {
+                        alert("Please enter a valid return quantity.");
+                        return false;
+                    }
+
+                    if (qty > availableQty) {
+                        alert("Return quantity cannot exceed available quantity.");
+                        return false;
+                    }
+                }
+
+                if (validRowCount === 0) {
+                    alert("Please add at least one return item.");
+                    return false;
+                }
+
+                return true;
             }
 
             document.addEventListener("click", function (e) {

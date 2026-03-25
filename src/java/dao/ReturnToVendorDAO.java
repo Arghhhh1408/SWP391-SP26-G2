@@ -69,7 +69,7 @@ public class ReturnToVendorDAO extends DBContext {
             }
 
             String insertDetailSql = "INSERT INTO ReturnToVendorDetails "
-                    + "(RTVID, StockInDetailID, StockInID, ProductID, Quantity, UnitCost, LineTotal, ReasonDetail, ItemCondition) "
+                    + "(RTVID, DetailID, StockInID, ProductID, Quantity, UnitCost, LineTotal, ReasonDetail, ItemCondition) "
                     + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             double totalAmount = 0;
@@ -246,7 +246,8 @@ public class ReturnToVendorDAO extends DBContext {
     public List<ReturnToVendorDetail> getDetailsByRTVID(int rtvID) {
         List<ReturnToVendorDetail> list = new ArrayList<>();
 
-        String sql = "SELECT d.*, p.Name AS ProductName "
+        String sql = "SELECT d.RTVDetailID, d.RTVID, d.DetailID AS StockInDetailID, d.StockInID, d.ProductID, "
+                + "d.Quantity, d.UnitCost, d.LineTotal, d.ReasonDetail, d.ItemCondition, p.Name AS ProductName "
                 + "FROM ReturnToVendorDetails d "
                 + "LEFT JOIN Products p ON d.ProductID = p.ProductID "
                 + "WHERE d.RTVID = ? "

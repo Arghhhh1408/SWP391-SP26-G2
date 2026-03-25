@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package controller;
 
 import dao.StockInDAO;
@@ -14,32 +10,20 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import model.StockInDetail;
 import model.Supplier;
 import model.SupplierProduct;
+import model.User;
 
-/**
- *
- * @author dotha
- */
 @WebServlet(name = "ReturnToVendorLookupController", urlPatterns = {"/rtv-lookup"})
 public class ReturnToVendorLookupController extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
@@ -52,21 +36,30 @@ public class ReturnToVendorLookupController extends HttpServlet {
         }
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+    private Integer parseInteger(String value) {
+        try {
+            return value == null || value.trim().isEmpty() ? null : Integer.parseInt(value.trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         response.setContentType("text/html;charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
+
+        HttpSession session = request.getSession(false);
+        User acc = session == null ? null : (User) session.getAttribute("acc");
+        PrintWriter out = response.getWriter();
+
+        if (acc == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print("<div class='lookup-item'>Session expired. Please login again.</div>");
+            return;
+        }
 
         String type = request.getParameter("type");
         String keyword = request.getParameter("keyword");
@@ -79,9 +72,11 @@ public class ReturnToVendorLookupController extends HttpServlet {
             page = Integer.parseInt(request.getParameter("page"));
         } catch (Exception ignored) {
         }
+        if (page < 1) {
+            page = 1;
+        }
 
         int pageSize = 5;
-        PrintWriter out = response.getWriter();
 
         try {
             if ("supplier".equals(type)) {
@@ -92,7 +87,11 @@ public class ReturnToVendorLookupController extends HttpServlet {
             }
 
             if ("product".equals(type)) {
-                int supplierID = Integer.parseInt(request.getParameter("supplierID"));
+                Integer supplierID = parseInteger(request.getParameter("supplierID"));
+                if (supplierID == null) {
+                    out.print("<div class='lookup-item'>Please select supplier first.</div>");
+                    return;
+                }
                 SupplierProductDAO dao = new SupplierProductDAO();
                 List<SupplierProduct> list = dao.searchProductsBySupplierPaged(supplierID, keyword, page, pageSize);
                 out.print(renderProductHtml(list));
@@ -100,8 +99,12 @@ public class ReturnToVendorLookupController extends HttpServlet {
             }
 
             if ("detail".equals(type)) {
-                int supplierID = Integer.parseInt(request.getParameter("supplierID"));
-                int productID = Integer.parseInt(request.getParameter("productID"));
+                Integer supplierID = parseInteger(request.getParameter("supplierID"));
+                Integer productID = parseInteger(request.getParameter("productID"));
+                if (supplierID == null || productID == null) {
+                    out.print("<div class='lookup-item'>Please select supplier and product first.</div>");
+                    return;
+                }
                 StockInDAO dao = new StockInDAO();
                 List<StockInDetail> list = dao.searchReturnableStockInDetails(supplierID, productID, keyword, page, pageSize);
                 out.print(renderDetailHtml(list, dao));
@@ -175,6 +178,9 @@ public class ReturnToVendorLookupController extends HttpServlet {
 
         for (StockInDetail d : list) {
             int remainingQty = dao.getRemainingReturnableQuantity(d.getDetailId());
+            if (remainingQty <= 0) {
+                continue;
+            }
 
             sb.append("<div class='lookup-item' onclick=\"selectDetail(")
                     .append("CURRENT_ROW_INDEX")
@@ -193,13 +199,16 @@ public class ReturnToVendorLookupController extends HttpServlet {
                     .append(d.getDetailId())
                     .append(" | StockIn ")
                     .append(d.getStockInId())
-                    .append(" | Remain ")
+                    .append(" | Remaining ")
                     .append(remainingQty)
-                    .append(" | Cost ")
+                    .append(" | UnitCost ")
                     .append(d.getUnitCost())
                     .append("</div>");
         }
 
+        if (sb.length() == 0) {
+            sb.append("<div class='lookup-item'>No stock-in detail found.</div>");
+        }
         return sb.toString();
     }
 
@@ -219,32 +228,20 @@ public class ReturnToVendorLookupController extends HttpServlet {
             return "";
         }
         return s.replace("\\", "\\\\")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
                 .replace("'", "\\'")
                 .replace("\"", "\\\"");
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
     }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
     @Override
     public String getServletInfo() {
         return "Short description";
-    }// </editor-fold>
-
+    }
 }

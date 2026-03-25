@@ -457,16 +457,26 @@ public class StockInDAO extends DBContext {
                 + "WHERE s.SupplierID = ? "
                 + "AND d.ProductID = ? "
                 + "AND s.StockStatus = 'Completed' "
-                + "AND CAST(d.DetailID AS NVARCHAR) LIKE ? "
+                + "AND ISNULL(d.ReceivedQuantity, 0) > 0 "
+                + "AND (CAST(d.DetailID AS NVARCHAR) LIKE ? OR CAST(d.StockInID AS NVARCHAR) LIKE ?) "
+                + "AND (ISNULL(d.ReceivedQuantity, 0) - ISNULL(( "
+                + "    SELECT SUM(rtd.Quantity) "
+                + "    FROM ReturnToVendorDetails rtd "
+                + "    INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
+                + "    WHERE rtd.DetailID = d.DetailID "
+                + "      AND rtv.Status IN ('Pending', 'Approved', 'Completed') "
+                + "), 0)) > 0 "
                 + "ORDER BY d.DetailID DESC "
                 + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            String likeKeyword = "%" + (keyword == null ? "" : keyword.trim()) + "%";
             ps.setInt(1, supplierId);
             ps.setInt(2, productId);
-            ps.setString(3, "%" + (keyword == null ? "" : keyword.trim()) + "%");
-            ps.setInt(4, (page - 1) * pageSize);
-            ps.setInt(5, pageSize);
+            ps.setString(3, likeKeyword);
+            ps.setString(4, likeKeyword);
+            ps.setInt(5, (page - 1) * pageSize);
+            ps.setInt(6, pageSize);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -514,14 +524,22 @@ public class StockInDAO extends DBContext {
     }
 
     public int getRemainingReturnableQuantity(int detailId) {
-        String sql = "SELECT "
-                + "ISNULL(d.ReceivedQuantity, 0) - ISNULL(("
-                + "    SELECT SUM(rtd.Quantity) "
-                + "    FROM ReturnToVendorDetails rtd "
-                + "    INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
-                + "    WHERE rtd.DetailID = d.DetailID "
-                + "      AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
-                + "), 0) AS RemainingQty "
+        String sql = "SELECT CASE "
+                + "    WHEN (ISNULL(d.ReceivedQuantity, 0) - ISNULL(("
+                + "        SELECT SUM(rtd.Quantity) "
+                + "        FROM ReturnToVendorDetails rtd "
+                + "        INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
+                + "        WHERE rtd.DetailID = d.DetailID "
+                + "          AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
+                + "    ), 0)) < 0 THEN 0 "
+                + "    ELSE (ISNULL(d.ReceivedQuantity, 0) - ISNULL(("
+                + "        SELECT SUM(rtd.Quantity) "
+                + "        FROM ReturnToVendorDetails rtd "
+                + "        INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
+                + "        WHERE rtd.DetailID = d.DetailID "
+                + "          AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
+                + "    ), 0)) "
+                + "END AS RemainingQty "
                 + "FROM StockInDetails d "
                 + "WHERE d.DetailID = ?";
 
