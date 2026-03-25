@@ -302,21 +302,18 @@ public class ProductDAO extends DBContext {
     }
 
     public int addProduct(Product p) throws Exception {
-        String sql = "INSERT INTO Products (Name, SKU, Cost, Price, StockQuantity, Unit, Description, ImageURL, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+        // StockQuantity is NOT set here — it defaults to 0 in the DB and is managed via stock-in
+        String sql = "INSERT INTO Products (Name, SKU, Cost, Price, Unit, Description, ImageURL, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
         java.sql.PreparedStatement st = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
         st.setString(1, p.getName());
         st.setString(2, p.getSku());
         st.setDouble(3, p.getCost());
         st.setDouble(4, p.getPrice());
-        st.setInt(5, p.getQuantity());
-        st.setString(6, p.getUnit());
-        st.setString(7, p.getDescription());
-        st.setString(8, p.getImageURL());
-        if (p.getQuantity() <= 0) {
-            p.setStatus("Deactivated");
-        }
-        st.setString(9, p.getStatus());
-        st.setInt(10, p.getCategoryId());
+        st.setString(5, p.getUnit());
+        st.setString(6, p.getDescription());
+        st.setString(7, p.getImageURL());
+        st.setString(8, p.getStatus());
+        st.setInt(9, p.getCategoryId());
 
         int affectedRows = st.executeUpdate();
         if (affectedRows > 0) {
@@ -329,22 +326,19 @@ public class ProductDAO extends DBContext {
     }
 
     public boolean updateProduct(Product p) throws Exception {
-        String sql = "UPDATE Products SET Name=?, SKU=?, Cost=?, Price=?, StockQuantity=?, Unit=?, Description=?, ImageURL=?, Status=?, CategoryID=?, UpdatedDate=GETDATE() WHERE ProductID=?";
+        // StockQuantity is NOT updated here — it is managed exclusively via stock-in
+        String sql = "UPDATE Products SET Name=?, SKU=?, Cost=?, Price=?, Unit=?, Description=?, ImageURL=?, Status=?, CategoryID=?, UpdatedDate=GETDATE() WHERE ProductID=?";
         PreparedStatement st = connection.prepareStatement(sql);
         st.setString(1, p.getName());
         st.setString(2, p.getSku());
         st.setDouble(3, p.getCost());
         st.setDouble(4, p.getPrice());
-        st.setInt(5, p.getQuantity());
-        st.setString(6, p.getUnit());
-        st.setString(7, p.getDescription());
-        st.setString(8, p.getImageURL());
-        if (p.getQuantity() <= 0) {
-            p.setStatus("Deactivated");
-        }
-        st.setString(9, p.getStatus());
-        st.setInt(10, p.getCategoryId());
-        st.setInt(11, p.getId());
+        st.setString(5, p.getUnit());
+        st.setString(6, p.getDescription());
+        st.setString(7, p.getImageURL());
+        st.setString(8, p.getStatus());
+        st.setInt(9, p.getCategoryId());
+        st.setInt(10, p.getId());
         return st.executeUpdate() > 0;
     }
 

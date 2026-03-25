@@ -581,7 +581,7 @@
                 <!-- Low Stock Detailed List -->
                 <div id="lowStockDetails" class="glass-card" style="display: none; border: 2px solid #f59e0b; background: #fffcf0; margin-bottom: 32px;">
                     <div class="card-header" style="background: #fef3c7; border-bottom: 1px solid #fde68a;">
-                        <h3 style="color: #92400e; font-weight: 700;">Danh sách sản phẩm dưới mức an tồn (< 5 sản phẩm)</h3>
+                        <h3 style="color: #92400e; font-weight: 700;">Danh sách sản phẩm dưới mức an tồn</h3>
                         <button onclick="toggleLowStockList()" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; padding: 2px 8px; cursor: pointer; color: #92400e;">Đóng</button>
                     </div>
                     <div class="card-body">
