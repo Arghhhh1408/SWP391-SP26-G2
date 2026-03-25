@@ -34,29 +34,46 @@ public class CartController extends HttpServlet {
             int productId = Integer.parseInt(pIdStr);
             ProductDAO pdao = new ProductDAO();
             Product p = pdao.getById(productId);
-
-            if (p != null) {
-                CartItem item = cart.get(productId);
+CartItem item = cart.get(productId);
 
                 // XỬ LÝ HÀNH ĐỘNG THÊM (ADD)
-                if ("add".equals(action)) {
-                    if (item == null) {
-                        if (p.getQuantity() > 0) {
-                            item = new CartItem();
-                            item.setProductId(productId);
-                            item.setName(p.getName());
-                            item.setPrice(p.getPrice());
-                            item.setQty(1);
-                            item.setStockQuantity(p.getQuantity()); // QUAN TRỌNG: Gán tồn kho ở đây
-                            cart.put(productId, item);
+                if (p != null) {
+                    
+
+                    if ("add".equals(action)) {
+                        if (item == null) {
+                            // Trường hợp 1: Sản phẩm CHƯA có trong giỏ -> Tạo mới hoàn toàn
+                            if (p.getQuantity() > 0) {
+                                item = new CartItem();
+                                item.setProductId(p.getId());
+                                item.setName(p.getName());
+                                item.setPrice(p.getPrice());
+                                item.setQty(1);
+
+                                // Gán các thuộc tính tồn kho và ngưỡng ở đây
+                                item.setProductTotalStock(p.getQuantity());
+                                item.setMinStockThreshold(p.getLowStockThreshold());
+                                // Nếu bạn dùng tên biến stockQuantity thì dùng dòng dưới:
+                                // item.setStockQuantity(p.getQuantity()); 
+
+                                cart.put(productId, item);
+                            } else {
+                                request.setAttribute("error", "Sản phẩm đã hết hàng!");
+                            }
                         } else {
-                            request.setAttribute("error", "Sản phẩm đã hết hàng!");
+                            // Trường hợp 2: Sản phẩm ĐÃ CÓ trong giỏ -> Chỉ tăng số lượng
+                            // Kiểm tra ngưỡng kho trước khi cho tăng (Logic chặn của Manager)
+                            if ((p.getQuantity() - (item.getQty() + 1)) >= p.getLowStockThreshold()) {
+                                item.setQty(item.getQty() + 1);
+                            } else {
+                                request.setAttribute("error", "Đã đạt giới hạn tồn kho tối thiểu!");
+                            }
                         }
-                    } else {
-                        if (item.getQty() + 1 <= p.getQuantity()) {
-                            item.setQty(item.getQty() + 1);
+                    } else if ("sub".equals(action)) {
+                        if (item != null && item.getQty() > 1) {
+                            item.setQty(item.getQty() - 1);
                         } else {
-                            request.setAttribute("error", "Chỉ còn " + p.getQuantity() + " sản phẩm!");
+                            cart.remove(productId);
                         }
                     }
                 } // XỬ LÝ HÀNH ĐỘNG GÕ TAY SỐ LƯỢNG (UPDATE)
@@ -84,7 +101,7 @@ public class CartController extends HttpServlet {
                     cart.remove(productId);
                 }
             }
-        }
+        
 
         session.setAttribute("cart", cart);
         request.getRequestDispatcher("_cart_content.jsp").forward(request, response);
