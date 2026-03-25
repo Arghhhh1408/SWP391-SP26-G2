@@ -519,7 +519,7 @@ public class StockInDAO extends DBContext {
                 + "    SELECT SUM(rtd.Quantity) "
                 + "    FROM ReturnToVendorDetails rtd "
                 + "    INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
-                + "    WHERE rtd.StockInDetailID = d.DetailID "
+                + "    WHERE rtd.DetailID = d.DetailID "
                 + "      AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
                 + "), 0) AS RemainingQty "
                 + "FROM StockInDetails d "

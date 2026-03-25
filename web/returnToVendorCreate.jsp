@@ -495,19 +495,32 @@
                 loadDetails(idx, page + 1);
             }
 
-            function selectDetail(idx, stockInDetailID, stockInID, productID, remainingQuantity, unitCost) {
+            function function selectDetail(idx, stockInDetailID, stockInID, productID, remainingQuantity, unitCost) {
+                console.log("selectDetail:", {
+                    idx: idx,
+                    stockInDetailID: stockInDetailID,
+                    stockInID: stockInID,
+                    productID: productID,
+                    remainingQuantity: remainingQuantity,
+                    unitCost: unitCost
+                });
+
                 if (isDetailAlreadyUsed(stockInDetailID, idx)) {
                     alert("This StockIn Detail has already been selected in another row.");
                     return;
                 }
 
                 document.getElementById("stockInDetailID_" + idx).value = stockInDetailID;
-                document.getElementById("detailDisplay_" + idx).value = "Detail " + stockInDetailID + " - StockIn " + stockInID;
+                document.getElementById("detailDisplay_" + idx).value = "StockInDetail " + stockInDetailID + " - StockIn " + stockInID;
                 document.getElementById("availableQty_" + idx).value = remainingQuantity;
                 document.getElementById("unitCost_" + idx).value = unitCost;
                 document.getElementById("detailPopup_" + idx).style.display = "none";
 
-                calculateLineTotal(idx);
+                console.log("after set:", {
+                    stockInDetailIDValue: document.getElementById("stockInDetailID_" + idx).value,
+                    availableQtyValue: document.getElementById("availableQty_" + idx).value,
+                    unitCostValue: document.getElementById("unitCost_" + idx).value
+                });
             }
 
             function isDetailAlreadyUsed(stockInDetailID, currentIdx) {
@@ -521,12 +534,43 @@
             }
 
             function calculateLineTotal(idx) {
+                const stockInDetailID = document.getElementById("stockInDetailID_" + idx).value;
                 const qty = parseFloat(document.getElementById("quantity_" + idx).value || 0);
                 const unitCost = parseFloat(document.getElementById("unitCost_" + idx).value || 0);
                 const availableQty = parseFloat(document.getElementById("availableQty_" + idx).value || 0);
 
+                console.log("calculateLineTotal:", {
+                    idx: idx,
+                    stockInDetailID: stockInDetailID,
+                    qty: qty,
+                    unitCost: unitCost,
+                    availableQty: availableQty
+                });
+
+                if (!stockInDetailID) {
+                    alert("Please choose StockIn Detail first.");
+                    document.getElementById("quantity_" + idx).value = "";
+                    document.getElementById("lineTotal_" + idx).value = "";
+                    calculateGrandTotal();
+                    return;
+                }
+
+                if (qty <= 0) {
+                    document.getElementById("lineTotal_" + idx).value = "";
+                    calculateGrandTotal();
+                    return;
+                }
+
+                if (availableQty <= 0) {
+                    alert("This StockIn Detail has no remaining quantity to return.");
+                    document.getElementById("quantity_" + idx).value = "";
+                    document.getElementById("lineTotal_" + idx).value = "";
+                    calculateGrandTotal();
+                    return;
+                }
+
                 if (qty > availableQty) {
-                    alert("Quantity cannot exceed available quantity.");
+                    alert("Quantity cannot exceed available quantity (" + availableQty + ").");
                     document.getElementById("quantity_" + idx).value = "";
                     document.getElementById("lineTotal_" + idx).value = "";
                     calculateGrandTotal();
