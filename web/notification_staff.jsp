@@ -231,11 +231,11 @@
                                         </div>
 
                                         <%-- Xem chi tiết for staff about their stock-in tasks --%>
-                                        <c:if test="${n.type == 'STOCKIN_CANCEL_REQUEST' || n.type == 'STOCKIN_RECEIVED' || n.type == 'STOCKIN_COMPLETED' || n.type == 'STOCKIN_CREATED'}">
+                                        <c:if test="${n.type == 'STOCKIN_CANCEL_REQUEST' || n.type == 'STOCKIN_RECEIVED' || n.type == 'STOCKIN_COMPLETED' || n.type == 'STOCKIN_CREATED' || n.type == 'STOCKIN_CANCEL_APPROVED' || n.type == 'STOCKIN_CANCEL_REJECTED'}">
                                             <a class="btn-view-detail"
                                                href="#"
                                                data-title="<c:out value='${n.title}'/>"
-                                               onclick="goToStockIn(this); return false;">
+                                               onclick="goToStockIn(this, ${n.notificationId}, ${n.read}); return false;">
                                                 🔍 Xem chi tiết phiếu nhập
                                             </a>
                                         </c:if>
@@ -243,9 +243,17 @@
                                         <%-- Inventory Check notification button --%>
                                         <c:if test="${n.type == 'INVENTORY_CHECK_APPROVED' || n.type == 'INVENTORY_CHECK_REJECTED'}">
                                             <a class="btn-view-detail"
-                                               href="inventoryCheck"
-                                               onclick="markAsRead('${n.notificationId}')">
-                                                📊 Xem danh sách sản phẩm đã kiểm kê
+                                               href="#"
+                                               onclick="goToInventoryCheck(this, ${n.notificationId}, ${n.read}); return false;">
+                                                📊 Xem danh sách kiểm kê
+                                            </a>
+                                        </c:if>
+
+                                        <c:if test="${n.type == 'PASSWORD_RESET_RESULT'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToProfile(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔐 Đổi mật khẩu ngay
                                             </a>
                                         </c:if>
 
@@ -272,7 +280,10 @@
                 <script>
                     var ctx = "${pageContext.request.contextPath}";
 
-                    function goToStockIn(link) {
+                    async function goToStockIn(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
                         var title = link.getAttribute('data-title') || '';
                         var match = title.match(/#(\d+)/);
                         if (match) {
@@ -280,8 +291,22 @@
                         }
                     }
 
+                    async function goToInventoryCheck(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/inventoryCheck';
+                    }
+
+                    async function goToProfile(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/personalProfile';
+                    }
+
                     function markAsRead(notifId) {
-                        fetch(ctx + '/notifications', {
+                        return fetch(ctx + '/notifications', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: 'action=markRead&id=' + notifId
@@ -291,7 +316,10 @@
                                 var item = document.getElementById('notif-item-' + notifId);
                                 var actionBox = document.getElementById('notif-action-' + notifId);
                                 if (item) item.classList.remove('unread');
-                                if (actionBox) actionBox.style.display = 'none';
+                                if (actionBox) {
+                                    actionBox.style.display = 'none';
+                                }
+                                return data;
                             })
                             .catch(err => console.error(err));
                     }

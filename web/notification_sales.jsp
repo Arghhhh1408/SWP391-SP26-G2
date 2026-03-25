@@ -183,6 +183,25 @@
                         color: var(--text-muted);
                         margin: 0;
                     }
+
+                    .btn-view-detail {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        margin-top: 14px;
+                        padding: 8px 16px;
+                        background: #1f4e79;
+                        color: #fff;
+                        border-radius: 8px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        text-decoration: none;
+                        transition: background 0.2s ease;
+                    }
+
+                    .btn-view-detail:hover {
+                        background: #163a59;
+                    }
                 </style>
             </head>
 
@@ -210,6 +229,14 @@
                                         <div class="notif-body">
                                             <c:out value="${n.message}" escapeXml="false" />
                                         </div>
+
+                                        <c:if test="${n.type == 'PASSWORD_RESET_RESULT'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToProfile(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔐 Đổi mật khẩu ngay
+                                            </a>
+                                        </c:if>
 
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
@@ -248,6 +275,13 @@
                                 if (actionBox) actionBox.style.display = 'none';
                             })
                             .catch(err => console.error(err));
+                    }
+
+                    async function goToProfile(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/personalProfile';
                     }
                 </script>
             </body>

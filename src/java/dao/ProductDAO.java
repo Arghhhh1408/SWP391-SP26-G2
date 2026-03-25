@@ -219,6 +219,33 @@ public class ProductDAO extends DBContext {
         }
     }
 
+    public boolean increaseQuantityBySku(String sku, int quantity) {
+        if (quantity <= 0) {
+            return false;
+        }
+        String key = sku == null ? "" : sku.trim();
+        if (key.isEmpty()) {
+            return false;
+        }
+        String sql = """
+            UPDATE dbo.Products
+            SET StockQuantity = StockQuantity + ?,
+                Status = CASE WHEN Status = 'Deactivated' THEN 'Active' ELSE Status END,
+                UpdatedDate = GETDATE()
+            WHERE UPPER(LTRIM(RTRIM(SKU))) = UPPER(?)
+            """;
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setInt(1, quantity);
+            ps.setString(2, key);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public List<Product> getAllActiveProducts() throws Exception {
         List<Product> list = new ArrayList<>();
         String sql = """

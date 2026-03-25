@@ -22,7 +22,9 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.List;
 import dao.NotificationDAO;
+import dao.SystemLogDAO;
 import model.Notification;
+import model.SystemLog;
 import websocket.NotificationEndpoint;
 
 /**
@@ -201,6 +203,22 @@ public class CheckoutController extends HttpServlet {
 
             con.commit(); // Hoàn tất Transaction
             session.removeAttribute("cart");
+
+            // --- BƯỚC 5.5: Ghi Log hệ thống ---
+            try {
+                SystemLogDAO logDAO = new SystemLogDAO();
+                SystemLog log = new SystemLog();
+                log.setUserID(createdBy);
+                log.setAction("SALE_COMPLETED");
+                log.setTargetObject("StockOut");
+                String customerDisplayName = (name != null && !name.isEmpty()) ? name : "Khách lẻ";
+                log.setDescription(String.format("Bán hàng thành công | Đơn hàng #%d | Khách hàng: %s | Tổng tiền: %,.0f đ",
+                        stockOutId, customerDisplayName, totalAmount));
+                log.setIpAddress(request.getRemoteAddr());
+                logDAO.insertLog(log);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
 
             // --- BƯỚC 6: Gửi thông báo cho Manager ---
             try {

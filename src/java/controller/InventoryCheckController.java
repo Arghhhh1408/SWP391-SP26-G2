@@ -5,6 +5,8 @@
 package controller;
 
 import dao.InventoryCheckDAO;
+import dao.SystemLogDAO;
+import model.SystemLog;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -255,12 +257,33 @@ public class InventoryCheckController extends HttpServlet {
             if (ok) {
                 session.setAttribute("message", "Lưu kiểm kê thành công.");
                 
-                // Send notification to all managers
+                String senderName = "Unknown User";
+                if (user != null) {
+                    if (user.getFullName() != null && !user.getFullName().trim().isEmpty()) {
+                        senderName = user.getFullName().trim();
+                    } else if (user.getUsername() != null && !user.getUsername().trim().isEmpty()) {
+                        senderName = user.getUsername().trim();
+                    }
+                }
+                
+                // 1. Add System Log (Do this first and independent of notifications)
+                try {
+                    SystemLogDAO logDao = new SystemLogDAO();
+                    SystemLog logEntry = new SystemLog();
+                    logEntry.setUserID(user != null ? user.getUserID() : 0);
+                    logEntry.setAction("INVENTORY_CHECK_SAVE");
+                    logEntry.setTargetObject("InventoryCheck");
+                    logEntry.setDescription("Staff " + senderName + " has saved a new inventory check session.");
+                    logEntry.setIpAddress(request.getRemoteAddr());
+                    logDao.insertLog(logEntry);
+                } catch (Exception logEx) {
+                    logEx.printStackTrace();
+                }
+
+                // 2. Send notification to all managers
                 try {
                     NotificationDAO nDao = new NotificationDAO();
                     List<Integer> managerIds = nDao.getManagerIds();
-                    String senderName = (user.getFullName() != null && !user.getFullName().trim().isEmpty()) 
-                                        ? user.getFullName() : user.getUsername();
                     
                     for (Integer managerId : managerIds) {
                         Notification n = new Notification();
@@ -440,6 +463,9 @@ public class InventoryCheckController extends HttpServlet {
     private void handleUpdate(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        HttpSession session = request.getSession(false);
+        User user = (User) session.getAttribute("acc");
+
         try {
             int countId = Integer.parseInt(request.getParameter("countId"));
             int systemQuantity = Integer.parseInt(request.getParameter("systemQuantity"));
@@ -487,6 +513,22 @@ public class InventoryCheckController extends HttpServlet {
 
             if (ok) {
                 request.getSession().setAttribute("message", "Cập nhật kiểm kê thành công.");
+
+                // Add System Log for individual update
+                try {
+                    String senderName = (user.getFullName() != null && !user.getFullName().trim().isEmpty())
+                            ? user.getFullName() : user.getUsername();
+                    SystemLogDAO logDao = new SystemLogDAO();
+                    SystemLog logEntry = new SystemLog();
+                    logEntry.setUserID(user.getUserID());
+                    logEntry.setAction("INVENTORY_CHECK_UPDATE");
+                    logEntry.setTargetObject("InventoryCheck");
+                    logEntry.setDescription("Staff " + senderName + " updated an inventory check record (ID: " + countId + ").");
+                    logEntry.setIpAddress(request.getRemoteAddr());
+                    logDao.insertLog(logEntry);
+                } catch (Exception logEx) {
+                    logEx.printStackTrace();
+                }
             } else {
                 request.getSession().setAttribute("error", "Cập nhật kiểm kê thất bại.");
             }
@@ -587,6 +629,22 @@ public class InventoryCheckController extends HttpServlet {
         if (ok) {
             session.setAttribute("message", "Approve phiếu kiểm kho thành công.");
             
+            // Log this action
+            try {
+                String managerName = (user.getFullName() != null && !user.getFullName().trim().isEmpty())
+                                    ? user.getFullName() : user.getUsername();
+                SystemLogDAO logDao = new SystemLogDAO();
+                SystemLog logEntry = new SystemLog();
+                logEntry.setUserID(user.getUserID());
+                logEntry.setAction("INVENTORY_CHECK_APPROVE");
+                logEntry.setTargetObject("InventoryCheck");
+                logEntry.setDescription("Manager " + managerName + " approved inventory session: " + sessionCode);
+                logEntry.setIpAddress(request.getRemoteAddr());
+                logDao.insertLog(logEntry);
+            } catch (Exception logEx) {
+                logEx.printStackTrace();
+            }
+
             // Notify staff
             InventoryCheckDAO daoNotify = new InventoryCheckDAO();
             Integer creatorId = daoNotify.getCreatorIdBySessionCode(sessionCode);
@@ -648,6 +706,22 @@ public class InventoryCheckController extends HttpServlet {
         if (ok) {
             session.setAttribute("message", "Reject phiếu kiểm kho thành công.");
             
+            // Log this action
+            try {
+                String managerName = (user.getFullName() != null && !user.getFullName().trim().isEmpty())
+                                    ? user.getFullName() : user.getUsername();
+                SystemLogDAO logDao = new SystemLogDAO();
+                SystemLog logEntry = new SystemLog();
+                logEntry.setUserID(user.getUserID());
+                logEntry.setAction("INVENTORY_CHECK_REJECT");
+                logEntry.setTargetObject("InventoryCheck");
+                logEntry.setDescription("Manager " + managerName + " rejected inventory session: " + sessionCode + ". Reason: " + rejectReason);
+                logEntry.setIpAddress(request.getRemoteAddr());
+                logDao.insertLog(logEntry);
+            } catch (Exception logEx) {
+                logEx.printStackTrace();
+            }
+
             // Notify staff
             InventoryCheckDAO daoNotify = new InventoryCheckDAO();
             Integer creatorId = daoNotify.getCreatorIdBySessionCode(sessionCode);

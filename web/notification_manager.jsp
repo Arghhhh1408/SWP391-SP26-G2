@@ -269,6 +269,14 @@
                                             </a>
                                         </c:if>
 
+                                        <c:if test="${n.type == 'PASSWORD_RESET_RESULT'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToProfile(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔐 Đổi mật khẩu ngay
+                                            </a>
+                                        </c:if>
+
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
                                                 <button class="btn-mark-read"
@@ -320,6 +328,13 @@
                             await markAsRead(notifId);
                         }
                         window.location.href = ctx + '/inventoryCheck?mode=approval';
+                    }
+
+                    async function goToProfile(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/personalProfile';
                     }
 
                     function markAsRead(notifId) {

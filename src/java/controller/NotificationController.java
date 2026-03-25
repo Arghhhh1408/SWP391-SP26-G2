@@ -1,6 +1,7 @@
 package controller;
 
 import dao.NotificationDAO;
+import dao.UserDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -10,7 +11,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import model.Notification;
+import dao.SystemLogDAO;
+import model.SystemLog;
 import model.User;
+import utils.SecurityUtils;
 import websocket.NotificationEndpoint;
 
 @WebServlet(name = "NotificationController", urlPatterns = { "/notifications" })
@@ -76,6 +80,88 @@ public class NotificationController extends HttpServlet {
             } else {
                 dao.markAllRead(user.getUserID());
             }
+        } else if ("resetPassword".equals(action) && idParam != null) {
+            try {
+                int notifId = Integer.parseInt(idParam);
+                Notification n = dao.getNotificationById(notifId);
+                if (n != null && "PASSWORD_RESET_REQUEST".equals(n.getType())) {
+                    // Extract username from title: "Yêu cầu Reset Mật khẩu từ [username]"
+                    String title = n.getTitle();
+                    String prefix = "Yêu cầu Reset Mật khẩu từ ";
+                    if (title.startsWith(prefix)) {
+                        String username = title.substring(prefix.length()).trim();
+                        UserDAO uDAO = new UserDAO();
+                        User requester = uDAO.getUserByUsername(username);
+                        if (requester != null) {
+                            String hashedPass = SecurityUtils.hashPassword("123");
+                            uDAO.resetPassword(requester.getUserID(), hashedPass);
+                            dao.markAsRead(user.getUserID(), notifId);
+
+                            // Notify requester
+                            Notification feedback = new Notification();
+                            feedback.setUserId(requester.getUserID());
+                            feedback.setTitle("Kết quả yêu cầu Reset Mật khẩu");
+                            feedback.setMessage("Mật khẩu của bạn đã được reset về mặc định (123) bởi Admin. Vui lòng đổi mật khẩu ngay sau khi đăng nhập.");
+                            feedback.setType("PASSWORD_RESET_RESULT");
+                            dao.insert(feedback);
+
+                             // Push WebSocket update to requester
+                             int unreadReq = dao.countUnread(requester.getUserID());
+                             NotificationEndpoint.sendToUser(requester.getUserID(), "{\"unreadCount\":" + unreadReq + "}");
+
+                             // Log action
+                             SystemLogDAO logDAO = new SystemLogDAO();
+                             SystemLog log = new SystemLog();
+                             log.setUserID(user.getUserID());
+                             log.setAction("PASSWORD_RESET");
+                             log.setTargetObject("User: " + username);
+                             log.setDescription("Admin reset password for user: " + username);
+                             log.setIpAddress(request.getRemoteAddr());
+                             logDAO.insertLog(log);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if ("rejectPassword".equals(action) && idParam != null) {
+            try {
+                int notifId = Integer.parseInt(idParam);
+                Notification n = dao.getNotificationById(notifId);
+                if (n != null && "PASSWORD_RESET_REQUEST".equals(n.getType())) {
+                    dao.markAsRead(user.getUserID(), notifId);
+
+                    // Extract username from title to notify user of rejection
+                    String title = n.getTitle();
+                    String prefix = "Yêu cầu Reset Mật khẩu từ ";
+                    if (title.startsWith(prefix)) {
+                        String username = title.substring(prefix.length()).trim();
+                        UserDAO uDAO = new UserDAO();
+                        User requester = uDAO.getUserByUsername(username);
+                        if (requester != null) {
+                            Notification feedback = new Notification();
+                            feedback.setUserId(requester.getUserID());
+                            feedback.setTitle("Kết quả yêu cầu Reset Mật khẩu");
+                            feedback.setMessage("Yêu cầu reset mật khẩu của bạn đã bị từ chối bởi Admin.");
+                            feedback.setType("PASSWORD_RESET_RESULT");
+                            dao.insert(feedback);
+
+                            int unreadReq = dao.countUnread(requester.getUserID());
+                            NotificationEndpoint.sendToUser(requester.getUserID(), "{\"unreadCount\":" + unreadReq + "}");
+
+                            // Log action
+                            SystemLogDAO logDAO = new SystemLogDAO();
+                            SystemLog log = new SystemLog();
+                            log.setUserID(user.getUserID());
+                            log.setAction("PASSWORD_REJECT");
+                            log.setTargetObject("User: " + username);
+                            log.setDescription("Admin rejected password reset request for user: " + username);
+                            log.setIpAddress(request.getRemoteAddr());
+                            logDAO.insertLog(log);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
         }
 
         int remainingUnread = dao.countUnread(user.getUserID());

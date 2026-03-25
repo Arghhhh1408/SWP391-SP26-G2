@@ -82,6 +82,37 @@ public class ReturnDAO extends DBContext {
         return list;
     }
 
+    public List<ReturnRequest> listVisibleByCreator(String actor) {
+        List<ReturnRequest> list = new ArrayList<>();
+        if (actor == null || actor.isBlank()) {
+            return list;
+        }
+
+        String sql = """
+                    SELECT r.ReturnID, r.ReturnCode, r.SKU, r.ProductName, r.CustomerName, r.CustomerPhone,
+                           r.Reason, r.ConditionNote, r.Status,
+                           r.RefundAmount, r.RefundMethod, r.RefundReference, r.RefundedAt,
+                           r.CreatedAt, r.UpdatedAt
+                    FROM dbo.ReturnRequests r
+                    INNER JOIN dbo.ReturnEvents e ON r.ReturnID = e.ReturnID
+                    WHERE e.Action = 'CREATE' AND e.Actor = ?
+                      AND r.Status <> 'CANCELLED'
+                    ORDER BY r.UpdatedAt DESC, r.ReturnID DESC
+                """;
+
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, actor);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                list.add(mapReturn(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     public ReturnRequest getById(int id) {
         ReturnRequest r = null;
         try {

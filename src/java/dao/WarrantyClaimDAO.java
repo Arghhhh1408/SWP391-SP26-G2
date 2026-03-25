@@ -150,6 +150,35 @@ public class WarrantyClaimDAO extends DBContext {
         return list;
     }
 
+    public List<WarrantyClaim> listInProgressByCreator(String actor) {
+        List<WarrantyClaim> list = new ArrayList<>();
+        if (actor == null || actor.isBlank()) {
+            return list;
+        }
+
+        String sql = """
+            SELECT c.ClaimID, c.ClaimCode, c.SKU, c.ProductName, c.CustomerName, c.CustomerPhone, c.IssueDescription,
+                   c.Status, c.CreatedAt, c.UpdatedAt
+            FROM dbo.WarrantyClaims c
+            INNER JOIN dbo.WarrantyClaimEvents e ON c.ClaimID = e.ClaimID
+            WHERE e.Action = 'CREATE' AND e.Actor = ?
+              AND c.Status <> 'CANCELLED'
+            ORDER BY c.UpdatedAt DESC, c.ClaimID DESC
+        """;
+
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, actor);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                list.add(mapClaim(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     public boolean updateStatus(int claimId, WarrantyClaimStatus newStatus, String note, String actor) {
         try {
             WarrantyClaim current = getById(claimId);

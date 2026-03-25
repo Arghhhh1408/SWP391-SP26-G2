@@ -87,6 +87,11 @@ public class WarrantyClaim {
         this.status = status;
     }
 
+    /** Trạng thái hiển thị cho người dùng (EL: statusLabelVi). */
+    public String getStatusLabelVi() {
+        return status != null ? status.getLabelVi() : "";
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

@@ -205,7 +205,9 @@ public class StockInDetailController extends HttpServlet {
                     SystemLog log = new SystemLog();
                     log.setUserID(user.getUserID());
                     log.setAction("RECEIVE_STOCKIN_DETAIL");
-                    log.setTargetObject("StockInDetail");
+                    String actorName = (user.getFullName() != null && !user.getFullName().trim().isEmpty()) 
+                                        ? user.getFullName() : user.getUsername();
+                    log.setTargetObject("User: " + actorName);
                     log.setDescription("Nhận hàng cho phiếu nhập | StockInID: " + stockInId
                             + " | DetailID: " + detailId
                             + " | ReceiveQty: " + receiveQty);
@@ -244,6 +246,7 @@ public class StockInDetailController extends HttpServlet {
             }
 
             try {
+                StockIn stockInForNotif = dao.getStockInByIdBasic(stockInId);
                 boolean ok = dao.approveCancelStockIn(stockInId, user.getUserID());
 
                 try {
@@ -260,6 +263,13 @@ public class StockInDetailController extends HttpServlet {
                 }
 
                 if (ok) {
+                    try {
+                        if (stockInForNotif != null) {
+                            sendCancelResponseNotification(user, stockInForNotif, true);
+                        }
+                    } catch (Exception notifEx) {
+                        notifEx.printStackTrace();
+                    }
                     response.sendRedirect("stockinDetail?id=" + stockInId + "&success=approveCancel");
                 } else {
                     forwardDetail(request, response, stockInId,
@@ -282,6 +292,7 @@ public class StockInDetailController extends HttpServlet {
             }
 
             try {
+                StockIn stockInForNotif = dao.getStockInByIdBasic(stockInId);
                 boolean ok = dao.rejectCancelStockIn(stockInId);
 
                 try {
@@ -298,6 +309,13 @@ public class StockInDetailController extends HttpServlet {
                 }
 
                 if (ok) {
+                    try {
+                        if (stockInForNotif != null) {
+                            sendCancelResponseNotification(user, stockInForNotif, false);
+                        }
+                    } catch (Exception notifEx) {
+                        notifEx.printStackTrace();
+                    }
                     response.sendRedirect("stockinDetail?id=" + stockInId + "&success=rejectCancel");
                 } else {
                     forwardDetail(request, response, stockInId,
@@ -411,6 +429,41 @@ public class StockInDetailController extends HttpServlet {
             // Push WebSocket badge update
             int unread = notifDAO.countUnread(managerId);
             NotificationEndpoint.sendToUser(managerId, "{\"unreadCount\":" + unread + "}");
+        }
+    }
+
+    private void sendCancelResponseNotification(User manager, StockIn stockIn, boolean approved) {
+        if (stockIn == null) {
+            return;
+        }
+        int stockInId = stockIn.getStockInId();
+
+        // The person to notify is the one who created/requested the cancellation
+        Integer cancelBy = stockIn.getCancelRequestedBy();
+        int targetUserId = (cancelBy != null && cancelBy != 0) ? cancelBy : stockIn.getCreatedBy();
+
+        String managerName = (manager.getFullName() != null && !manager.getFullName().isEmpty())
+                ? manager.getFullName()
+                : manager.getUsername();
+
+        Notification n = new Notification();
+        n.setUserId(targetUserId);
+
+        if (approved) {
+            n.setTitle("Phiếu nhập #" + stockInId + " đã được duyệt hủy");
+            n.setMessage("Manager " + managerName + " đã duyệt yêu cầu hủy phiếu nhập của bạn.");
+            n.setType("STOCKIN_CANCEL_APPROVED");
+        } else {
+            n.setTitle("Phiếu nhập #" + stockInId + " bị từ chối hủy");
+            n.setMessage("Manager " + managerName + " đã từ chối yêu cầu hủy phiếu nhập của bạn.");
+            n.setType("STOCKIN_CANCEL_REJECTED");
+        }
+
+        NotificationDAO notifDAO = new NotificationDAO();
+        if (notifDAO.insert(n)) {
+            // Push WebSocket badge update
+            int unread = notifDAO.countUnread(targetUserId);
+            NotificationEndpoint.sendToUser(targetUserId, "{\"unreadCount\":" + unread + "}");
         }
     }
 
