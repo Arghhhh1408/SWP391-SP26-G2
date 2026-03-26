@@ -1,7 +1,6 @@
 package controller;
 
 import dao.ReturnDAO;
-import dao.SystemLogDAO;
 import dao.WarrantyLookupDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -16,7 +15,6 @@ import java.time.LocalDate;
 import model.ReturnLookupResult;
 import model.ReturnRequest;
 import model.ReturnStatus;
-import model.SystemLog;
 import model.User;
 
 @WebServlet(name = "ReturnRefundController", urlPatterns = {"/returns", "/return"})
@@ -159,27 +157,6 @@ public class ReturnRefundController extends HttpServlet {
         }
 
         dao.updateStatus(id, st, note, actor);
-
-        // System Log
-        try {
-            User user = (User) request.getSession().getAttribute("acc");
-            SystemLogDAO logDAO = new SystemLogDAO();
-            SystemLog log = new SystemLog();
-            log.setUserID(user.getUserID());
-            
-            String action = "UPDATE_STATUS_RETURN";
-            if (st == ReturnStatus.COMPLETED) action = "COMPLETE_RETURN";
-            if (st == ReturnStatus.REJECTED) action = "REJECT_RETURN";
-            
-            log.setAction(action);
-            log.setTargetObject("ReturnRequest: " + id);
-            log.setDescription("Cập nhật trạng thái trả hàng: " + st.name() + (note != null ? " | Note: " + note : ""));
-            log.setIpAddress(request.getRemoteAddr());
-            logDAO.insertLog(log);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
         response.sendRedirect("return?id=" + id);
     }
 
@@ -196,22 +173,6 @@ public class ReturnRefundController extends HttpServlet {
             return;
         }
         dao.addNote(id, note, actor);
-
-        // System Log
-        try {
-            User user = (User) request.getSession().getAttribute("acc");
-            SystemLogDAO logDAO = new SystemLogDAO();
-            SystemLog log = new SystemLog();
-            log.setUserID(user.getUserID());
-            log.setAction("ADD_NOTE_RETURN");
-            log.setTargetObject("ReturnRequest: " + id);
-            log.setDescription("Thêm ghi chú trả hàng: " + note);
-            log.setIpAddress(request.getRemoteAddr());
-            logDAO.insertLog(log);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
         response.sendRedirect("return?id=" + id);
     }
 
@@ -235,22 +196,6 @@ public class ReturnRefundController extends HttpServlet {
         }
 
         dao.recordRefund(id, amount, method, reference, note, actor);
-
-        // System Log
-        try {
-            User user = (User) request.getSession().getAttribute("acc");
-            SystemLogDAO logDAO = new SystemLogDAO();
-            SystemLog log = new SystemLog();
-            log.setUserID(user.getUserID());
-            log.setAction("RECORD_REFUND_RETURN");
-            log.setTargetObject("ReturnRequest: " + id);
-            log.setDescription("Ghi nhận hoàn tiền: " + amount + " | Method: " + method + " | Ref: " + reference + (note != null ? " | Note: " + note : ""));
-            log.setIpAddress(request.getRemoteAddr());
-            logDAO.insertLog(log);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
         response.sendRedirect("return?id=" + id);
     }
 

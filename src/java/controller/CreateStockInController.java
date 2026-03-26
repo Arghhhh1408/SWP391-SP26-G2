@@ -9,6 +9,7 @@ import dao.StockInDAO;
 import dao.SupplierDAO;
 import dao.SystemLogDAO;
 import dao.NotificationDAO;
+import dao.SupplierDebtDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -29,6 +30,8 @@ import model.StockInDraftItem;
 import model.Supplier;
 import model.SystemLog;
 import model.User;
+import utils.AppUrlUtils;
+import utils.SupplierEmailService;
 import websocket.NotificationEndpoint;
 
 @WebServlet(name = "CreateStockInController", urlPatterns = {"/createStockIn"})
@@ -389,6 +392,16 @@ public class CreateStockInController extends HttpServlet {
             return;
         }
 
+        double debtAmount = total - paidNow;
+        if (debtAmount > 0) {
+            SupplierDebtDAO debtDAO = new SupplierDebtDAO();
+            double outstandingDebt = debtDAO.getOutstandingDebtTotalBySupplier(supplierId);
+            if (outstandingDebt + debtAmount > 1000000000D) {
+                forwardForm(request, response, "Tổng công nợ mở của nhà cung cấp không được vượt quá 1.000.000.000.", "error");
+                return;
+            }
+        }
+
         String finalPaymentStatus = calculatePaymentStatus(paidNow, total);
         if ("AUTO".equals(finalPaymentStatus)) {
             finalPaymentStatus = StockIn.PAYMENT_STATUS_UNPAID;
@@ -439,14 +452,18 @@ public class CreateStockInController extends HttpServlet {
             session.setAttribute("flashMessage", "Tạo phiếu nhập thành công.");
             session.setAttribute("flashType", "success");
 
-            // ---- Notification dispatch ----
+            // ---- Notification + supplier email dispatch ----
             try {
                 SupplierDAO supplierDAO2 = new SupplierDAO();
                 Supplier supplier = supplierDAO2.getSupplierById(supplierId);
                 String supplierName = (supplier != null) ? supplier.getSupplierName() : "#" + supplierId;
                 sendStockInNotification(user, stockInId, supplierName, details, total, paidNow, finalPaymentStatus);
+                if (supplier != null) {
+                    SupplierEmailService supplierEmailService = new SupplierEmailService();
+                    supplierEmailService.sendStockInCreatedEmail(supplier, stockInId, details, total, paidNow, finalPaymentStatus);
+                }
             } catch (Exception notifEx) {
-                notifEx.printStackTrace(); // notification failure must NOT break the main flow
+                notifEx.printStackTrace(); // notification/email failure must NOT break the main flow
             }
 
             response.sendRedirect("stockinList");

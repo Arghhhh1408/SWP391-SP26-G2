@@ -276,6 +276,12 @@ public class StockInDAO extends DBContext {
             double debtAmount = stockIn.getTotalAmount() - stockIn.getInitialPaidAmount();
 
             if (debtAmount > 0) {
+                SupplierDebtDAO debtDAO = new SupplierDebtDAO();
+                double existingDebt = debtDAO.getOutstandingDebtTotalBySupplier(stockIn.getSupplierId());
+                if (existingDebt + debtAmount > 1000000000D) {
+                    connection.rollback();
+                    return -1;
+                }
                 PreparedStatement psDebt = connection.prepareStatement(insertDebtSql);
                 psDebt.setInt(1, stockIn.getSupplierId());
                 psDebt.setInt(2, stockInId);
