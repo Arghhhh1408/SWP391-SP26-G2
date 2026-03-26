@@ -88,7 +88,7 @@ public class SystemLogDAO extends DBContext {
         String sql = "SELECT TOP (?) l.*, u.FullName "
                 + "FROM [dbo].[SystemLog] l "
                 + "LEFT JOIN [dbo].[User] u ON l.UserID = u.UserID "
-                + "WHERE l.Action IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                + "WHERE l.Action IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                 + "ORDER BY l.LogDate DESC";
  
         try {
@@ -111,6 +111,24 @@ public class SystemLogDAO extends DBContext {
             stm.setString(15, "REJECT_RETURN");
             stm.setString(16, "NOTIFY_LOW_STOCK");
             stm.setString(17, "UNNOTIFY_LOW_STOCK");
+            
+            // Bổ sung các hành động Stock In chi tiết
+            stm.setString(18, "RECEIVE_STOCKIN_DETAIL");
+            stm.setString(19, "REQUEST_CANCEL_STOCKIN");
+            
+            // Bổ sung các hành động Return To Vendor (RTV)
+            stm.setString(20, "CREATE_RETURN_VENDOR");
+            stm.setString(21, "APPROVE_RETURN_VENDOR");
+            stm.setString(22, "REJECT_RETURN_VENDOR");
+            stm.setString(23, "COMPLETE_RETURN_VENDOR");
+
+            // Bổ sung các hành động Bảo hành / Trả hàng chi tiết
+            stm.setString(24, "UPDATE_STATUS_WARRANTY");
+            stm.setString(25, "ADD_NOTE_WARRANTY");
+            stm.setString(26, "UPDATE_STATUS_RETURN");
+            stm.setString(27, "ADD_NOTE_RETURN");
+            stm.setString(28, "RECORD_REFUND_RETURN");
+            stm.setString(29, "COMPLETE_RETURN");
 
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {

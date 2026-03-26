@@ -138,6 +138,20 @@ public class CheckoutController extends HttpServlet {
                     // TRƯỜNG HỢP KHÁCH MỚI:
                     // Lúc này mới tin tưởng cái "name" gửi từ Form để tạo khách mới
                     finalCustomerId = customerDAO.getOrCreateCustomerId(name, phone);
+                    
+                    // --- BƯỚC 3.5: Ghi Log hệ thống (Khách hàng mới) ---
+                    try {
+                        SystemLogDAO logDAO = new SystemLogDAO();
+                        SystemLog log = new SystemLog();
+                        log.setUserID(createdBy);
+                        log.setAction("CUSTOMER_CREATED");
+                        log.setTargetObject("Customer");
+                        log.setDescription(String.format("Tạo khách hàng mới tự động | Tên: %s | SĐT: %s", name, phone));
+                        log.setIpAddress(request.getRemoteAddr());
+                        logDAO.insertLog(log);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
                 }
             } else {
                 // Khách lẻ không để lại SĐT

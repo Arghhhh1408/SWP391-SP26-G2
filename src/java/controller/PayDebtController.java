@@ -59,6 +59,21 @@ public class PayDebtController extends HttpServlet {
                     notifDAO.insert(n);
                 }
                 
+                // --- BƯỚC 5: Ghi Log hệ thống ---
+                try {
+                    dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+                    model.SystemLog log = new model.SystemLog();
+                    log.setUserID(staffId);
+                    log.setAction("DEBT_PAYMENT");
+                    log.setTargetObject("Customer");
+                    log.setDescription(String.format("Khách hàng %s thanh toán nợ | Đã trả: %,.0f VND | Còn nợ: %,.0f VND", 
+                            customerBefore.getName(), amountPaid, newDebt));
+                    log.setIpAddress(request.getRemoteAddr());
+                    logDAO.insertLog(log);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
                 // Thành công: Quay lại trang chi tiết khách hàng với thông báo
                 response.sendRedirect("customer_detail?id=" + customerId + "&msg=success");
             } else {
