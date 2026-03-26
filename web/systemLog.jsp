@@ -56,9 +56,9 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>UID</th>
+                                <th>Người thực hiện</th>
                                 <th>Hành động</th>
-                                <th>Đối tượng</th>
+                                <th>Đối tượng & Mô tả</th>
                                 <th>Thời gian</th>
                                 <th>IP Truy cập</th>
                             </tr>
@@ -67,15 +67,32 @@
                             <c:forEach items="${requestScope.logs}" var="log">
                                 <tr>
                                     <td><span style="color: #b5b5c3; font-weight: 700;">#${log.logID}</span></td>
-                                    <td style="font-weight: 600;">UID:${log.userID}</td>
                                     <td>
-                                        <span class="badge badge-primary">${log.action}</span>
+                                        <div style="font-weight: 600; color: #181c32;">${not empty log.name ? log.name : 'Hệ thống'}</div>
+                                        <div style="font-size: 11px; color: #b5b5c3;">UID: ${log.userID}</div>
                                     </td>
                                     <td>
-                                        <div style="font-weight: 600;">${log.targetObject}</div>
-                                        <div style="color: #b5b5c3; font-size: 11px;">${log.description}</div>
+                                        <span class="badge ${log.action.contains('DELETE') || log.action.contains('REJECT') ? 'badge-danger' : 
+                                                           log.action.contains('CREATE') || log.action.contains('APPROVE') ? 'badge-success' : 'badge-primary'}">
+                                            ${log.action}
+                                        </span>
                                     </td>
-                                    <td style="color: #181c32; font-size: 13px;">
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${not empty log.targetName}">
+                                                <div style="font-weight: 600;">
+                                                    <a href="updateuser?id=${log.targetObject.split(': ')[1]}" style="color: var(--primary); text-decoration: none;">
+                                                        👤 ${log.targetName}
+                                                    </a>
+                                                </div>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <div style="font-weight: 600;">${log.targetObject}</div>
+                                            </c:otherwise>
+                                        </c:choose>
+                                        <div style="color: #475569; font-size: 12px; margin-top: 4px;">${log.description}</div>
+                                    </td>
+                                    <td style="color: #181c32; font-size: 12px; white-space: nowrap;">
                                         <fmt:formatDate value="${log.logDate}" pattern="dd/MM/yyyy HH:mm:ss" />
                                     </td>
                                     <td><code style="background: #f3f6f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${log.ipAddress}</code></td>
