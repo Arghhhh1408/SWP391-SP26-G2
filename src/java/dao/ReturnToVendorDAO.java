@@ -142,21 +142,45 @@ public class ReturnToVendorDAO extends DBContext {
             }
 
             rtv.setSettlementType(normalizeSettlementType(rtv.getSettlementType()));
+
+            Integer headerStockInID = rtv.getStockInID() > 0 ? rtv.getStockInID() : null;
+            for (ReturnToVendorDetail d : details) {
+                if (d == null || d.getStockInDetailID() <= 0) {
+                    return -1;
+                }
+                StockInDetail sid = stockInDAO.getStockInDetailByDetailId(d.getStockInDetailID());
+                if (sid == null) {
+                    return -1;
+                }
+                d.setStockInID(sid.getStockInId());
+                if (headerStockInID == null) {
+                    headerStockInID = sid.getStockInId();
+                } else if (headerStockInID.intValue() != sid.getStockInId()) {
+                    return -1;
+                }
+            }
+
+            if (headerStockInID == null) {
+                return -1;
+            }
+            rtv.setStockInID(headerStockInID);
+
             connection.setAutoCommit(false);
 
             String insertHeaderSql = "INSERT INTO ReturnToVendors "
-                    + "(ReturnCode, SupplierID, CreatedBy, Status, Reason, Note, SettlementType, TotalAmount) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "(ReturnCode, SupplierID, StockInID, CreatedBy, Status, Reason, Note, SettlementType, TotalAmount) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement psHeader = connection.prepareStatement(insertHeaderSql, Statement.RETURN_GENERATED_KEYS)) {
                 psHeader.setString(1, rtv.getReturnCode());
                 psHeader.setInt(2, rtv.getSupplierID());
-                psHeader.setInt(3, rtv.getCreatedBy());
-                psHeader.setString(4, rtv.getStatus());
-                psHeader.setString(5, rtv.getReason());
-                psHeader.setString(6, rtv.getNote());
-                psHeader.setString(7, rtv.getSettlementType());
-                psHeader.setDouble(8, 0);
+                psHeader.setInt(3, rtv.getStockInID());
+                psHeader.setInt(4, rtv.getCreatedBy());
+                psHeader.setString(5, rtv.getStatus());
+                psHeader.setString(6, rtv.getReason());
+                psHeader.setString(7, rtv.getNote());
+                psHeader.setString(8, rtv.getSettlementType());
+                psHeader.setDouble(9, 0);
 
                 int affected = psHeader.executeUpdate();
                 if (affected <= 0) {
@@ -175,8 +199,8 @@ public class ReturnToVendorDAO extends DBContext {
             }
 
             String insertDetailSql = "INSERT INTO ReturnToVendorDetails "
-                    + "(RTVID, DetailID, StockInID, ProductID, Quantity, UnitCost, LineTotal, ReasonDetail, ItemCondition) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "(RTVID, StockInDetailID, ProductID, Quantity, UnitCost, LineTotal, ReasonDetail, ItemCondition) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
             double totalAmount = 0;
 
@@ -210,13 +234,12 @@ public class ReturnToVendorDAO extends DBContext {
                 try (PreparedStatement psDetail = connection.prepareStatement(insertDetailSql)) {
                     psDetail.setInt(1, rtvID);
                     psDetail.setInt(2, d.getStockInDetailID());
-                    psDetail.setInt(3, d.getStockInID());
-                    psDetail.setInt(4, d.getProductID());
-                    psDetail.setInt(5, d.getQuantity());
-                    psDetail.setDouble(6, d.getUnitCost());
-                    psDetail.setDouble(7, d.getLineTotal());
-                    psDetail.setString(8, d.getReasonDetail());
-                    psDetail.setString(9, d.getItemCondition());
+                    psDetail.setInt(3, d.getProductID());
+                    psDetail.setInt(4, d.getQuantity());
+                    psDetail.setDouble(5, d.getUnitCost());
+                    psDetail.setDouble(6, d.getLineTotal());
+                    psDetail.setString(7, d.getReasonDetail());
+                    psDetail.setString(8, d.getItemCondition());
 
                     if (psDetail.executeUpdate() <= 0) {
                         connection.rollback();
@@ -279,6 +302,7 @@ public class ReturnToVendorDAO extends DBContext {
                 rtv.setRtvID(rs.getInt("RTVID"));
                 rtv.setReturnCode(rs.getString("ReturnCode"));
                 rtv.setSupplierID(rs.getInt("SupplierID"));
+                rtv.setStockInID(rs.getInt("StockInID"));
                 rtv.setCreatedBy(rs.getInt("CreatedBy"));
                 rtv.setApprovedBy((Integer) rs.getObject("ApprovedBy"));
                 rtv.setCompletedBy((Integer) rs.getObject("CompletedBy"));
@@ -321,7 +345,8 @@ public class ReturnToVendorDAO extends DBContext {
                     rtv.setRtvID(rs.getInt("RTVID"));
                     rtv.setReturnCode(rs.getString("ReturnCode"));
                     rtv.setSupplierID(rs.getInt("SupplierID"));
-                    rtv.setCreatedBy(rs.getInt("CreatedBy"));
+                    rtv.setStockInID(rs.getInt("StockInID"));
+                rtv.setCreatedBy(rs.getInt("CreatedBy"));
                     rtv.setApprovedBy((Integer) rs.getObject("ApprovedBy"));
                     rtv.setCompletedBy((Integer) rs.getObject("CompletedBy"));
                     rtv.setCreatedDate(rs.getTimestamp("CreatedDate"));
@@ -352,10 +377,12 @@ public class ReturnToVendorDAO extends DBContext {
     public List<ReturnToVendorDetail> getDetailsByRTVID(int rtvID) {
         List<ReturnToVendorDetail> list = new ArrayList<>();
 
-        String sql = "SELECT d.RTVDetailID, d.RTVID, d.DetailID AS StockInDetailID, d.StockInID, d.ProductID, "
-                + "d.Quantity, d.UnitCost, d.LineTotal, d.ReasonDetail, d.ItemCondition, p.Name AS ProductName "
+        String sql = "SELECT d.RTVDetailID, d.RTVID, d.StockInDetailID, sid.StockInID, d.ProductID, "
+                + "d.Quantity, d.UnitCost, d.LineTotal, d.ReasonDetail, d.ItemCondition, "
+                + "p.Name AS ProductName, sid.Quantity AS OrderedQuantity, sid.ReceivedQuantity "
                 + "FROM ReturnToVendorDetails d "
                 + "LEFT JOIN Products p ON d.ProductID = p.ProductID "
+                + "LEFT JOIN StockInDetails sid ON d.StockInDetailID = sid.DetailID "
                 + "WHERE d.RTVID = ? "
                 + "ORDER BY d.RTVDetailID ASC";
 
@@ -376,6 +403,7 @@ public class ReturnToVendorDAO extends DBContext {
                     d.setReasonDetail(rs.getString("ReasonDetail"));
                     d.setItemCondition(rs.getString("ItemCondition"));
                     d.setProductName(rs.getString("ProductName"));
+                    d.setAvailableQuantity(rs.getInt("ReceivedQuantity"));
                     list.add(d);
                 }
             }

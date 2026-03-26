@@ -247,6 +247,7 @@ public class ReturnToVendorController extends HttpServlet {
             List<ReturnToVendorDetail> details = new ArrayList<>();
             Set<Integer> usedStockInDetailIDs = new HashSet<>();
             StockInDAO stockInDAO = new StockInDAO();
+            Integer headerStockInID = null;
 
             for (int i = 0; i < stockInDetailIDs.length; i++) {
                 String stockInDetailRaw = trimToNull(valueAt(stockInDetailIDs, i));
@@ -298,6 +299,14 @@ public class ReturnToVendorController extends HttpServlet {
                     return;
                 }
 
+                if (headerStockInID == null) {
+                    headerStockInID = sid.getStockInId();
+                } else if (headerStockInID.intValue() != sid.getStockInId()) {
+                    request.setAttribute("error", "All return items in one return-to-vendor document must belong to the same StockIn.");
+                    request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                    return;
+                }
+
                 ReturnToVendorDetail detail = new ReturnToVendorDetail();
                 detail.setStockInDetailID(stockInDetailID);
                 detail.setStockInID(sid.getStockInId());
@@ -317,6 +326,14 @@ public class ReturnToVendorController extends HttpServlet {
                 request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                 return;
             }
+
+            if (headerStockInID == null) {
+                request.setAttribute("error", "Cannot determine StockIn for the return items.");
+                request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                return;
+            }
+
+            rtv.setStockInID(headerStockInID);
 
             int rtvID = dao.createReturnWithDetails(rtv, details, ipAddress);
 

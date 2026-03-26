@@ -139,6 +139,7 @@
                 <p><strong>RTVID:</strong> <%= rtv.getRtvID() %></p>
                 <p><strong>Return Code:</strong> <%= rtv.getReturnCode() %></p>
                 <p><strong>Supplier:</strong> <%= rtv.getSupplierName() != null ? rtv.getSupplierName() : rtv.getSupplierID() %></p>
+                <p><strong>StockIn ID:</strong> <%= rtv.getStockInID() %></p>
                 <p><strong>Status:</strong> <%= rtv.getStatus() %></p>
                 <p><strong>Reason:</strong> <%= rtv.getReason() %></p>
                 <p><strong>Note:</strong> <%= rtv.getNote() %></p>
