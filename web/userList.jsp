@@ -25,6 +25,17 @@
         </div>
 
         <div class="admin-content">
+            <c:if test="${not empty sessionScope.message}">
+                <div class="alert alert-${sessionScope.status eq 'success' ? 'success' : 'danger'}" 
+                     style="margin-bottom: 20px; padding: 15px; border-radius: 8px; 
+                            background: ${sessionScope.status eq 'success' ? '#e8fff3' : '#fff5f8'}; 
+                            color: ${sessionScope.status eq 'success' ? '#50cd89' : '#f1416c'}; 
+                            border: 1px solid ${sessionScope.status eq 'success' ? '#50cd89' : '#f1416c'};">
+                    ${sessionScope.status eq 'success' ? '✅' : '⚠️'} ${sessionScope.message}
+                    <c:remove var="message" scope="session" />
+                    <c:remove var="status" scope="session" />
+                </div>
+            </c:if>
             <div class="card">
                 <div class="card-header">
                     <h3>🔍 Bộ lọc tìm kiếm</h3>
