@@ -23,7 +23,7 @@ public class BusinessReportDAO extends DBContext {
     public Integer countLowStockProducts(int threshold) {
         try {
             PreparedStatement stm = connection.prepareStatement(
-                    "SELECT COUNT(*) FROM dbo.Products WHERE StockQuantity < ?");
+                    "SELECT COUNT(*) FROM dbo.Products WHERE StockQuantity <= ?");
             stm.setInt(1, threshold);
             ResultSet rs = stm.executeQuery();
             return rs.next() ? rs.getInt(1) : null;

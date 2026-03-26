@@ -12,11 +12,11 @@ public class ProductDAO extends DBContext {
         List<Product> list = new ArrayList<>();
 
         String sql = """
-            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status
-            FROM dbo.Products
-            WHERE Status = 'Active'
-              AND (Name LIKE ? OR SKU LIKE ?)
-        """;
+                    SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status
+                    FROM dbo.Products
+                    WHERE Status = 'Active'
+                      AND (Name LIKE ? OR SKU LIKE ?)
+                """;
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
@@ -36,10 +36,10 @@ public class ProductDAO extends DBContext {
 
     public Product getBySku(String sku) {
         String sql = """
-            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
-            FROM dbo.Products
-            WHERE Status = 'Active' AND SKU = ?
-        """;
+                    SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
+                    FROM dbo.Products
+                    WHERE Status = 'Active' AND SKU = ?
+                """;
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
@@ -57,10 +57,10 @@ public class ProductDAO extends DBContext {
     public List<Product> searchByName(String keyword) {
         List<Product> list = new ArrayList<>();
         String sql = """
-            SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
-            FROM dbo.Products
-            WHERE Status = 'Active' AND Name LIKE ?
-        """;
+                    SELECT ProductID, Name, SKU, Price, StockQuantity, Unit, Status, WarrantyPeriod
+                    FROM dbo.Products
+                    WHERE Status = 'Active' AND Name LIKE ?
+                """;
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
@@ -79,12 +79,12 @@ public class ProductDAO extends DBContext {
     public List<Product> getLowStockProducts(int defaultThreshold) {
         List<Product> list = new ArrayList<>();
         String sql = """
-            SELECT p.*, l.MinStockLevel
-            FROM dbo.Products p
-            LEFT JOIN dbo.LowStockAlerts l ON p.ProductID = l.ProductID
-            WHERE p.Status = 'Active' 
-              AND p.StockQuantity < ISNULL(l.MinStockLevel, ?)
-        """;
+                    SELECT p.*, l.MinStockLevel
+                    FROM dbo.Products p
+                    LEFT JOIN dbo.LowStockAlerts l ON p.ProductID = l.ProductID
+                    WHERE p.Status = 'Active'
+                      AND p.StockQuantity <= ISNULL(l.MinStockLevel, ?)
+                """;
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
@@ -103,12 +103,12 @@ public class ProductDAO extends DBContext {
     // Lấy product theo ID (add vào cart)
     public Product getById(int id) {
         String sql = """
-                 SELECT ProductID, Name, SKU, Cost, Price, StockQuantity, Unit, 
-                        Status, Description, ImageURL, WarrantyPeriod, CategoryID, 
-                        CreatedDate, UpdatedDate
-                 FROM dbo.Products
-                 WHERE ProductID = ? AND Status = 'Active'
-                 """;
+                SELECT ProductID, Name, SKU, Cost, Price, StockQuantity, Unit,
+                       Status, Description, ImageURL, WarrantyPeriod, CategoryID,
+                       CreatedDate, UpdatedDate
+                FROM dbo.Products
+                WHERE ProductID = ? AND Status = 'Active'
+                """;
 
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
@@ -228,12 +228,12 @@ public class ProductDAO extends DBContext {
             return false;
         }
         String sql = """
-            UPDATE dbo.Products
-            SET StockQuantity = StockQuantity + ?,
-                Status = CASE WHEN Status = 'Deactivated' THEN 'Active' ELSE Status END,
-                UpdatedDate = GETDATE()
-            WHERE UPPER(LTRIM(RTRIM(SKU))) = UPPER(?)
-            """;
+                UPDATE dbo.Products
+                SET StockQuantity = StockQuantity + ?,
+                    Status = CASE WHEN Status = 'Deactivated' THEN 'Active' ELSE Status END,
+                    UpdatedDate = GETDATE()
+                WHERE UPPER(LTRIM(RTRIM(SKU))) = UPPER(?)
+                """;
 
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
@@ -249,11 +249,11 @@ public class ProductDAO extends DBContext {
     public List<Product> getAllActiveProducts() throws Exception {
         List<Product> list = new ArrayList<>();
         String sql = """
-            SELECT p.*, l.MinStockLevel 
-            FROM Products p
-            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
-            WHERE p.Status = 'Active'
-            """;
+                SELECT p.*, l.MinStockLevel
+                FROM Products p
+                LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+                WHERE p.Status = 'Active'
+                """;
         PreparedStatement st = connection.prepareStatement(sql);
         ResultSet rs = st.executeQuery();
         while (rs.next()) {
@@ -265,10 +265,10 @@ public class ProductDAO extends DBContext {
     public List<Product> getAllProducts() throws Exception {
         List<Product> list = new ArrayList<>();
         String sql = """
-            SELECT p.*, l.MinStockLevel 
-            FROM Products p
-            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
-            """;
+                SELECT p.*, l.MinStockLevel
+                FROM Products p
+                LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+                """;
         PreparedStatement st = connection.prepareStatement(sql);
         ResultSet rs = st.executeQuery();
         while (rs.next()) {
@@ -302,7 +302,8 @@ public class ProductDAO extends DBContext {
     }
 
     public int addProduct(Product p) throws Exception {
-        // StockQuantity is NOT set here — it defaults to 0 in the DB and is managed via stock-in
+        // StockQuantity is NOT set here — it defaults to 0 in the DB and is managed via
+        // stock-in
         String sql = "INSERT INTO Products (Name, SKU, Cost, Price, Unit, Description, ImageURL, Status, CategoryID, CreatedDate, UpdatedDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
         java.sql.PreparedStatement st = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
         st.setString(1, p.getName());
@@ -356,11 +357,11 @@ public class ProductDAO extends DBContext {
 
     public Product getProductById(int id) {
         String sql = """
-            SELECT p.*, l.MinStockLevel 
-            FROM Products p
-            LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
-            WHERE p.ProductID = ?
-        """;
+                    SELECT p.*, l.MinStockLevel
+                    FROM Products p
+                    LEFT JOIN LowStockAlerts l ON p.ProductID = l.ProductID
+                    WHERE p.ProductID = ?
+                """;
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setInt(1, id);
@@ -376,16 +377,16 @@ public class ProductDAO extends DBContext {
 
     public Product getByIdAndSupplier(int productId, int supplierId) {
         String sql = """
-        SELECT p.ProductID, p.Name, p.SKU, p.Cost, p.Price, p.StockQuantity, p.Unit,
-               p.Description, p.ImageURL, p.Status, p.CategoryID, p.CreatedDate, p.UpdatedDate, p.WarrantyPeriod,
-               sp.SupplyPrice
-        FROM dbo.Products p
-        INNER JOIN dbo.SupplierProduct sp ON p.ProductID = sp.ProductID
-        WHERE p.ProductID = ?
-          AND sp.SupplierID = ?
-          AND p.Status = 'Active'
-          AND sp.IsActive = 1
-    """;
+                    SELECT p.ProductID, p.Name, p.SKU, p.Cost, p.Price, p.StockQuantity, p.Unit,
+                           p.Description, p.ImageURL, p.Status, p.CategoryID, p.CreatedDate, p.UpdatedDate, p.WarrantyPeriod,
+                           sp.SupplyPrice
+                    FROM dbo.Products p
+                    INNER JOIN dbo.SupplierProduct sp ON p.ProductID = sp.ProductID
+                    WHERE p.ProductID = ?
+                      AND sp.SupplierID = ?
+                      AND p.Status = 'Active'
+                      AND sp.IsActive = 1
+                """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, productId);
@@ -433,50 +434,53 @@ public class ProductDAO extends DBContext {
         }
         return false;
     }
-public List<Product> searchProducts(String keyword, String sort, String range) {
-    List<Product> list = new ArrayList<>();
-    // 1. Dùng SELECT * để đảm bảo hàm map(rs) có đủ cột dữ liệu
-    StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE Status = 'Active' ");
 
-    // Lọc theo tên hoặc SKU
-    if (keyword != null && !keyword.trim().isEmpty()) {
-        sql.append(" AND (Name LIKE ? OR SKU LIKE ?) ");
-    }
-    
-    // Lọc chỉ sản phẩm còn hàng
-    if ("available".equals(range)) {
-        sql.append(" AND StockQuantity > 0 ");
-    }
+    public List<Product> searchProducts(String keyword, String sort, String range) {
+        List<Product> list = new ArrayList<>();
+        // 1. Dùng SELECT * để đảm bảo hàm map(rs) có đủ cột dữ liệu
+        StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE Status = 'Active' ");
 
-    // Sắp xếp giá
-    if ("total_desc".equals(sort)) {
-        sql.append(" ORDER BY Price DESC ");
-    } else if ("total_asc".equals(sort)) {
-        sql.append(" ORDER BY Price ASC ");
-    } else {
-        sql.append(" ORDER BY ProductID DESC "); 
-    }
-
-    try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+        // Lọc theo tên hoặc SKU
         if (keyword != null && !keyword.trim().isEmpty()) {
-            String p = "%" + keyword.trim() + "%";
-            ps.setString(1, p);
-            ps.setString(2, p);
+            sql.append(" AND (Name LIKE ? OR SKU LIKE ?) ");
         }
 
-        try (ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                // Tận dụng hàm map(rs) đã có sẵn của Mạnh Lý ở dòng 156
-                list.add(map(rs));
-            }
+        // Lọc chỉ sản phẩm còn hàng
+        if ("available".equals(range)) {
+            sql.append(" AND StockQuantity > 0 ");
         }
-    } catch (Exception e) {
-        System.out.println("Lỗi searchProducts POS: " + e.getMessage());
-        e.printStackTrace();
+
+        // Sắp xếp giá
+        if ("total_desc".equals(sort)) {
+            sql.append(" ORDER BY Price DESC ");
+        } else if ("total_asc".equals(sort)) {
+            sql.append(" ORDER BY Price ASC ");
+        } else {
+            sql.append(" ORDER BY ProductID DESC ");
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String p = "%" + keyword.trim() + "%";
+                ps.setString(1, p);
+                ps.setString(2, p);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    // Tận dụng hàm map(rs) đã có sẵn của Mạnh Lý ở dòng 156
+                    list.add(map(rs));
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Lỗi searchProducts POS: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
     }
-    return list;
-}
-    public List<Product> searchProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status)
+
+    public List<Product> searchProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId,
+            String status)
             throws Exception {
         List<Product> list = new ArrayList<>();
         CategoryDAO catDao = new CategoryDAO();
@@ -556,7 +560,8 @@ public List<Product> searchProducts(String keyword, String sort, String range) {
         return list;
     }
 
-    public int countProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status) throws Exception {
+    public int countProducts(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status)
+            throws Exception {
         CategoryDAO catDao = new CategoryDAO();
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM Products WHERE 1=1");
         if (status != null && !status.isEmpty() && !"all".equalsIgnoreCase(status)) {
@@ -622,7 +627,8 @@ public List<Product> searchProducts(String keyword, String sort, String range) {
         return 0;
     }
 
-    public List<Product> searchProductsPaginated(String keyword, Double minPrice, Double maxPrice, Integer categoryId, String status,
+    public List<Product> searchProductsPaginated(String keyword, Double minPrice, Double maxPrice, Integer categoryId,
+            String status,
             int page, int pageSize) throws Exception {
         List<Product> list = new ArrayList<>();
         CategoryDAO catDao = new CategoryDAO();
@@ -714,7 +720,8 @@ public List<Product> searchProducts(String keyword, String sort, String range) {
         if (ids == null || ids.length == 0) {
             return false;
         }
-        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Deactivated', UpdatedDate = GETDATE() WHERE ProductID IN (");
+        StringBuilder sql = new StringBuilder(
+                "UPDATE Products SET Status = 'Deactivated', UpdatedDate = GETDATE() WHERE ProductID IN (");
         for (int i = 0; i < ids.length; i++) {
             sql.append("?");
             if (i < ids.length - 1) {
@@ -784,7 +791,8 @@ public List<Product> searchProducts(String keyword, String sort, String range) {
         if (ids == null || ids.length == 0) {
             return false;
         }
-        StringBuilder sql = new StringBuilder("UPDATE Products SET Status = 'Active', UpdatedDate = GETDATE() WHERE ProductID IN (");
+        StringBuilder sql = new StringBuilder(
+                "UPDATE Products SET Status = 'Active', UpdatedDate = GETDATE() WHERE ProductID IN (");
         for (int i = 0; i < ids.length; i++) {
             sql.append("?");
             if (i < ids.length - 1) {
@@ -807,15 +815,15 @@ public List<Product> searchProducts(String keyword, String sort, String range) {
     public List<ProductPerformance> getTopSellingProducts(int limit) {
         List<ProductPerformance> list = new ArrayList<>();
         String sql = """
-            SELECT TOP (?) 
-                p.ProductID, p.SKU, p.Name,
-                SUM(sd.Quantity) as TotalQuantity,
-                SUM(sd.Quantity * sd.UnitPrice) as TotalRevenue
-            FROM dbo.Products p
-            JOIN dbo.StockOutDetails sd ON p.ProductID = sd.ProductID
-            GROUP BY p.ProductID, p.SKU, p.Name
-            ORDER BY TotalQuantity DESC
-            """;
+                SELECT TOP (?)
+                    p.ProductID, p.SKU, p.Name,
+                    SUM(sd.Quantity) as TotalQuantity,
+                    SUM(sd.Quantity * sd.UnitPrice) as TotalRevenue
+                FROM dbo.Products p
+                JOIN dbo.StockOutDetails sd ON p.ProductID = sd.ProductID
+                GROUP BY p.ProductID, p.SKU, p.Name
+                ORDER BY TotalQuantity DESC
+                """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, limit);
             try (ResultSet rs = ps.executeQuery()) {
