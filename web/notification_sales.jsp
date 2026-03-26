@@ -243,7 +243,56 @@
                                                 <button class="btn-mark-read"
                                                     onclick="markAsRead(${n.notificationId})">Đã đọc</button>
                                             </div>
-                                        </c:if>
+
+
+                                            <c:if test="${n.type == 'PASSWORD_RESET_RESULT'}">
+                                                <a class="btn-view-detail" href="#"
+                                                    onclick="goToProfile(this, ${n.notificationId}, '${n.read}'); return false;">
+                                                    🔐 Đổi mật khẩu ngay
+                                                </a>
+                                            </c:if>
+                                            
+                                            <c:if test="${n.type == 'SALE_SUCCESS'}">
+                                                <a class="btn-view-detail"
+                                                   href="#"
+                                                   data-title="<c:out value='${n.title}'/>"
+                                                   onclick="goToOrderDetail(this, ${n.notificationId}, '${n.read}'); return false;">
+                                                    🔍 Xem chi tiết đơn hàng
+                                                </a>
+                                            </c:if>
+
+                                            <c:if test="${n.type == 'WARRANTY_STATUS_CHANGED'}">
+                                                <a class="btn-view-detail"
+                                                   href="#"
+                                                   onclick="goToWarrantyList(this, ${n.notificationId}, '${n.read}'); return false;">
+                                                    🔧 Xem danh sách bảo hành
+                                                </a>
+                                            </c:if>
+
+                                            <c:if test="${n.type == 'RETURN_STATUS_CHANGED'}">
+                                                <a class="btn-view-detail"
+                                                   href="#"
+                                                   onclick="goToReturnList(this, ${n.notificationId}, '${n.read}'); return false;">
+                                                    📦 Xem danh sách trả hàng
+                                                </a>
+                                            </c:if>
+
+                                            <c:if test="${not n.read}">
+                                                <div class="notif-actions" id="notif-action-${n.notificationId}">
+                                                    <button class="btn-mark-read"
+                                                        onclick="markAsRead(${n.notificationId})">Đã đọc</button>
+                                                </div>
+                                            </c:if>
+                                        </div>
+                                    </c:forEach>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="notif-empty">
+                                        <div class="notif-empty-icon">📭</div>
+                                        <h3 style="margin: 0 0 8px 0; color: var(--text-main);">Không có thông báo nào
+                                        </h3>
+                                        <p class="notif-empty-text">Bạn đã xem tất cả các thông báo.</p>
+
                                     </div>
                                 </c:forEach>
                             </c:when>
@@ -281,9 +330,23 @@
                         if (!isRead && notifId) {
                             await markAsRead(notifId);
                         }
-                        window.location.href = ctx + '/personalProfile';
-                    }
-                </script>
-            </body>
+
+
+                        async function goToWarrantyList(link, notifId, isRead) {
+                            if (isRead === 'false' && notifId) {
+                                await markAsRead(notifId);
+                            }
+                            window.location.href = ctx + '/sales-warranty-lookup?showClaims=1';
+                        }
+
+                        async function goToReturnList(link, notifId, isRead) {
+                            if (isRead === 'false' && notifId) {
+                                await markAsRead(notifId);
+                            }
+                            window.location.href = ctx + '/sales_dashboard?tab=return-lookup&showReturns=1';
+                        }
+                    </script>
+                </body>
+
 
             </html>
