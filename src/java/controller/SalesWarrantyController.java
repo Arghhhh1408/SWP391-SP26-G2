@@ -11,7 +11,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.List;
 import model.Product;
+import websocket.NotificationEndpoint;
 import model.ReturnLookupResult;
 import model.ReturnRequest;
 import model.User;
@@ -138,6 +140,8 @@ public class SalesWarrantyController extends HttpServlet {
             return;
         }
 
+        notifyStaffOfNewWarranty(lookup.getProductName());
+
         response.sendRedirect("sales-warranty-lookup?created=" + claim.getClaimCode());
     }
 
@@ -210,12 +214,15 @@ public class SalesWarrantyController extends HttpServlet {
             );
             if (rr == null) {
                 session.setAttribute("lookupFlashError", "Không thể tạo yêu cầu trả hàng.");
-            } else if (toDashboard) {
-                response.sendRedirect("sales_dashboard?tab=return-lookup&returnCreated=" + rr.getReturnCode());
-                return;
             } else {
-                response.sendRedirect("sales-warranty-lookup?returnCreated=" + rr.getReturnCode());
-                return;
+                notifyStaffOfNewReturn(productName);
+                if (toDashboard) {
+                    response.sendRedirect("sales_dashboard?tab=return-lookup&returnCreated=" + rr.getReturnCode());
+                    return;
+                } else {
+                    response.sendRedirect("sales-warranty-lookup?returnCreated=" + rr.getReturnCode());
+                    return;
+                }
             }
             response.sendRedirect(returnLookupHome);
             return;
@@ -241,6 +248,9 @@ public class SalesWarrantyController extends HttpServlet {
             response.sendRedirect(lookupHome);
             return;
         }
+        
+        notifyStaffOfNewWarranty(lookup.getProductName());
+
         if (toDashboard) {
             response.sendRedirect("sales_dashboard?tab=warranty-lookup&created=" + claim.getClaimCode());
         } else {
@@ -279,6 +289,40 @@ public class SalesWarrantyController extends HttpServlet {
         }
 
         request.getRequestDispatcher("sales_warranty_lookup.jsp").forward(request, response);
+    }
+
+    private void notifyStaffOfNewReturn(String productName) {
+        dao.NotificationDAO nDAO = new dao.NotificationDAO();
+        List<Integer> staffIds = nDAO.getStaffIds();
+        for (Integer staffId : staffIds) {
+            model.Notification n = new model.Notification();
+            n.setUserId(staffId);
+            n.setTitle("📦 Yêu cầu trả hàng mới");
+            n.setMessage("Có yêu cầu trả hàng mới: Tên sản phẩm: <strong>" + productName + "</strong>");
+            n.setType("RETURN_REQUEST_CREATED");
+            nDAO.insert(n);
+            
+            // Push WebSocket update
+            int unread = nDAO.countUnread(staffId);
+            websocket.NotificationEndpoint.sendToUser(staffId, "{\"unreadCount\":" + unread + "}");
+        }
+    }
+
+    private void notifyStaffOfNewWarranty(String productName) {
+        dao.NotificationDAO nDAO = new dao.NotificationDAO();
+        List<Integer> staffIds = nDAO.getStaffIds();
+        for (Integer staffId : staffIds) {
+            model.Notification n = new model.Notification();
+            n.setUserId(staffId);
+            n.setTitle("🔧 Bảo hành mới");
+            n.setMessage("Có đơn bảo hành mới: Tên sản phẩm: <strong>" + productName + "</strong>");
+            n.setType("WARRANTY_CLAIM_CREATED");
+            nDAO.insert(n);
+            
+            // Push WebSocket update
+            int unread = nDAO.countUnread(staffId);
+            NotificationEndpoint.sendToUser(staffId, "{\"unreadCount\":" + unread + "}");
+        }
     }
 
     private String getActor(HttpServletRequest request) {
