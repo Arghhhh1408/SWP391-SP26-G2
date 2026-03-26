@@ -1,5 +1,6 @@
 package controller;
 
+import dao.SystemLogDAO;
 import dao.WarrantyClaimDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -10,6 +11,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import model.SystemLog;
 import model.User;
 import model.WarrantyClaim;
 import model.WarrantyClaimStatus;
@@ -149,6 +151,27 @@ public class WarrantyClaimController extends HttpServlet {
         }
 
         dao.updateStatus(id, st, note, actor);
+
+        // System Log
+        try {
+            User user = (User) request.getSession().getAttribute("acc");
+            SystemLogDAO logDAO = new SystemLogDAO();
+            SystemLog log = new SystemLog();
+            log.setUserID(user.getUserID());
+            
+            String action = "UPDATE_STATUS_WARRANTY";
+            if (st == WarrantyClaimStatus.COMPLETED) action = "COMPLETE_WARRANTY";
+            if (st == WarrantyClaimStatus.REJECTED) action = "REJECT_WARRANTY";
+            
+            log.setAction(action);
+            log.setTargetObject("WarrantyClaim: " + id);
+            log.setDescription("Cập nhật trạng thái bảo hành: " + st.name() + (note != null ? " | Note: " + note : ""));
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
         response.sendRedirect("warrantyClaim?id=" + id);
     }
 
@@ -165,6 +188,22 @@ public class WarrantyClaimController extends HttpServlet {
             return;
         }
         dao.addNote(id, note, actor);
+
+        // System Log
+        try {
+            User user = (User) request.getSession().getAttribute("acc");
+            SystemLogDAO logDAO = new SystemLogDAO();
+            SystemLog log = new SystemLog();
+            log.setUserID(user.getUserID());
+            log.setAction("ADD_NOTE_WARRANTY");
+            log.setTargetObject("WarrantyClaim: " + id);
+            log.setDescription("Thêm ghi chú bảo hành: " + note);
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
         response.sendRedirect("warrantyClaim?id=" + id);
     }
 

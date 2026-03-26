@@ -218,6 +218,23 @@ public class StockInDetailController extends HttpServlet {
                 }
 
                 if (ok) {
+                    // System Log for the whole StockIn if it's now completed
+                    try {
+                        StockIn updated = dao.getStockInById(stockInId);
+                        if (updated != null && StockIn.STOCK_STATUS_COMPLETED.equals(updated.getStockStatus())) {
+                            SystemLogDAO logDAO = new SystemLogDAO();
+                            SystemLog log = new SystemLog();
+                            log.setUserID(user.getUserID());
+                            log.setAction("COMPLETE_STOCKIN");
+                            log.setTargetObject("StockIn: " + stockInId);
+                            log.setDescription("Hoàn thành nhập kho cho phiếu #" + stockInId + " (Đã nhận đủ hàng)");
+                            log.setIpAddress(request.getRemoteAddr());
+                            logDAO.insertLog(log);
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
                     // Send notification to managers
                     try {
                         sendReceiveNotification(user, stockIn, detailId, receiveQty);

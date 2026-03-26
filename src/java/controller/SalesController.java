@@ -297,6 +297,22 @@ public class SalesController extends HttpServlet {
             return;
         }
 
+        // --- BƯỚC 7: Ghi Log hệ thống ---
+        try {
+            dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+            model.SystemLog log = new model.SystemLog();
+            User acc = (User) request.getSession().getAttribute("acc");
+            log.setUserID(acc != null ? acc.getUserID() : 0);
+            log.setAction("WARRANTY_CREATED");
+            log.setTargetObject("WarrantyClaim");
+            log.setDescription(String.format("Tạo yêu cầu bảo hành | Mã yêu cầu #%s | SKU: %s | Khách hàng: %s", 
+                    claim.getClaimCode(), sku, customerName));
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
         response.sendRedirect("sales_dashboard?tab=warranty-lookup&created=" + claim.getClaimCode());
     }
 
@@ -361,6 +377,22 @@ public class SalesController extends HttpServlet {
             request.setAttribute("error", "Không thể tạo yêu cầu trả hàng, vui lòng kiểm tra dữ liệu hoặc DB.");
             request.getRequestDispatcher("sales_dashboard.jsp").forward(request, response);
             return;
+        }
+
+        // --- BƯỚC 7: Ghi Log hệ thống ---
+        try {
+            dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
+            model.SystemLog log = new model.SystemLog();
+            User acc = (User) request.getSession().getAttribute("acc");
+            log.setUserID(acc != null ? acc.getUserID() : 0);
+            log.setAction("RETURN_CREATED");
+            log.setTargetObject("ReturnRequest");
+            log.setDescription(String.format("Tạo yêu cầu trả hàng | Mã yêu cầu #%s | SKU: %s | Khách hàng: %s", 
+                    rr.getReturnCode(), sku, customerName));
+            log.setIpAddress(request.getRemoteAddr());
+            logDAO.insertLog(log);
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
 
         response.sendRedirect("sales_dashboard?tab=return-lookup&returnCreated=" + rr.getReturnCode());
