@@ -507,4 +507,30 @@ public class UserDAO extends DBContext {
         }
         return null;
     }
+
+    public java.util.List<String> getActiveManagerEmails() {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        String sql = "SELECT Email FROM [User] WHERE IsActive = 1 AND RoleID = 2 AND Email IS NOT NULL AND LTRIM(RTRIM(Email)) <> ''";
+        try (PreparedStatement stm = connection.prepareStatement(sql); ResultSet rs = stm.executeQuery()) {
+            while (rs.next()) {
+                list.add(rs.getString("Email"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public java.util.List<Integer> getActiveManagerIds() {
+        java.util.List<Integer> list = new java.util.ArrayList<>();
+        String sql = "SELECT UserID FROM [User] WHERE IsActive = 1 AND RoleID = 2";
+        try (PreparedStatement stm = connection.prepareStatement(sql); ResultSet rs = stm.executeQuery()) {
+            while (rs.next()) {
+                list.add(rs.getInt("UserID"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }

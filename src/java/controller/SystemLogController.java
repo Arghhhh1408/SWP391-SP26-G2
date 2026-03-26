@@ -53,29 +53,14 @@ public class SystemLogController extends HttpServlet {
 
         List<SystemLog> logs = dao.getLogs(userId, action, date);
 
-        // Audit log for viewing the system log
-        if (userIdStr == null && action == null && date == null) {
-            SystemLog auditLog = new SystemLog();
-            auditLog.setUserID(acc.getUserID());
-            auditLog.setAction("VIEW_SYSTEM_LOG");
-            auditLog.setTargetObject("SystemLog");
-            auditLog.setDescription("Admin viewed the audit logs");
-            auditLog.setIpAddress(request.getRemoteAddr());
-            dao.insertLog(auditLog);
-        }
-
-        // Populate user names (Actor and Target)
+        // Populate user names
         for (SystemLog log : logs) {
-            // Actor name
-            log.setName(userDAO.getNameByID(log.getUserID()));
-            
-            // Target user name if applicable
             String target = log.getTargetObject();
             if (target != null && target.startsWith("User ID: ")) {
                 try {
                     int targetId = Integer.parseInt(target.split(": ")[1]);
-                    String targetName = userDAO.getNameByID(targetId);
-                    log.setTargetName(targetName); 
+                    String name = userDAO.getNameByID(targetId);
+                    log.setName(name);
                 } catch (Exception e) {
                     // Ignore parsing errors
                 }

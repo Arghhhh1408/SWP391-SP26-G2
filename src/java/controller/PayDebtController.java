@@ -37,44 +37,10 @@ public class PayDebtController extends HttpServlet {
             
             // Bước A: Trừ nợ trong bảng Customer
             // Bước B: Lưu lịch sử vào bảng Payment (nếu bạn có bảng này)
-            model.Customer customerBefore = dao.getCustomerById(customerId);
             boolean success = dao.updateCustomerDebt(customerId, amountPaid, staffId, note);
 
-            if (success && customerBefore != null) {
-                // 4. Gửi thông báo cho Manager
-                dao.NotificationDAO notifDAO = new dao.NotificationDAO();
-                double oldDebt = customerBefore.getDebt();
-                double newDebt = Math.max(0, oldDebt - amountPaid);
-                
-                String notifMessage = String.format("Cập nhật công nợ khách hàng \"%s\" | Tổng nợ: %,.0f VND | đã trả: %,.0f VND | Còn nợ: %,.0f VND",
-                        customerBefore.getName(), oldDebt, amountPaid, newDebt);
-                
-                java.util.List<Integer> managerIds = notifDAO.getManagerIds();
-                for (int mId : managerIds) {
-                    model.Notification n = new model.Notification();
-                    n.setUserId(mId);
-                    n.setTitle("Cập nhật công nợ: " + customerBefore.getName());
-                    n.setMessage(notifMessage);
-                    n.setType("DEBT_UPDATE");
-                    notifDAO.insert(n);
-                }
-                
-                // --- BƯỚC 5: Ghi Log hệ thống ---
-                try {
-                    dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
-                    model.SystemLog log = new model.SystemLog();
-                    log.setUserID(staffId);
-                    log.setAction("DEBT_PAYMENT");
-                    log.setTargetObject("Customer");
-                    log.setDescription(String.format("Khách hàng %s thanh toán nợ | Đã trả: %,.0f VND | Còn nợ: %,.0f VND", 
-                            customerBefore.getName(), amountPaid, newDebt));
-                    log.setIpAddress(request.getRemoteAddr());
-                    logDAO.insertLog(log);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-
-                // Thành công: Quay lại trang chi tiết khách hàng với thông báo
+            if (success) {
+                // 4. Thành công: Quay lại trang chi tiết khách hàng với thông báo
                 response.sendRedirect("customer_detail?id=" + customerId + "&msg=success");
             } else {
                 // Thất bại

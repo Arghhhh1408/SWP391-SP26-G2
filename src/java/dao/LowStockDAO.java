@@ -32,7 +32,7 @@ public class LowStockDAO extends DBContext {
                 FROM dbo.LowStockAlerts l
                 INNER JOIN dbo.Products p ON p.ProductID = l.ProductID
                 LEFT JOIN dbo.Categories c ON c.CategoryID = p.CategoryID
-                ORDER BY CASE WHEN p.StockQuantity <= l.MinStockLevel THEN 0 ELSE 1 END,
+                ORDER BY CASE WHEN p.StockQuantity < l.MinStockLevel THEN 0 ELSE 1 END,
                          (l.MinStockLevel - p.StockQuantity) DESC,
                          p.Name ASC
                 """;
@@ -62,7 +62,7 @@ public class LowStockDAO extends DBContext {
                 FROM dbo.LowStockAlerts l
                 INNER JOIN dbo.Products p ON p.ProductID = l.ProductID
                 LEFT JOIN dbo.Categories c ON c.CategoryID = p.CategoryID
-                WHERE p.StockQuantity <= l.MinStockLevel
+                WHERE p.StockQuantity < l.MinStockLevel
                 ORDER BY (l.MinStockLevel - p.StockQuantity) DESC, p.Name ASC
                 """;
         try {
@@ -191,7 +191,7 @@ public class LowStockDAO extends DBContext {
                 FROM dbo.LowStockAlerts l
                 INNER JOIN dbo.Products p ON p.ProductID = l.ProductID
                 LEFT JOIN dbo.Categories c ON c.CategoryID = p.CategoryID
-                WHERE p.StockQuantity <= l.MinStockLevel
+                WHERE p.StockQuantity < l.MinStockLevel
                 """;
         try {
             PreparedStatement stm = connection.prepareStatement(sql);

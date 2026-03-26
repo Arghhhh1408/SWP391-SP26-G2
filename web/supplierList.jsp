@@ -299,6 +299,8 @@
                             <option value="">-- Tất cả --</option>
                             <option value="active" ${param.status == 'active' ? 'selected' : ''}>Hoạt động</option>
                             <option value="inactive" ${param.status == 'inactive' ? 'selected' : ''}>Ngừng hoạt động</option>
+                            <option value="verified" ${param.status == 'verified' ? 'selected' : ''}>Đã xác thực email</option>
+                            <option value="unverified" ${param.status == 'unverified' ? 'selected' : ''}>Chưa xác thực email</option>
                         </select>
                     </div>
                 </div>
@@ -322,6 +324,7 @@
                             <th>Số điện thoại</th>
                             <th>Địa chỉ</th>
                             <th>Email</th>
+                            <th>Xác thực email</th>
                             <th>Trạng thái</th>
 
                             <c:if test="${sessionScope.acc.roleID == 1 || sessionScope.acc.roleID == 2}">
@@ -330,6 +333,7 @@
                                 </c:if>
 
                             <c:if test="${sessionScope.acc.roleID == 2}">
+                                <th>Gửi xác nhận email</th>
                                 <th>Sửa</th>
                                 <th>Ngừng hoạt động</th>
                                 </c:if>
@@ -345,6 +349,16 @@
                                         <td>${s.phone}</td>
                                         <td>${s.address}</td>
                                         <td>${s.email}</td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${s.emailVerified}">
+                                                    <span class="status-active">Đã xác thực</span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="status-inactive">Chưa xác thực</span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
                                         <td>
                                             <c:choose>
                                                 <c:when test="${s.status}">
@@ -373,6 +387,23 @@
                                         </c:if>
                                         <c:if test="${sessionScope.acc.roleID == 2}">
                                             <td>
+                                                <c:choose>
+                                                    <c:when test="${empty s.email}">
+                                                        <span class="status-inactive">Chưa có email</span>
+                                                    </c:when>
+                                                    <c:when test="${s.emailVerified}">
+                                                        <span class="status-active">Đã xác thực</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <form action="supplier-email" method="post" style="margin:0;">
+                                                            <input type="hidden" name="action" value="sendVerification">
+                                                            <input type="hidden" name="supplierId" value="${s.id}">
+                                                            <button type="submit" class="table-action product-link" style="border:none;">Gửi email xác nhận</button>
+                                                        </form>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+                                            <td>
                                                 <a class="table-action edit-link" href="addSupplier?action=edit&id=${s.id}">
                                                     Sửa
                                                 </a>
@@ -396,7 +427,7 @@
 
                             <c:otherwise>
                                 <tr>
-                                    <td class="empty-row" colspan="${sessionScope.acc.roleID == 2 ? 10 : 6}">
+                                    <td class="empty-row" colspan="${sessionScope.acc.roleID == 2 ? 12 : 8}">
                                         Không có nhà cung cấp nào.
                                     </td>
                                 </tr>

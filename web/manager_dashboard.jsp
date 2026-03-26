@@ -328,30 +328,6 @@
         .status-rejected { background: #fee2e2; color: #991b1b; }
         .status-new { background: #fef9c3; color: #854d0e; }
 
-        /* Action Badges */
-        .action-badge {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        .action-product { background: #eef2ff; color: #4338ca; }
-        .action-category { background: #f0fdf4; color: #15803d; }
-        .action-supplier { background: #fff7ed; color: #9a3412; }
-        .action-stockin { background: #fdf2f8; color: #9d174d; }
-        .action-warranty { background: #ecfeff; color: #0891b2; }
-        .action-return { background: #f5f3ff; color: #5b21b6; }
-        .action-check { background: #fffbeb; color: #92400e; }
-        .action-default { background: #f1f5f9; color: #475569; }
-
-        .dashboard-report-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            padding: 24px;
-        }
-
         .btn {
             display: inline-flex;
             align-items: center;
@@ -551,7 +527,7 @@
                         </h3>
                         <span style="font-size: 12px; color: #64748b; font-weight: 500;">Tùy chọn xuất dữ liệu Excel cho Manager</span>
                     </div>
-                    <div class="card-body dashboard-report-grid">
+                    <div class="card-body" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; padding: 24px;">
                         
                         <!-- 1. Inventory -->
                         <div class="export-tile" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 24px; border-radius: 16px; border: 1px solid #bae6fd; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s;">
@@ -650,64 +626,38 @@
                     </div>
                 </div>
 
-                <!-- Recent System Operations -->
-                <div class="glass-card" style="margin-bottom: 32px;">
+                <div class="glass-card">
                     <div class="card-header">
-                        <h3 style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 20px;">📜</span> Nhật ký hoạt động gần đây
-                        </h3>
-                        <a href="systemLog" class="btn btn-outline" style="padding: 6px 14px; font-size: 12px; border: 1px solid #e2e8f0;">Xem toàn bộ log</a>
+                        <h3>Yêu cầu bảo hành gần đây</h3>
+                        <a href="manager_dashboard?tab=warranty" class="btn btn-outline" style="padding: 6px 14px; font-size: 12px;">Xem tất cả</a>
                     </div>
                     <div class="card-body">
-                        <c:choose>
-                            <c:when test="${empty recentLogs}">
-                                <div class="empty-state" style="padding: 40px;">
-                                    <p>Chưa có hoạt động nào được ghi lại.</p>
-                                </div>
-                            </c:when>
-                            <c:otherwise>
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Thời gian</th>
-                                            <th>Người thực hiện</th>
-                                            <th>Hành động</th>
-                                            <th>Mô tả</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <c:forEach items="${recentLogs}" var="log">
-                                            <tr>
-                                                <td style="white-space: nowrap; font-size: 13px; color: #64748b;">
-                                                    <fmt:formatDate value="${log.logDate}" pattern="dd/MM/yyyy HH:mm"/>
-                                                </td>
-                                                <td>
-                                                    <div style="font-weight: 600;">${log.fullName}</div>
-                                                    <div style="font-size: 11px; color: #94a3b8;">IP: ${log.ipAddress}</div>
-                                                </td>
-                                                <td>
-                                                    <c:set var="act" value="${log.action}" />
-                                                    <span class="action-badge 
-                                                        ${act.contains('PRODUCT') ? 'action-product' : 
-                                                          act.contains('CATEGORY') ? 'action-category' : 
-                                                          act.contains('SUPPLIER') ? 'action-supplier' : 
-                                                          act.contains('STOCKIN') ? 'action-stockin' : 
-                                                          act.contains('WARRANTY') ? 'action-warranty' : 
-                                                          act.contains('RETURN') ? 'action-return' : 
-                                                          act.contains('CHECK') ? 'action-check' : 'action-default'}">
-                                                        ${act}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div style="max-width: 400px; font-size: 13px; line-height: 1.5;">${log.description}</div>
-                                                    <div style="font-size: 11px; color: #94a3b8; font-style: italic;">Target: ${log.targetObject}</div>
-                                                </td>
-                                            </tr>
-                                        </c:forEach>
-                                    </tbody>
-                                </table>
-                            </c:otherwise>
-                        </c:choose>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mã yêu cầu</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Khách hàng</th>
+                                    <th>Trạng thái</th>
+                                    <th>Cập nhật</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach items="${recentClaims}" var="c">
+                                    <tr>
+                                        <td style="font-weight: 600; color: var(--primary);">${c.claimCode}</td>
+                                        <td>${c.productName}</td>
+                                        <td>${c.customerName}</td>
+                                        <td>
+                                            <span class="badge badge-${c.status.name().toLowerCase()}">
+                                                ${c.status.name()}
+                                            </span>
+                                        </td>
+                                        
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

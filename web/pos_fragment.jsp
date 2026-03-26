@@ -1,25 +1,36 @@
 <%@page contentType="text/html" pageEncoding="UTF-8" %>
 <%@taglib uri="jakarta.tags.core" prefix="c" %>
 <%@taglib uri="jakarta.tags.fmt" prefix="fmt" %>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bán hàng POS - S.I.M</title>
+    <style>
+        #invoiceModal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        .modal-content { background: white; margin: 2% auto; width: 450px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; }
+        .invoice-card { padding: 30px; font-family: 'Courier New', Courier, monospace; color: #000; }
+        .invoice-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .invoice-table th { border-bottom: 1px solid #000; padding: 8px 0; text-align: left; }
+        .invoice-table td { padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
+        .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; font-size: 16px; }
+        .modal-footer { display: flex; gap: 10px; padding: 15px 30px 25px; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+        .pos-container { display: flex !important; flex-direction: row !important; align-items: flex-start !important; gap: 20px !important; width: 100% !important; margin-top: 10px; }
+        .product-column { flex: 1.6 !important; min-width: 0; }
+        .cart-column { width: 400px !important; position: sticky !important; top: 20px; }
+        .box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .cart-box { background: white; border: 1px solid #3b82f6; border-radius: 12px; padding: 20px; }
+        .stock-warning { color: #ef4444; font-weight: bold; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @media print { .no-print { display: none !important; } body * { visibility: hidden; } #invoice-print-area, #invoice-print-area * { visibility: visible; } #invoice-print-area { position: absolute; left: 0; top: 0; width: 100%; } }
+    </style>
+</head>
+<body>
+    <c:set var="tab" value="pos" scope="request" />
+    <jsp:include page="saleSidebar.jsp" />
 
-<style>
-    #invoiceModal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
-    .modal-content { background: white; margin: 2% auto; width: 450px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; }
-    .invoice-card { padding: 30px; font-family: 'Courier New', Courier, monospace; color: #000; }
-    .invoice-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-    .invoice-table th { border-bottom: 1px solid #000; padding: 8px 0; text-align: left; }
-    .invoice-table td { padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
-    .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; font-size: 16px; }
-    .modal-footer { display: flex; gap: 10px; padding: 15px 30px 25px; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
-    .pos-container { display: flex !important; flex-direction: row !important; align-items: flex-start !important; gap: 20px !important; width: 100% !important; margin-top: 10px; }
-    .product-column { flex: 1.6 !important; min-width: 0; }
-    .cart-column { width: 400px !important; position: sticky !important; top: 20px; }
-    .stock-warning { color: #ef4444; font-weight: bold; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    @media print { .no-print { display: none !important; } body * { visibility: hidden; } #invoice-print-area, #invoice-print-area * { visibility: visible; } #invoice-print-area { position: absolute; left: 0; top: 0; width: 100%; } }
-</style>
-
-<div class="pos-container">
+    <div class="admin-main" style="margin-left: 10px; padding: 10px;">
+        <div class="pos-container">
             <div class="product-column">
                 <div class="box">
                     <div style="padding: 15px 20px; background: #fcfcfc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -323,4 +334,30 @@ document.getElementById('display-totalPrice').innerText = finalTotal.toLocaleStr
         if (e.key === "Escape") closeModal();
         if (e.key === "F9" && document.getElementById('invoiceModal').style.display === 'block') submitFinalOrder();
     });
+    function updateQtyManual(input, id) {
+    let newQty = parseInt(input.value);
+    const p = products.find(item => String(item.id) === String(id));
+    
+    if (!p) return;
+
+    const maxCanSell = p.quantity - p.minStockLevel;
+
+    // Chặn vượt ngưỡng
+    if (newQty > maxCanSell) {
+        alert("⚠️ Vượt quá tồn kho cho phép! Tối đa: " + maxCanSell);
+        newQty = maxCanSell > 0 ? maxCanSell : 1;
+        input.value = newQty;
+    }
+
+    // Nếu số lượng hợp lệ (ví dụ gõ 5 và 5 <= maxCanSell)
+    if (newQty >= 1) {
+        // Gửi CHÍNH XÁC chuỗi này lên Servlet
+        updateCartAjax(id, 'update&quantity=' + newQty);
+    } else {
+        input.value = 1;
+        updateCartAjax(id, 'update&quantity=1');
+    }
+}
 </script>
+</body>
+</html>

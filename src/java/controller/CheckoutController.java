@@ -31,17 +31,17 @@ import websocket.NotificationEndpoint;
  *
  * @author DELL
  */
-@WebServlet(name = "CheckoutController", urlPatterns = { "/checkout" })
+@WebServlet(name = "CheckoutController", urlPatterns = {"/checkout"})
 public class CheckoutController extends HttpServlet {
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
      *
-     * @param request  servlet request
+     * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException      if an I/O error occurs
+     * @throws IOException if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -60,15 +60,14 @@ public class CheckoutController extends HttpServlet {
         }
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the
-    // + sign on the left to edit the code.">
+    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
      *
-     * @param request  servlet request
+     * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException      if an I/O error occurs
+     * @throws IOException if an I/O error occurs
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -81,10 +80,10 @@ public class CheckoutController extends HttpServlet {
     /**
      * Handles the HTTP <code>POST</code> method.
      *
-     * @param request  servlet request
+     * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException      if an I/O error occurs
+     * @throws IOException if an I/O error occurs
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -129,7 +128,7 @@ public class CheckoutController extends HttpServlet {
                 model.Customer existingCustomer = customerDAO.getCustomerByPhone(phone.trim());
 
                 if (existingCustomer != null) {
-                    // TRƯỜNG HỢP KHÁCH CŨ:
+                    // TRƯỜNG HỢP KHÁCH CŨ: 
                     // Lấy ID và Tên trực tiếp từ DB, bỏ qua cái "name" mà Form gửi lên
                     finalCustomerId = existingCustomer.getCustomerId();
                     name = existingCustomer.getName();
@@ -138,20 +137,6 @@ public class CheckoutController extends HttpServlet {
                     // TRƯỜNG HỢP KHÁCH MỚI:
                     // Lúc này mới tin tưởng cái "name" gửi từ Form để tạo khách mới
                     finalCustomerId = customerDAO.getOrCreateCustomerId(name, phone);
-                    
-                    // --- BƯỚC 3.5: Ghi Log hệ thống (Khách hàng mới) ---
-                    try {
-                        SystemLogDAO logDAO = new SystemLogDAO();
-                        SystemLog log = new SystemLog();
-                        log.setUserID(createdBy);
-                        log.setAction("CUSTOMER_CREATED");
-                        log.setTargetObject("Customer");
-                        log.setDescription(String.format("Tạo khách hàng mới tự động | Tên: %s | SĐT: %s", name, phone));
-                        log.setIpAddress(request.getRemoteAddr());
-                        logDAO.insertLog(log);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
                 }
             } else {
                 // Khách lẻ không để lại SĐT
@@ -226,8 +211,7 @@ public class CheckoutController extends HttpServlet {
                 stockStm.executeBatch();
             }
 
-            // BƯỚC 5: Cập nhật công nợ nếu khách trả thiếu (Chỉ áp dụng khách có ID khác
-            // khách lẻ)
+            // BƯỚC 5: Cập nhật công nợ nếu khách trả thiếu (Chỉ áp dụng khách có ID khác khách lẻ)
             if (totalAmount > amountPaid && finalCustomerId != 1) {
                 // 1. Tính số tiền khách còn thiếu
                 double debtIncrement = totalAmount - amountPaid;
@@ -247,9 +231,8 @@ public class CheckoutController extends HttpServlet {
                 log.setAction("SALE_COMPLETED");
                 log.setTargetObject("StockOut");
                 String customerDisplayName = (name != null && !name.isEmpty()) ? name : "Khách lẻ";
-                log.setDescription(
-                        String.format("Bán hàng thành công | Đơn hàng #%d | Khách hàng: %s | Tổng tiền: %,.0f đ",
-                                stockOutId, customerDisplayName, totalAmount));
+                log.setDescription(String.format("Bán hàng thành công | Đơn hàng #%d | Khách hàng: %s | Tổng tiền: %,.0f đ",
+                        stockOutId, customerDisplayName, totalAmount));
                 log.setIpAddress(request.getRemoteAddr());
                 logDAO.insertLog(log);
             } catch (Exception ex) {
@@ -275,11 +258,8 @@ public class CheckoutController extends HttpServlet {
                 String sellerName = (acc != null) ? acc.getFullName() : "Nhân viên bán hàng";
                 String customerDisplayName = (name != null && !name.isEmpty()) ? name : "Khách lẻ";
 
-                double amountDue = Math.max(0, totalAmount - amountPaid);
-                String notifMessage = String.format(
-                        "Đã bán thành công \"%s\" | Số lượng: \"%s\" | Người bán: \"%s\" | Khách hàng: \"%s\" | Thành tiền: \"%,.0f đ\" | Đã Thanh Toán: \"%,.0f đ\" | Còn nợ : \"%,.0f đ\"",
-                        productNames.toString(), quantities.toString(), sellerName, customerDisplayName, totalAmount,
-                        amountPaid, amountDue);
+                String notifMessage = String.format("Đã bán thành công \"%s\" | Số lượng: \"%s\" | Người bán: \"%s\" | Khách hàng: \"%s\" | Thành tiền: \"%,.0f đ\"",
+                        productNames.toString(), quantities.toString(), sellerName, customerDisplayName, totalAmount);
 
                 String notifTitle = "Đơn hàng #" + stockOutId + " mới từ " + sellerName;
 
@@ -291,23 +271,9 @@ public class CheckoutController extends HttpServlet {
                     n.setType("SALE_SUCCESS");
                     notifDAO.insert(n);
 
-                    // Đẩy thông báo qua WebSocket cho Manager
+                    // Đẩy thông báo qua WebSocket
                     int unread = notifDAO.countUnread(managerId);
                     NotificationEndpoint.sendToUser(managerId, "{\"unreadCount\":" + unread + "}");
-                }
-
-                // --- BƯỚC 6.5: Gửi thông báo cho chính nhân viên bán hàng (Real-time) ---
-                if (acc != null && !managerIds.contains(acc.getUserID())) {
-                    Notification nSelf = new Notification();
-                    nSelf.setUserId(acc.getUserID());
-                    nSelf.setTitle(notifTitle);
-                    nSelf.setMessage(notifMessage);
-                    nSelf.setType("SALE_SUCCESS");
-                    notifDAO.insert(nSelf);
-
-                    // Quan trọng: Đẩy WebSocket để badge hiện lên ngay lập tức mà không cần refresh
-                    int unreadSelf = notifDAO.countUnread(acc.getUserID());
-                    NotificationEndpoint.sendToUser(acc.getUserID(), "{\"unreadCount\":" + unreadSelf + "}");
                 }
             } catch (Exception eNotif) {
                 eNotif.printStackTrace(); // Không làm gián đoạn luồng chính nếu lỗi thông báo
