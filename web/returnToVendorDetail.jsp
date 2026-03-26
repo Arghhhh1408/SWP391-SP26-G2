@@ -67,6 +67,16 @@
                 display: inline-block;
                 margin-bottom: 20px;
             }
+            .dashboard-back {
+                background: #1f4e79;
+                color: white;
+                text-decoration: none;
+                padding: 10px 14px;
+                border-radius: 10px;
+                display: inline-block;
+                margin-bottom: 20px;
+                font-weight: 500;
+            }
             .msg {
                 color: #166534;
                 background: #dcfce7;
@@ -124,6 +134,9 @@
             %>
 
             <a class="back" href="<%= backUrl %>"><%= backLabel %></a>
+            <% if (acc != null && acc.getRoleID() == 1) { %>
+                <a class="dashboard-back" href="staff_dashboard">Back to dashboard</a>
+            <% } %>
 
             <% if (msg != null) { %>
             <div class="msg">Success: <%= msg %></div>

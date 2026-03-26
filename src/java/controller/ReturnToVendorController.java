@@ -16,10 +16,14 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import dao.NotificationDAO;
+import dao.SupplierDAO;
+import model.Notification;
 import model.ReturnToVendor;
 import model.ReturnToVendorDetail;
 import model.StockInDetail;
 import model.User;
+import websocket.NotificationEndpoint;
 
 @WebServlet(name = "ReturnToVendorController", urlPatterns = {"/return-to-vendor"})
 public class ReturnToVendorController extends HttpServlet {
@@ -161,6 +165,27 @@ public class ReturnToVendorController extends HttpServlet {
                     return;
                 }
                 boolean ok = dao.approveReturn(rtvID, acc.getUserID(), ipAddress);
+                if (ok) {
+                    // Thông báo cho Staff (Người tạo)
+                    try {
+                        ReturnToVendor rtv = dao.getById(rtvID);
+                        if (rtv != null) {
+                            NotificationDAO notifDAO = new NotificationDAO();
+                            Notification n = new Notification();
+                            n.setUserId(rtv.getCreatedBy());
+                            n.setTitle("Đơn trả hàng #" + rtvID + " của bạn đã được duyệt");
+                            n.setMessage("Duyệt bởi Manager: " + acc.getFullName());
+                            n.setType("RTV_APPROVED");
+                            notifDAO.insert(n);
+
+                            // Real-time push
+                            int unread = notifDAO.countUnread(rtv.getCreatedBy());
+                            NotificationEndpoint.sendToUser(rtv.getCreatedBy(), "{\"unreadCount\":" + unread + "}");
+                        }
+                    } catch (Exception eNotif) {
+                        eNotif.printStackTrace();
+                    }
+                }
                 response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=approved" : "error=approve_failed"));
                 return;
             }
@@ -173,6 +198,27 @@ public class ReturnToVendorController extends HttpServlet {
                 }
                 String rejectNote = trimToNull(request.getParameter("rejectNote"));
                 boolean ok = dao.rejectReturn(rtvID, acc.getUserID(), rejectNote, ipAddress);
+                if (ok) {
+                    // Thông báo cho Staff (Người tạo)
+                    try {
+                        ReturnToVendor rtv = dao.getById(rtvID);
+                        if (rtv != null) {
+                            NotificationDAO notifDAO = new NotificationDAO();
+                            Notification n = new Notification();
+                            n.setUserId(rtv.getCreatedBy());
+                            n.setTitle("Đơn trả hàng #" + rtvID + " của bạn bị từ chối");
+                            n.setMessage("Lý do: " + (rejectNote != null ? rejectNote : "Không có lý do cụ thể."));
+                            n.setType("RTV_REJECTED");
+                            notifDAO.insert(n);
+
+                            // Real-time push
+                            int unread = notifDAO.countUnread(rtv.getCreatedBy());
+                            NotificationEndpoint.sendToUser(rtv.getCreatedBy(), "{\"unreadCount\":" + unread + "}");
+                        }
+                    } catch (Exception eNotif) {
+                        eNotif.printStackTrace();
+                    }
+                }
                 response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=rejected" : "error=reject_failed"));
                 return;
             }
@@ -338,6 +384,34 @@ public class ReturnToVendorController extends HttpServlet {
             int rtvID = dao.createReturnWithDetails(rtv, details, ipAddress);
 
             if (rtvID > 0) {
+                // --- BƯỚC 6.7: Gửi thông báo cho Managers (Bù đắp yêu cầu người dùng) ---
+                try {
+                    NotificationDAO notifDAO = new NotificationDAO();
+                    SupplierDAO supplierDAO = new SupplierDAO();
+                    
+                    String supplierName = supplierDAO.getSupplierNameById(supplierID);
+                    String staffName = acc.getFullName();
+                    List<Integer> managerIds = notifDAO.getManagerIds();
+                    
+                    String notifTitle = "Nhân viên " + staffName + " đã tạo đơn trả hàng #" + rtvID + " cho nhà cung cấp";
+                    String notifMessage = "Nhà cung cấp: " + supplierName + " | Hình thức: " + settlementType;
+                    
+                    for (int mid : managerIds) {
+                        Notification n = new Notification();
+                        n.setUserId(mid);
+                        n.setTitle(notifTitle);
+                        n.setMessage(notifMessage);
+                        n.setType("RTV_CREATED");
+                        notifDAO.insert(n);
+                        
+                        // Đẩy real-time badge
+                        int unread = notifDAO.countUnread(mid);
+                        NotificationEndpoint.sendToUser(mid, "{\"unreadCount\":" + unread + "}");
+                    }
+                } catch (Exception eNotif) {
+                    eNotif.printStackTrace();
+                }
+
                 response.sendRedirect(buildDetailRedirect(request, rtvID, "msg=created"));
             } else {
                 request.setAttribute("error", "Create return to vendor failed.");
