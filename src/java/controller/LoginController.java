@@ -34,7 +34,30 @@ public class LoginController extends HttpServlet {
         String password = request.getParameter("password");
 
         UserDAO dao = new UserDAO();
-        User user = dao.login(username, password);
+        User user = dao.getUserByUsername(username);
+
+        if (user != null) {
+            // Check if account is deactivated
+            if (!user.isIsActive()) {
+                request.setAttribute("err", "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ Admin.");
+                request.setAttribute("username", username);
+                request.getRequestDispatcher("login.jsp").forward(request, response);
+                return;
+            }
+
+            // Check if account is locked
+            if (user.getLockoutEnd() != null && user.getLockoutEnd().after(new java.util.Date())) {
+                long diff = user.getLockoutEnd().getTime() - System.currentTimeMillis();
+                long minutes = diff / (60 * 1000);
+                if (minutes < 1) minutes = 1;
+                request.setAttribute("err", "Tài khoản bị khóa tạm thời. Vui lòng thử lại sau " + minutes + " phút.");
+                request.setAttribute("username", username);
+                request.getRequestDispatcher("login.jsp").forward(request, response);
+                return;
+            }
+        }
+
+        user = dao.login(username, password);
         if (user != null) {
             HttpSession session = request.getSession();
             session.setAttribute("acc", user);
@@ -48,6 +71,7 @@ public class LoginController extends HttpServlet {
             log.setDescription("Login successful");
             log.setIpAddress(request.getRemoteAddr());
             logDAO.insertLog(log);
+            
             if (user.getRoleID() == 0) {
                 response.sendRedirect("admin");
             } else if (user.getRoleID() == 1) {
@@ -60,15 +84,27 @@ public class LoginController extends HttpServlet {
                 response.sendRedirect("category");
             }
         } else {
-            request.setAttribute("err", "Sai tài khoản hoặc mật khẩu!");
+            // Log failure and check if it caused a lockout
+            User failedUser = dao.getUserByUsername(username);
+            String errorMessage = "Sai tài khoản hoặc mật khẩu!";
+            
+            if (failedUser != null) {
+                if (failedUser.getLockoutEnd() != null && failedUser.getLockoutEnd().after(new java.util.Date())) {
+                    errorMessage = "Tài khoản đã bị khóa 30 phút do nhập sai quá 5 lần.";
+                } else {
+                    int remaining = 5 - failedUser.getFailedAttempts();
+                    if (remaining > 0 && remaining <= 3) {
+                        errorMessage += " Bạn còn " + remaining + " lần thử trước khi bị khóa.";
+                    }
+                }
+            }
+
+            request.setAttribute("err", errorMessage);
             request.setAttribute("username", username);
             request.setAttribute("password", password);
 
-            // Log failure
             dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
             model.SystemLog log = new model.SystemLog();
-            // Since login failed, we might not have a user ID.
-            // We can use 0 or a specific system ID.
             log.setUserID(0);
             log.setAction("LOGIN_FAILED");
             log.setTargetObject("IP: " + request.getRemoteAddr());

@@ -157,10 +157,11 @@
                                             </div>
                                         </c:if>
 
-                                        <c:if test="${not empty message}">
+                                        <c:if test="${not empty message or not empty sessionScope.message}">
                                             <div
                                                 style="color: #10b981; background: #dcfce7; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 16px;">
-                                                ✅ ${message}
+                                                ✅ ${not empty message ? message : sessionScope.message}
+                                                <c:remove var="message" scope="session" />
                                             </div>
                                         </c:if>
 
