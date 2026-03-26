@@ -224,6 +224,7 @@
                             <th>Số tiền nợ</th>
                             <th>Hạn thanh toán</th>
                             <th>Trạng thái</th>
+                            <th>Theo dõi thanh toán</th>
                             <c:if test="${sessionScope.acc.roleID == 2}"><th>Xác nhận thanh toán</th></c:if>
                             </tr>
                         </thead>
@@ -258,6 +259,12 @@
                                                     <span class="status-overdue">Overdue</span>
                                                 </c:otherwise>
                                             </c:choose>
+                                            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                                Đã trả: <fmt:formatNumber value="${d.paidAmount}" type="number" groupingUsed="true"/>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a class="btn btn-secondary" style="padding:8px 12px;" href="supplierDebtPayments?supplierId=${selectedSupplierId}&debtId=${d.debtID}">Xem theo đợt</a>
                                         </td>
                                         <c:if test="${sessionScope.acc.roleID == 2}">
                                             <td>
@@ -282,7 +289,7 @@
                             </c:when>
                             <c:otherwise>
                                 <tr>
-                                    <td colspan="${sessionScope.acc.roleID == 2 || sessionScope.acc.roleID == 0 ? 6 : 5}" class="empty-row">Không có dữ liệu công nợ.</td>
+                                    <td colspan="${sessionScope.acc.roleID == 2 || sessionScope.acc.roleID == 0 ? 7 : 6}" class="empty-row">Không có dữ liệu công nợ.</td>
                                 </tr>
                             </c:otherwise>
                         </c:choose>
