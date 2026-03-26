@@ -11,6 +11,7 @@ import dao.ReturnDAO;
 import dao.StaffDashboardDAO;
 import dao.SystemLogDAO;
 import dao.WarrantyClaimDAO;
+import websocket.NotificationEndpoint;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -111,6 +112,7 @@ public class StaffController extends HttpServlet {
                         && claim.getStatus() != WarrantyClaimStatus.CANCELLED) {
                     dao.updateStatus(id, WarrantyClaimStatus.COMPLETED,
                             "Staff xác nhận đã bảo hành", getActor(request));
+                    notifySalesOfWarrantyUpdate(claim.getProductName(), "Hoàn tất");
                 }
             }
             response.sendRedirect("staff_dashboard?tab=warranty");
@@ -128,6 +130,7 @@ public class StaffController extends HttpServlet {
                         && claim.getStatus() != WarrantyClaimStatus.CANCELLED) {
                     dao.updateStatus(id, WarrantyClaimStatus.REJECTED,
                             "Staff từ chối yêu cầu bảo hành", getActor(request));
+                    notifySalesOfWarrantyUpdate(claim.getProductName(), "Từ chối");
                 }
             }
             response.sendRedirect("staff_dashboard?tab=warranty");
@@ -153,6 +156,7 @@ public class StaffController extends HttpServlet {
                         ProductDAO productDAO = new ProductDAO();
                         productDAO.increaseQuantityBySku(skuBefore, 1);
                     }
+                    notifySalesOfReturnUpdate(rr.getProductName(), "Hoàn tất");
                 }
             }
             response.sendRedirect("staff_dashboard?tab=returns");
@@ -182,6 +186,7 @@ public class StaffController extends HttpServlet {
                         && rr.getStatus() != ReturnStatus.CANCELLED) {
                     dao.updateStatus(id, ReturnStatus.REJECTED,
                             "Staff từ chối yêu cầu trả hàng", getActor(request));
+                    notifySalesOfReturnUpdate(rr.getProductName(), "Từ chối");
                 }
             }
             response.sendRedirect("staff_dashboard?tab=returns");
@@ -240,6 +245,40 @@ public class StaffController extends HttpServlet {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
         formatter.setMaximumFractionDigits(0);
         return formatter.format(amount) + " đ";
+    }
+
+    private void notifySalesOfReturnUpdate(String productName, String statusStr) {
+        dao.NotificationDAO nDAO = new dao.NotificationDAO();
+        List<Integer> salesIds = nDAO.getSalesIds();
+        for (Integer salesId : salesIds) {
+            model.Notification n = new model.Notification();
+            n.setUserId(salesId);
+            n.setTitle("📢 Cập nhật trả hàng");
+            n.setMessage("Yêu cầu trả hàng cho <strong>" + productName + "</strong> đã được <strong>" + statusStr + "</strong>.");
+            n.setType("RETURN_STATUS_CHANGED");
+            nDAO.insert(n);
+            
+            // Push WebSocket update
+            int unread = nDAO.countUnread(salesId);
+            websocket.NotificationEndpoint.sendToUser(salesId, "{\"unreadCount\":" + unread + "}");
+        }
+    }
+
+    private void notifySalesOfWarrantyUpdate(String productName, String statusStr) {
+        dao.NotificationDAO nDAO = new dao.NotificationDAO();
+        List<Integer> salesIds = nDAO.getSalesIds();
+        for (Integer salesId : salesIds) {
+            model.Notification n = new model.Notification();
+            n.setUserId(salesId);
+            n.setTitle("📣 Cập nhật bảo hành");
+            n.setMessage("Yêu cầu bảo hành cho <strong>" + productName + "</strong> đã được <strong>" + statusStr + "</strong>.");
+            n.setType("WARRANTY_STATUS_CHANGED");
+            nDAO.insert(n);
+            
+            // Push WebSocket update
+            int unread = nDAO.countUnread(salesId);
+            NotificationEndpoint.sendToUser(salesId, "{\"unreadCount\":" + unread + "}");
+        }
     }
 
     private boolean ensureStaff(HttpServletRequest request, HttpServletResponse response) throws IOException {

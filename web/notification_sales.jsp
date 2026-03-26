@@ -246,6 +246,22 @@
                                                 </a>
                                             </c:if>
 
+                                            <c:if test="${n.type == 'WARRANTY_STATUS_CHANGED'}">
+                                                <a class="btn-view-detail"
+                                                   href="#"
+                                                   onclick="goToWarrantyList(this, ${n.notificationId}, '${n.read}'); return false;">
+                                                    🔧 Xem danh sách bảo hành
+                                                </a>
+                                            </c:if>
+
+                                            <c:if test="${n.type == 'RETURN_STATUS_CHANGED'}">
+                                                <a class="btn-view-detail"
+                                                   href="#"
+                                                   onclick="goToReturnList(this, ${n.notificationId}, '${n.read}'); return false;">
+                                                    📦 Xem danh sách trả hàng
+                                                </a>
+                                            </c:if>
+
                                             <c:if test="${not n.read}">
                                                 <div class="notif-actions" id="notif-action-${n.notificationId}">
                                                     <button class="btn-mark-read"
@@ -302,6 +318,20 @@
                             if (match) {
                                 window.location.href = ctx + '/orderdetail?id=' + match[1];
                             }
+                        }
+
+                        async function goToWarrantyList(link, notifId, isRead) {
+                            if (isRead === 'false' && notifId) {
+                                await markAsRead(notifId);
+                            }
+                            window.location.href = ctx + '/sales-warranty-lookup?showClaims=1';
+                        }
+
+                        async function goToReturnList(link, notifId, isRead) {
+                            if (isRead === 'false' && notifId) {
+                                await markAsRead(notifId);
+                            }
+                            window.location.href = ctx + '/sales_dashboard?tab=return-lookup&showReturns=1';
                         }
                     </script>
                 </body>

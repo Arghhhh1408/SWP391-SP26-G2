@@ -6,6 +6,7 @@ import dao.ReturnDAO;
 import dao.WarrantyLookupDAO;
 import model.ReturnLookupResult;
 import dao.WarrantyClaimDAO;
+import websocket.NotificationEndpoint;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
@@ -379,6 +380,8 @@ public class SalesController extends HttpServlet {
             return;
         }
 
+        notifyStaffOfNewReturn(productName);
+
         // --- BƯỚC 7: Ghi Log hệ thống ---
         try {
             dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
@@ -396,6 +399,23 @@ public class SalesController extends HttpServlet {
         }
 
         response.sendRedirect("sales_dashboard?tab=return-lookup&returnCreated=" + rr.getReturnCode());
+    }
+
+    private void notifyStaffOfNewReturn(String productName) {
+        dao.NotificationDAO nDAO = new dao.NotificationDAO();
+        List<Integer> staffIds = nDAO.getStaffIds();
+        for (Integer staffId : staffIds) {
+            model.Notification n = new model.Notification();
+            n.setUserId(staffId);
+            n.setTitle("📦 Yêu cầu trả hàng mới");
+            n.setMessage("Có yêu cầu trả hàng mới: Tên sản phẩm: <strong>" + productName + "</strong>");
+            n.setType("RETURN_REQUEST_CREATED");
+            nDAO.insert(n);
+            
+            // Push WebSocket update
+            int unread = nDAO.countUnread(staffId);
+            NotificationEndpoint.sendToUser(staffId, "{\"unreadCount\":" + unread + "}");
+        }
     }
 
     private boolean ensureSales(HttpServletRequest request, HttpServletResponse response) throws IOException {
