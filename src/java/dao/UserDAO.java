@@ -26,28 +26,46 @@ public class UserDAO extends DBContext {
     }
 
     public User login(String username, String password) {
-        String sql = "select * from [User] where Username = ? and PasswordHash = ? and IsActive = 1";
+        User u = getUserByUsername(username);
+        if (u == null || !u.isIsActive()) {
+            return null;
+        }
+
+        // Check if currently locked
+        if (u.getLockoutEnd() != null && u.getLockoutEnd().after(new java.util.Date())) {
+            return null; // Controller will handle the message by checking User object again
+        }
+
+        if (u.getPasswordHash().equals(SecurityUtils.hashPassword(password))) {
+            // Success: Reset attempts
+            resetFailedAttempts(username);
+            return u;
+        } else {
+            // Failure: Increment attempts
+            incrementFailedAttempts(username);
+            return null;
+        }
+    }
+
+    public User getUserByUsername(String username) {
+        String sql = "SELECT * FROM [User] WHERE Username = ?";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             stm.setString(1, username);
-
-            stm.setString(2, SecurityUtils.hashPassword(password));
-
             ResultSet rs = stm.executeQuery();
             if (rs.next()) {
-                String dbUsername = rs.getString("Username");
-                if (!dbUsername.equals(username)) {
-                    return null;
-                }
                 User u = new User();
                 u.setUserID(rs.getInt("UserID"));
-                u.setUsername(dbUsername);
+                u.setUsername(rs.getString("Username"));
+                u.setPasswordHash(rs.getString("PasswordHash"));
                 u.setFullName(rs.getString("FullName"));
                 u.setRoleID(rs.getInt("RoleID"));
                 u.setEmail(rs.getString("Email"));
                 u.setPhone(rs.getString("Phone"));
                 u.setCreateDate(rs.getDate("CreateDate"));
                 u.setIsActive(rs.getBoolean("IsActive"));
+                u.setFailedAttempts(rs.getInt("FailedAttempts"));
+                u.setLockoutEnd(rs.getTimestamp("LockoutEnd"));
                 return u;
             }
         } catch (Exception e) {
@@ -56,8 +74,97 @@ public class UserDAO extends DBContext {
         return null;
     }
 
+    public void incrementFailedAttempts(String username) {
+        String sql = "UPDATE [User] SET FailedAttempts = FailedAttempts + 1 WHERE Username = ?";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, username);
+            stm.executeUpdate();
+
+            // Check if should lock
+            User u = getUserByUsername(username);
+            if (u != null && u.getFailedAttempts() == 5) {
+                setLockout(username, 30);
+                notifyAdminsOfLockout(username);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void notifyAdminsOfLockout(String username) {
+        NotificationDAO nDAO = new NotificationDAO();
+        List<Integer> adminIds = nDAO.getAdminIds();
+        for (Integer adminId : adminIds) {
+            model.Notification n = new model.Notification();
+            n.setUserId(adminId);
+            n.setTitle("⚠️ Cảnh báo bảo mật");
+            n.setMessage("Tài khoản <strong>" + username + "</strong> đã bị khóa tự động sau 5 lần nhập sai mật khẩu.");
+            n.setType("ACCOUNT_LOCKOUT");
+            nDAO.insert(n);
+        }
+    }
+
+    public void resetFailedAttempts(String username) {
+        String sql = "UPDATE [User] SET FailedAttempts = 0, LockoutEnd = NULL WHERE Username = ?";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, username);
+            stm.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setLockout(String username, int minutes) {
+        String sql = "UPDATE [User] SET LockoutEnd = DATEADD(minute, ?, GETDATE()) WHERE Username = ?";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, minutes);
+            stm.setString(2, username);
+            stm.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<User> getLockedUsers() {
+        List<User> list = new ArrayList<>();
+        String sql = "SELECT * FROM [User] WHERE IsActive = 1 AND LockoutEnd > GETDATE()";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                User u = new User();
+                u.setUserID(rs.getInt("UserID"));
+                u.setUsername(rs.getString("Username"));
+                u.setFullName(rs.getString("FullName"));
+                u.setRoleID(rs.getInt("RoleID"));
+                u.setIsActive(rs.getBoolean("IsActive"));
+                u.setFailedAttempts(rs.getInt("FailedAttempts"));
+                u.setLockoutEnd(rs.getTimestamp("LockoutEnd"));
+                list.add(u);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public boolean unlockUser(int userId) {
+        String sql = "UPDATE [User] SET IsActive = 1, FailedAttempts = 0, LockoutEnd = NULL WHERE UserID = ?";
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, userId);
+            return stm.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public List<User> getAllUsers() {
-        List<User> list = new ArrayList();
+        List<User> list = new ArrayList<>();
         String sql = "select * from [User] where IsActive = 1";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
@@ -318,7 +425,7 @@ public class UserDAO extends DBContext {
     }
 
     public boolean restoreUser(int userID) {
-        String sql = "UPDATE [User] SET IsActive = 1 WHERE UserID = ?";
+        String sql = "UPDATE [User] SET IsActive = 1, FailedAttempts = 0, LockoutEnd = NULL WHERE UserID = ?";
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             stm.setInt(1, userID);
@@ -401,36 +508,10 @@ public class UserDAO extends DBContext {
         return null;
     }
 
-    public User getUserByUsername(String username) {
-        String sql = "SELECT * FROM [User] WHERE Username = ? AND IsActive = 1";
-        try {
-            PreparedStatement stm = connection.prepareStatement(sql);
-            stm.setString(1, username);
-            ResultSet rs = stm.executeQuery();
-            if (rs.next()) {
-                User u = new User();
-                u.setUserID(rs.getInt("UserID"));
-                u.setUsername(rs.getString("Username"));
-                u.setFullName(rs.getString("FullName"));
-                u.setRoleID(rs.getInt("RoleID"));
-                u.setEmail(rs.getString("Email"));
-                u.setPhone(rs.getString("Phone"));
-                u.setPasswordHash(rs.getString("PasswordHash"));
-                u.setCreateDate(rs.getDate("CreateDate"));
-                u.setIsActive(rs.getBoolean("IsActive"));
-                return u;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     public java.util.List<String> getActiveManagerEmails() {
         java.util.List<String> list = new java.util.ArrayList<>();
         String sql = "SELECT Email FROM [User] WHERE IsActive = 1 AND RoleID = 2 AND Email IS NOT NULL AND LTRIM(RTRIM(Email)) <> ''";
-        try (PreparedStatement stm = connection.prepareStatement(sql);
-             ResultSet rs = stm.executeQuery()) {
+        try (PreparedStatement stm = connection.prepareStatement(sql); ResultSet rs = stm.executeQuery()) {
             while (rs.next()) {
                 list.add(rs.getString("Email"));
             }
@@ -443,8 +524,7 @@ public class UserDAO extends DBContext {
     public java.util.List<Integer> getActiveManagerIds() {
         java.util.List<Integer> list = new java.util.ArrayList<>();
         String sql = "SELECT UserID FROM [User] WHERE IsActive = 1 AND RoleID = 2";
-        try (PreparedStatement stm = connection.prepareStatement(sql);
-             ResultSet rs = stm.executeQuery()) {
+        try (PreparedStatement stm = connection.prepareStatement(sql); ResultSet rs = stm.executeQuery()) {
             while (rs.next()) {
                 list.add(rs.getInt("UserID"));
             }
@@ -453,5 +533,4 @@ public class UserDAO extends DBContext {
         }
         return list;
     }
-
 }

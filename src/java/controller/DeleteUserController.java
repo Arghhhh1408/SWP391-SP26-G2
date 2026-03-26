@@ -28,11 +28,12 @@ public class DeleteUserController extends HttpServlet {
         int id = Integer.parseInt(request.getParameter("id"));
         UserDAO dao = new UserDAO();
         HttpSession session = request.getSession();
+        String redirect = request.getParameter("redirect");
         try {
-            boolean success = dao.deleteUser(id); // Use boolean result
+            boolean success = dao.deleteUser(id); 
             if (success) {
-                request.setAttribute("message", "Xóa tài khoản thành công");
-                request.setAttribute("status", "success");
+                session.setAttribute("message", "Xóa tài khoản thành công");
+                session.setAttribute("status", "success");
 
                 // Log the action
                 dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
@@ -47,15 +48,20 @@ public class DeleteUserController extends HttpServlet {
                 log.setIpAddress(request.getRemoteAddr());
                 logDAO.insertLog(log);
             } else {
-                request.setAttribute("message", "Xóa tài khoản thất bại");
-                request.setAttribute("status", "failure");
+                session.setAttribute("message", "Xóa tài khoản thất bại");
+                session.setAttribute("status", "failure");
             }
         } catch (Exception e) {
-            request.setAttribute("message", "Xóa tài khoản thất bại: " + e.getMessage());
-            request.setAttribute("status", "failure");
+            session.setAttribute("message", "Xóa tài khoản thất bại: " + e.getMessage());
+            session.setAttribute("status", "failure");
             e.printStackTrace();
         }
-        request.getRequestDispatcher("userList").forward(request, response);
+        
+        if (redirect != null && !redirect.isEmpty()) {
+            response.sendRedirect(redirect);
+        } else {
+            response.sendRedirect("userList");
+        }
     }
 
     @Override
