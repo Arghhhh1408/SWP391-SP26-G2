@@ -159,7 +159,7 @@ public class ExcelUtils {
                 row.createCell(6).setCellValue(p.getPrice());
                 row.createCell(7).setCellValue(p.getQuantity() * p.getCost());
 
-                boolean isLow = p.getQuantity() < p.getLowStockThreshold();
+                boolean isLow = p.getQuantity() <= p.getLowStockThreshold();
                 Cell statusCell = row.createCell(8);
                 statusCell.setCellValue(isLow ? "Sắp hết hàng" : "Bình thường");
                 if (isLow) statusCell.setCellStyle(lowStockStyle);
