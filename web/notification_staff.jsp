@@ -248,6 +248,15 @@
                                                 📊 Xem danh sách kiểm kê
                                             </a>
                                         </c:if>
+                                        
+                                        <c:if test="${n.type == 'RTV_APPROVED' || n.type == 'RTV_REJECTED'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               data-title="<c:out value='${n.title}'/>"
+                                               onclick="goToRTVDetail(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔍 Xem chi tiết đơn trả hàng
+                                            </a>
+                                        </c:if>
 
                                         <c:if test="${n.type == 'PASSWORD_RESET_RESULT'}">
                                             <a class="btn-view-detail"
@@ -312,6 +321,17 @@
                             await markAsRead(notifId);
                         }
                         window.location.href = ctx + '/inventoryCheck';
+                    }
+
+                    async function goToRTVDetail(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        var title = link.getAttribute('data-title') || '';
+                        var match = title.match(/#(\d+)/);
+                        if (match) {
+                            window.location.href = ctx + '/return-to-vendor?action=detail&id=' + match[1];
+                        }
                     }
 
                     async function goToProfile(link, notifId, isRead) {
