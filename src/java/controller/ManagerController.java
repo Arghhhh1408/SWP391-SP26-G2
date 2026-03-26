@@ -4,8 +4,10 @@ import dao.CategoryDAO;
 import dao.ProductDAO;
 import dao.ReturnDAO;
 import dao.ReturnToVendorDAO;
+import dao.SystemLogDAO;
 import dao.WarrantyClaimDAO;
 import dao.WarrantyLookupDAO;
+import model.SystemLog;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -90,6 +92,11 @@ public class ManagerController extends HttpServlet {
             try {
                 request.setAttribute("categories", cDao.getHierarchicalList());
                 request.setAttribute("lowStockProducts", pDao.getLowStockProducts(10));
+                
+                // Recent Activity for Overview
+                SystemLogDAO logDao = new SystemLogDAO();
+                request.setAttribute("recentLogs", logDao.getWarehouseStaffLogs(5));
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -127,6 +134,16 @@ public class ManagerController extends HttpServlet {
                         return;
                     }
                     dao.updateStatus(id, WarrantyClaimStatus.APPROVED, "Manager xác nhận yêu cầu", actor);
+                    
+                    // Audit log
+                    SystemLogDAO logDao = new SystemLogDAO();
+                    SystemLog logEntry = new SystemLog();
+                    logEntry.setUserID(currentUser.getUserID());
+                    logEntry.setAction("APPROVE_WARRANTY");
+                    logEntry.setTargetObject("WarrantyClaim");
+                    logEntry.setDescription("Manager approved warranty claim: " + claim.getClaimCode() + " | Sku: " + claim.getSku());
+                    logEntry.setIpAddress(ipAddress);
+                    logDao.insertLog(logEntry);
                 }
             }
             response.sendRedirect("manager_dashboard?tab=warranty");
@@ -137,7 +154,20 @@ public class ManagerController extends HttpServlet {
             Integer id = tryParseInt(request.getParameter("id"));
             if (id != null) {
                 ReturnDAO dao = new ReturnDAO();
-                dao.updateStatus(id, ReturnStatus.APPROVED, "Manager xác nhận yêu cầu", actor);
+                model.ReturnRequest rr = dao.getById(id);
+                boolean ok = dao.updateStatus(id, ReturnStatus.APPROVED, "Manager xác nhận yêu cầu", actor);
+                
+                if (ok && rr != null) {
+                    // Audit log
+                    SystemLogDAO logDao = new SystemLogDAO();
+                    SystemLog logEntry = new SystemLog();
+                    logEntry.setUserID(currentUser.getUserID());
+                    logEntry.setAction("APPROVE_RETURN");
+                    logEntry.setTargetObject("ReturnRequest");
+                    logEntry.setDescription("Manager approved customer return: " + rr.getReturnCode() + " | Sku: " + rr.getSku());
+                    logEntry.setIpAddress(ipAddress);
+                    logDao.insertLog(logEntry);
+                }
             }
             response.sendRedirect("manager_dashboard?tab=returns");
             return;

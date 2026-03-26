@@ -232,7 +232,7 @@
 
                                             <c:if test="${n.type == 'PASSWORD_RESET_RESULT'}">
                                                 <a class="btn-view-detail" href="#"
-                                                    onclick="goToProfile(this, ${n.notificationId}, ${n.read}); return false;">
+                                                    onclick="goToProfile(this, ${n.notificationId}, '${n.read}'); return false;">
                                                     🔐 Đổi mật khẩu ngay
                                                 </a>
                                             </c:if>
@@ -241,7 +241,7 @@
                                                 <a class="btn-view-detail"
                                                    href="#"
                                                    data-title="<c:out value='${n.title}'/>"
-                                                   onclick="goToOrderDetail(this, ${n.notificationId}, ${n.read}); return false;">
+                                                   onclick="goToOrderDetail(this, ${n.notificationId}, '${n.read}'); return false;">
                                                     🔍 Xem chi tiết đơn hàng
                                                 </a>
                                             </c:if>
@@ -287,14 +287,14 @@
                         }
 
                         async function goToProfile(link, notifId, isRead) {
-                            if (!isRead && notifId) {
+                            if (isRead === 'false' && notifId) {
                                 await markAsRead(notifId);
                             }
                             window.location.href = ctx + '/personalProfile';
                         }
 
                         async function goToOrderDetail(link, notifId, isRead) {
-                            if (!isRead && notifId) {
+                            if (isRead === 'false' && notifId) {
                                 await markAsRead(notifId);
                             }
                             var title = link.getAttribute('data-title') || '';

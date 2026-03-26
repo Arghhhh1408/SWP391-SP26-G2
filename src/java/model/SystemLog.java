@@ -88,6 +88,7 @@ public class SystemLog {
     }
 
     private String name; // Transient field for Actor Name
+    private String targetName; // Transient field for Target User Name
     private String productName; // Transient field for Product Name
 
     public String getName() {
@@ -96,6 +97,14 @@ public class SystemLog {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getTargetName() {
+        return targetName;
+    }
+
+    public void setTargetName(String targetName) {
+        this.targetName = targetName;
     }
 
     public String getProductName() {
