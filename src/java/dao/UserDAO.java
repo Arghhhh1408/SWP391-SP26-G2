@@ -83,11 +83,25 @@ public class UserDAO extends DBContext {
 
             // Check if should lock
             User u = getUserByUsername(username);
-            if (u != null && u.getFailedAttempts() >= 5) {
+            if (u != null && u.getFailedAttempts() == 5) {
                 setLockout(username, 30);
+                notifyAdminsOfLockout(username);
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void notifyAdminsOfLockout(String username) {
+        NotificationDAO nDAO = new NotificationDAO();
+        List<Integer> adminIds = nDAO.getAdminIds();
+        for (Integer adminId : adminIds) {
+            model.Notification n = new model.Notification();
+            n.setUserId(adminId);
+            n.setTitle("⚠️ Cảnh báo bảo mật");
+            n.setMessage("Tài khoản <strong>" + username + "</strong> đã bị khóa tự động sau 5 lần nhập sai mật khẩu.");
+            n.setType("ACCOUNT_LOCKOUT");
+            nDAO.insert(n);
         }
     }
 
