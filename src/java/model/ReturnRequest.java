@@ -10,6 +10,7 @@ public class ReturnRequest {
 
     private String sku;
     private String productName;
+    private Double productPrice;
 
     private String customerName;
     private String customerPhone;
@@ -59,6 +60,14 @@ public class ReturnRequest {
 
     public void setProductName(String productName) {
         this.productName = productName;
+    }
+
+    public Double getProductPrice() {
+        return productPrice;
+    }
+
+    public void setProductPrice(Double productPrice) {
+        this.productPrice = productPrice;
     }
 
     public String getCustomerName() {

@@ -8,6 +8,24 @@ public class CartItem {
     private int qty;
     private String unit;
 private int stockQuantity;
+private int productTotalStock;   // Tổng tồn kho hiện tại
+private int minStockThreshold;   // Ngưỡng kho thấp (lowStockThreshold)
+
+    public int getProductTotalStock() {
+        return productTotalStock;
+    }
+
+    public void setProductTotalStock(int productTotalStock) {
+        this.productTotalStock = productTotalStock;
+    }
+
+    public int getMinStockThreshold() {
+        return minStockThreshold;
+    }
+
+    public void setMinStockThreshold(int minStockThreshold) {
+        this.minStockThreshold = minStockThreshold;
+    }
 
     public int getStockQuantity() {
         return stockQuantity;

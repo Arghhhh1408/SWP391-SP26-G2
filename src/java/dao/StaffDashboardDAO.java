@@ -8,10 +8,11 @@ package dao;
  *
  * @author dotha
  */
+import dao.OrderHistoryDAO.DailyReport;
+import dao.OrderHistoryDAO.StockOrderDetail;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import model.LowStock;
@@ -140,6 +141,133 @@ public class StaffDashboardDAO extends DBContext {
         }
     }
 
+    /** Doanh thu tuần này (từ đầu tuần đến hiện tại), theo StockOut.Date, Status=Completed. */
+    public double getCompletedRevenueThisWeek() {
+        String sql = """
+                SELECT ISNULL(SUM(TotalAmount), 0)
+                FROM dbo.StockOut
+                WHERE Status = N'Completed'
+                  AND [Date] >= DATEADD(week, DATEDIFF(week, 0, GETDATE()), 0)
+                """;
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            ResultSet rs = stm.executeQuery();
+            return rs.next() ? rs.getDouble(1) : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    /** Doanh thu tháng này (từ đầu tháng đến hiện tại), theo StockOut.Date, Status=Completed. */
+    public double getCompletedRevenueThisMonth() {
+        String sql = """
+                SELECT ISNULL(SUM(TotalAmount), 0)
+                FROM dbo.StockOut
+                WHERE Status = N'Completed'
+                  AND [Date] >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
+                """;
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            ResultSet rs = stm.executeQuery();
+            return rs.next() ? rs.getDouble(1) : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    /** Doanh thu năm nay (từ đầu năm đến hiện tại), theo StockOut.Date, Status=Completed. */
+    public double getCompletedRevenueThisYear() {
+        String sql = """
+                SELECT ISNULL(SUM(TotalAmount), 0)
+                FROM dbo.StockOut
+                WHERE Status = N'Completed'
+                  AND [Date] >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1)
+                """;
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            ResultSet rs = stm.executeQuery();
+            return rs.next() ? rs.getDouble(1) : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    /** Báo cáo doanh thu theo ngày (Completed) trong khoảng ngày (yyyy-MM-dd). */
+    public List<DailyReport> getDailyCompletedSalesReport(String fromDate, String toDate) {
+        List<DailyReport> list = new ArrayList<>();
+        String sql = """
+            SELECT 
+                CAST(so.Date AS DATE) as ReportDate,
+                COUNT(DISTINCT so.StockOutID) as TotalOrders,
+                SUM(so.TotalAmount) as TotalRevenue,
+                SUM(sd.Quantity * p.Cost) as TotalCost
+            FROM dbo.StockOut so
+            JOIN dbo.StockOutDetails sd ON so.StockOutID = sd.StockOutID
+            JOIN dbo.Products p ON sd.ProductID = p.ProductID
+            WHERE so.Status = N'Completed'
+              AND CAST(so.Date AS DATE) BETWEEN ? AND ?
+            GROUP BY CAST(so.Date AS DATE)
+            ORDER BY ReportDate DESC
+            """;
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, fromDate);
+            ps.setString(2, toDate);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                DailyReport r = new DailyReport();
+                r.setDate(rs.getDate("ReportDate"));
+                r.setOrderCount(rs.getInt("TotalOrders"));
+                r.setRevenue(rs.getDouble("TotalRevenue"));
+                r.setCost(rs.getDouble("TotalCost"));
+                r.setProfit(r.getRevenue() - r.getCost());
+                list.add(r);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    /** Chi tiết sản phẩm đã bán (Completed) trong khoảng ngày (yyyy-MM-dd). */
+    public List<StockOrderDetail> getCompletedStockOutDetailsReport(String fromDate, String toDate) {
+        List<StockOrderDetail> list = new ArrayList<>();
+        String sql = """
+            SELECT 
+                so.Date, so.StockOutID, p.Name as ProductName,
+                sd.Quantity, sd.UnitPrice as SellingPrice,
+                (sd.Quantity * sd.UnitPrice) as Revenue
+            FROM dbo.StockOut so
+            JOIN dbo.StockOutDetails sd ON so.StockOutID = sd.StockOutID
+            JOIN dbo.Products p ON sd.ProductID = p.ProductID
+            WHERE so.Status = N'Completed'
+              AND CAST(so.Date AS DATE) BETWEEN ? AND ?
+            ORDER BY so.Date DESC
+            """;
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, fromDate);
+            ps.setString(2, toDate);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                StockOrderDetail d = new StockOrderDetail();
+                d.setDate(rs.getTimestamp("Date"));
+                d.setOrderId(rs.getInt("StockOutID"));
+                d.setProductName(rs.getString("ProductName"));
+                d.setQuantity(rs.getInt("Quantity"));
+                d.setPrice(rs.getDouble("SellingPrice"));
+                d.setTotal(rs.getDouble("Revenue"));
+                list.add(d);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     /** Tổng số lượng sản phẩm đã bán (chi tiết phiếu xuất hoàn thành). */
     public long getTotalSoldUnitsFromStockOut() {
         String sql = """
@@ -195,6 +323,95 @@ public class StaffDashboardDAO extends DBContext {
         try {
             PreparedStatement stm = connection.prepareStatement(sql);
             stm.setInt(1, maxRows);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                StaffHomeFeedItem it = new StaffHomeFeedItem();
+                String tn = rs.getString("TypeName");
+                it.setType(StaffHomeFeedItem.TYPE_RETURN.equals(tn) ? StaffHomeFeedItem.TYPE_RETURN : StaffHomeFeedItem.TYPE_WARRANTY);
+                it.setRefId(rs.getInt("RefId"));
+                it.setCode(rs.getString("Code"));
+                it.setProductLine(rs.getString("ProductLine"));
+                it.setCustomerLine(rs.getString("CustLine"));
+                String raw = rs.getString("RawStatus");
+                if (StaffHomeFeedItem.TYPE_WARRANTY.equals(it.getType())) {
+                    it.setStatusLabel(mapWarrantyStatusVi(raw));
+                } else {
+                    it.setStatusLabel(mapReturnStatusVi(raw));
+                }
+                Timestamp ts = rs.getTimestamp("ActivityAt");
+                if (ts != null) {
+                    it.setActivityTime(ts.toLocalDateTime());
+                }
+                list.add(it);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public int countWarrantyAndReturnFeedAll() {
+        String sql = """
+                SELECT COUNT(*) AS cnt
+                FROM (
+                    SELECT ClaimID AS RefId
+                    FROM dbo.WarrantyClaims
+                    UNION ALL
+                    SELECT ReturnID
+                    FROM dbo.ReturnRequests
+                ) AS u
+                """;
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            ResultSet rs = stm.executeQuery();
+            return rs.next() ? rs.getInt("cnt") : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    public List<StaffHomeFeedItem> getWarrantyAndReturnFeedPaged(int page, int pageSize) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (pageSize < 1) {
+            pageSize = 5;
+        }
+        if (pageSize > 50) {
+            pageSize = 50;
+        }
+        int offset = (page - 1) * pageSize;
+
+        List<StaffHomeFeedItem> list = new ArrayList<>();
+        String sql = """
+                SELECT *
+                FROM (
+                    SELECT N'WARRANTY' AS TypeName,
+                           ClaimID AS RefId,
+                           ISNULL(ClaimCode, N'') AS Code,
+                           ISNULL(ProductName, N'') AS ProductLine,
+                           ISNULL(CustomerName, N'') AS CustLine,
+                           ISNULL(Status, N'') AS RawStatus,
+                           UpdatedAt AS ActivityAt
+                    FROM dbo.WarrantyClaims
+                    UNION ALL
+                    SELECT N'RETURN',
+                           ReturnID,
+                           ISNULL(ReturnCode, N''),
+                           ISNULL(ProductName, N''),
+                           ISNULL(CustomerName, N''),
+                           ISNULL(Status, N''),
+                           UpdatedAt
+                    FROM dbo.ReturnRequests
+                ) AS u
+                ORDER BY ActivityAt DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+                """;
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, offset);
+            stm.setInt(2, pageSize);
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {
                 StaffHomeFeedItem it = new StaffHomeFeedItem();

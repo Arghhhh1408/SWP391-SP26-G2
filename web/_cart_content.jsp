@@ -11,7 +11,7 @@
 
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9;">
             <div style="flex:1;">
-                <div style="font-weight:600; font-size:13px; color:#1e293b;">${item.name}</div>
+                <div class="item-name" style="font-weight:600; font-size:13px; color:#1e293b;">${item.name}</div>
                 <div style="font-size:11px; color:#64748b;">
                     <fmt:formatNumber value="${item.price}" type="number"/>đ 
                 </div>
@@ -22,11 +22,13 @@
                         style="width:24px; height:24px; border:1px solid #ddd; background:white; cursor:pointer; border-radius:4px;">-</button>
 
                 <input type="number" 
+                       id="qty-input-${item.productId}"
                        value="${item.qty}" 
-                       onchange="updateQuantityWithCheck(this, '${item.productId}', ${item.stockQuantity})"
-                       style="width: 40px; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px 0; font-weight: bold;">
+                       onkeydown="if (event.key === 'Enter') { event.preventDefault(); updateQtyManual(this, '${item.productId}'); }"
+                       onchange="updateQtyManual(this, '${item.productId}')"
+                       style="width: 50px; text-align: center;">
 
-                <button type="button" onclick="updateCartAjax('${item.productId}', 'add', ${item.stockQuantity})" 
+                <button type="button" onclick="updateCartAjax('${item.productId}', 'add')" 
                         style="width:24px; height:24px; border:1px solid #ddd; background:white; cursor:pointer; border-radius:4px;">+</button>
             </div>
 
@@ -38,15 +40,9 @@
 </div>
 
 <div style="margin-top:15px; border-top:2px solid #f1f5f9; padding-top:10px;">
-    <c:if test="${not empty error}">
-        <div style="color: #ef4444; font-size: 11px; margin-bottom: 8px; font-weight: bold; background: #fee2e2; padding: 5px; border-radius: 4px;">
-            ⚠️ ${error}
-        </div>
-    </c:if>
-
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <span style="font-weight:bold; color:#64748b;">Tổng cộng:</span>
-        <span style="font-size:18px; font-weight:800; color:#1e293b;" id="display-total-text">
+        <span style="font-size:18px; font-weight:800; color:#1e293b;">
             <fmt:formatNumber value="${totalPrice}" type="number"/>đ
         </span>
     </div>
@@ -56,7 +52,6 @@
             <span style="font-weight: 600; color: #64748b;">Công nợ:</span>
             <span id="debt-display" style="font-size: 16px; font-weight: 800; color: #ef4444;">0 đ</span>
         </div>
-
         <div id="row-change" style="display: none; justify-content: space-between; align-items: center;">
             <span style="font-weight: 600; color: #64748b;">Tiền thừa:</span>
             <span id="change-display" style="font-size: 16px; font-weight: 800; color: #10b981;">0 đ</span>
@@ -68,29 +63,29 @@
     <p style="text-align:center; color:#94a3b8; padding:20px;">Giỏ hàng trống</p>
 </c:if>
 
-<input type="hidden" id="hidden-total-val" value="${totalPrice}">
+<%-- FIX QUAN TRỌNG: Dùng pattern="#" để lấy số thuần túy không có dấu phẩy --%>
+<input type="hidden" id="hidden-total-val" value="<fmt:formatNumber value='${totalPrice}' pattern='#' />">
 
 <script>
-    // Tự động gọi hàm tính nợ khi giỏ hàng được cập nhật
-    if (typeof calculateDebt === "function") {
-        calculateDebt();
-    }
+    (function () {
+        // Lấy con số thuần túy từ ô hidden vừa fix ở trên
+        const newTotalVal = document.getElementById('hidden-total-val').value;
+        const amountPaidInput = document.getElementById('amountPaid');
 
-    function updateQuantityWithCheck(inputElement, productId, stockLimit) {
-        let newQty = parseInt(inputElement.value);
-
-        if (newQty > stockLimit) {
-            alert("⚠️ Lỗi: Trong kho chỉ còn " + stockLimit + " sản phẩm!");
-            inputElement.value = stockLimit;
-            newQty = stockLimit;
+        if (amountPaidInput) {
+            // Xóa dấu chấm định dạng hiện tại để so sánh số
+            const currentVal = amountPaidInput.value.replace(/\./g, '');
+            
+            // Nếu ô trống hoặc tiền cũ không khớp, tự điền tổng mới vào
+            if (currentVal === "" || currentVal === "0") {
+                amountPaidInput.value = Number(newTotalVal).toLocaleString('vi-VN');
+            }
         }
 
-        if (newQty <= 0 || isNaN(newQty)) {
-            inputElement.value = 1;
-            newQty = 1;
-        }
-
-        // Gửi lệnh update về server
-        updateCartAjax(productId, 'update&quantity=' + newQty);
-    }
+        setTimeout(function () {
+            if (typeof calculateDebt === "function") {
+                calculateDebt();
+            }
+        }, 50);
+    })();
 </script>

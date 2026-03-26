@@ -30,6 +30,21 @@ final class WarrantyLookupServletHelper {
         Integer ps = tryParseInt(trim(request.getParameter("pageSize")));
         int pageSize = ps == null ? 10 : Math.min(50, Math.max(1, ps));
 
+        // Với tra cứu StockOutID: giá trị số âm (vd: "-1") không bao giờ là mã hợp lệ.
+        // Nếu vẫn cho chạy truy vấn LIKE thì chuỗi serial dạng "SN-1-2" có thể bị khớp bởi "-1".
+        if (keyword != null && isNegativeInteger(keyword)) {
+            request.setAttribute("q", keyword);
+            request.setAttribute("wf", warrantyFilter);
+            request.setAttribute("sort", sort);
+            request.setAttribute("warrantyResults", Collections.emptyList());
+            request.setAttribute("warrantyTotal", 0);
+            request.setAttribute("warrantyPage", 1);
+            request.setAttribute("warrantyPageSize", pageSize);
+            request.setAttribute("warrantyTotalPages", 1);
+            request.setAttribute("warrantyHasFilter", true);
+            return;
+        }
+
         boolean runSearch = keyword != null || !"all".equalsIgnoreCase(warrantyFilter);
 
         request.setAttribute("q", keyword == null ? "" : keyword);
@@ -82,7 +97,7 @@ final class WarrantyLookupServletHelper {
             return null;
         }
         try {
-            return Integer.parseInt(s);
+            return Integer.valueOf(s);
         } catch (NumberFormatException e) {
             return null;
         }
@@ -93,5 +108,20 @@ final class WarrantyLookupServletHelper {
             return def;
         }
         return p;
+    }
+
+    private static boolean isNegativeInteger(String s) {
+        if (s == null) {
+            return false;
+        }
+        String v = s.trim();
+        if (!v.matches("^-\\d+$")) {
+            return false;
+        }
+        try {
+            return Integer.parseInt(v) < 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 }
