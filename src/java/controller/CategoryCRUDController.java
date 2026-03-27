@@ -19,10 +19,25 @@ import model.User;
         "/manageCategories" })
 public class CategoryCRUDController extends HttpServlet {
 
+    private boolean ensureStaffOrManager(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        User u = session == null ? null : (User) session.getAttribute("acc");
+        if (u == null || (u.getRoleID() != 1 && u.getRoleID() != 2)) {
+            response.sendRedirect("login");
+            return false;
+        }
+        return true;
+    }
+
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!ensureStaffOrManager(request, response)) {
+            return;
+        }
         String path = request.getServletPath();
+
         CategoryDAO dao = new CategoryDAO();
 
         try {
@@ -108,7 +123,11 @@ public class CategoryCRUDController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!ensureStaffOrManager(request, response)) {
+            return;
+        }
         String path = request.getServletPath();
+
         CategoryDAO dao = new CategoryDAO();
 
         try {
