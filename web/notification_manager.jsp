@@ -277,6 +277,15 @@
                                             </a>
                                         </c:if>
 
+                                        <c:if test="${n.type == 'RETURN_TO_VENDOR_CREATED'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               data-title="<c:out value='${n.title}'/>"
+                                               onclick="goToReturnToVendor(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔍 Xem chi tiết
+                                            </a>
+                                        </c:if>
+
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
                                                 <button class="btn-mark-read"
@@ -335,6 +344,17 @@
                             await markAsRead(notifId);
                         }
                         window.location.href = ctx + '/personalProfile';
+                    }
+
+                    async function goToReturnToVendor(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        var title = link.getAttribute('data-title') || '';
+                        var match = title.match(/#(\d+)/);
+                        if (match) {
+                            window.location.href = ctx + '/return-to-vendor?action=detail&id=' + match[1];
+                        }
                     }
 
                     function markAsRead(notifId) {

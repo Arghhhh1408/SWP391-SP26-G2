@@ -247,6 +247,20 @@ public class ReturnToVendorController extends HttpServlet {
             }
             int rtvID = dao.createReturnWithDetails(rtv, details, ipAddress);
             if (rtvID > 0) {
+                dao.NotificationDAO nDAO = new dao.NotificationDAO();
+                List<Integer> managerIds = nDAO.getManagerIds();
+                String staffName = acc.getFullName() != null && !acc.getFullName().trim().isEmpty() ? acc.getFullName() : acc.getUsername();
+                for (Integer mId : managerIds) {
+                    model.Notification n = new model.Notification();
+                    n.setUserId(mId);
+                    n.setTitle("📦 Trả hàng NCC #" + rtvID);
+                    n.setMessage("Nhân viên \"" + staffName + "\" đã tạo phiếu trả hàng cho nhà cung cấp");
+                    n.setType("RETURN_TO_VENDOR_CREATED");
+                    nDAO.insert(n);
+                    
+                    int unread = nDAO.countUnread(mId);
+                    websocket.NotificationEndpoint.sendToUser(mId, "{\"unreadCount\":" + unread + "}");
+                }
                 response.sendRedirect(buildDetailRedirect(request, rtvID, "msg=created"));
             } else {
                 request.setAttribute("error", "Create return to vendor failed.");
