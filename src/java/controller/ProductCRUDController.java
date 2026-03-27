@@ -232,7 +232,7 @@ public class ProductCRUDController extends HttpServlet {
             if (u != null) {
                 userName = u.getUsername();
             }
-            log.setTargetObject("User: " + userName);
+            log.setTargetObject("Product");
             
             log.setDescription(description);
             log.setIpAddress(request.getRemoteAddr());

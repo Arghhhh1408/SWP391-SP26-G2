@@ -98,9 +98,12 @@ public class ExcelUtils {
                 ip.rowNum = currentExcelRow;
                 ip.name = name;
                 ip.sku = sku;
-                ip.cost = getCellValueAsDouble(row.getCell(2));
-                ip.price = getCellValueAsDouble(row.getCell(3));
-                ip.quantity = (int) getCellValueAsDouble(row.getCell(4));
+                ip.rowNum = currentExcelRow;
+                ip.name = name;
+                ip.sku = sku;
+                ip.cost = getCellValueAsString(row.getCell(2));
+                ip.price = getCellValueAsString(row.getCell(3));
+                ip.quantity = getCellValueAsString(row.getCell(4));
                 ip.unit = getCellValueAsString(row.getCell(5));
                 ip.categoryName = getCellValueAsString(row.getCell(6));
                 ip.status = getCellValueAsString(row.getCell(7));
@@ -399,8 +402,7 @@ public class ExcelUtils {
      */
     public static class ImportedProduct {
         public String name, sku, unit, categoryName, status, description, imageUrl;
-        public double cost, price;
-        public int quantity;
+        public String cost, price, quantity;
         public int rowNum;
     }
 }
