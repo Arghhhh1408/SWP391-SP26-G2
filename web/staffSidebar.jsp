@@ -214,8 +214,7 @@
                     <a href="#">🚚 Supplier</a>
                     <div class="submenu">
                         <a href="supplierList">Supplier List</a>
-                        <a href="staff_dashboard?tab=inventory-adjustment" class="${tab == 'inventory-adjustment' ? 'active' : ''}">Inventory
-                            Adjustment</a>
+                        <a href="inventoryAdjustment" class="${currentPage == 'inventoryAdjustment' ? 'active' : ''}">Inventory Adjustment</a>
                         <a href="staff_dashboard?tab=returns" class="${tab == 'returns' ? 'active' : ''}">Return
                             Requests</a>
                         <a href="staff_dashboard?tab=warranty" class="${tab == 'warranty' ? 'active' : ''}">Warranty
