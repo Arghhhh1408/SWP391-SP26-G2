@@ -179,10 +179,13 @@
                         <div class="col">
                             <label>Settlement Type</label>
                             <select name="settlementType">
-                                <option value="OFFSET_DEBT">OFFSET_DEBT - Cấn trừ công nợ</option>
-                                <option value="REFUND">REFUND - Hoàn tiền</option>
-                                <option value="REPLACEMENT">REPLACEMENT - Đổi hàng</option>
+                                <option value="OFFSET_DEBT">OFFSET_DEBT - Cấn trừ công nợ khi Completed</option>
+                                <option value="REFUND">REFUND - Trừ tồn kho khi Completed</option>
+                                <option value="REPLACEMENT">REPLACEMENT - Trừ tồn kho khi Approved, cộng lại khi Completed</option>
                             </select>
+                            <small style="display:block; margin-top:6px; color:#64748b; line-height:1.5;">
+                                Với REPLACEMENT, hệ thống sẽ trừ tồn khi phiếu được duyệt và cộng lại khi hoàn tất nhận hàng thay thế.
+                            </small>
                         </div>
 
                         <div class="col">
@@ -279,6 +282,7 @@
                     ["productID_", ""],
                     ["productDisplay_", ""],
                     ["stockInDetailID_", ""],
+                    ["stockInID_", ""],
                     ["detailDisplay_", ""],
                     ["availableQty_", ""],
                     ["quantity_", ""],
@@ -332,10 +336,12 @@
                         + '<td>'
                         + '  <div class="lookup-box">'
                         + '    <input type="hidden" name="stockInDetailID" id="stockInDetailID_' + idx + '">'
+                        + '    <input type="hidden" id="stockInID_' + idx + '">'
                         + '    <input type="text" id="detailDisplay_' + idx + '" placeholder="Choose stock in detail" readonly onclick="openDetailLookup(' + idx + ')">'
                         + '    <div class="lookup-popup" id="detailPopup_' + idx + '">'
                         + '      <input type="text" id="detailSearch_' + idx + '" placeholder="Search detail..." onkeyup="loadDetails(' + idx + ', 1)">'
                         + '      <div class="lookup-list" id="detailList_' + idx + '"></div>'
+                        + '      <small style="display:block; margin-top:8px; color:#64748b; line-height:1.4;">Can choose details when received quantity &gt; 0, even if StockIn is Pending. All rows in one RTV must belong to the same StockIn.</small>'
                         + '      <div class="pager">'
                         + '        <button type="button" onclick="prevDetailPage(' + idx + ')">Prev</button>'
                         + '        <button type="button" onclick="nextDetailPage(' + idx + ')">Next</button>'
@@ -505,13 +511,34 @@
                 loadDetails(idx, page + 1);
             }
 
+            function getSelectedHeaderStockInID(excludeIdx) {
+                const inputs = document.querySelectorAll("[id^='stockInID_']");
+                for (const input of inputs) {
+                    if (!input || !input.value) {
+                        continue;
+                    }
+                    if (excludeIdx !== undefined && input.id === "stockInID_" + excludeIdx) {
+                        continue;
+                    }
+                    return input.value;
+                }
+                return "";
+            }
+
             function selectDetail(idx, stockInDetailID, stockInID, productID, remainingQuantity, unitCost) {
                 if (isDetailAlreadyUsed(stockInDetailID, idx)) {
                     alert("This StockIn Detail has already been selected in another row.");
                     return;
                 }
 
+                const selectedHeaderStockInID = getSelectedHeaderStockInID(idx);
+                if (selectedHeaderStockInID && String(selectedHeaderStockInID) !== String(stockInID)) {
+                    alert("One Return To Vendor document can only contain details from the same StockIn.");
+                    return;
+                }
+
                 document.getElementById("stockInDetailID_" + idx).value = stockInDetailID;
+                document.getElementById("stockInID_" + idx).value = stockInID;
                 document.getElementById("detailDisplay_" + idx).value = "StockInDetail " + stockInDetailID + " - StockIn " + stockInID;
                 document.getElementById("availableQty_" + idx).value = remainingQuantity;
                 document.getElementById("unitCost_" + idx).value = unitCost;
@@ -605,8 +632,9 @@
                     const detailInput = document.getElementById("stockInDetailID_" + idx);
                     const quantityInput = document.getElementById("quantity_" + idx);
                     const availableQtyInput = document.getElementById("availableQty_" + idx);
+                    const stockInInput = document.getElementById("stockInID_" + idx);
 
-                    if (!productInput || !detailInput || !quantityInput || !availableQtyInput) {
+                    if (!productInput || !detailInput || !quantityInput || !availableQtyInput || !stockInInput) {
                         continue;
                     }
 
@@ -644,6 +672,21 @@
                 if (validRowCount === 0) {
                     alert("Please add at least one return item.");
                     return false;
+                }
+
+                let headerStockInID = "";
+                for (let idx = 0; idx < rowIndex; idx++) {
+                    const detailInput = document.getElementById("stockInDetailID_" + idx);
+                    const stockInInput = document.getElementById("stockInID_" + idx);
+                    if (!detailInput || !stockInInput || !detailInput.value) {
+                        continue;
+                    }
+                    if (!headerStockInID) {
+                        headerStockInID = stockInInput.value;
+                    } else if (String(headerStockInID) !== String(stockInInput.value)) {
+                        alert("All selected details must belong to the same StockIn.");
+                        return false;
+                    }
                 }
 
                 return true;

@@ -276,6 +276,12 @@ public class StockInDAO extends DBContext {
             double debtAmount = stockIn.getTotalAmount() - stockIn.getInitialPaidAmount();
 
             if (debtAmount > 0) {
+                SupplierDebtDAO debtDAO = new SupplierDebtDAO();
+                double existingDebt = debtDAO.getOutstandingDebtTotalBySupplier(stockIn.getSupplierId());
+                if (existingDebt + debtAmount > 1000000000D) {
+                    connection.rollback();
+                    return -1;
+                }
                 PreparedStatement psDebt = connection.prepareStatement(insertDebtSql);
                 psDebt.setInt(1, stockIn.getSupplierId());
                 psDebt.setInt(2, stockInId);
@@ -456,14 +462,13 @@ public class StockInDAO extends DBContext {
                 + "INNER JOIN Products p ON d.ProductID = p.ProductID "
                 + "WHERE s.SupplierID = ? "
                 + "AND d.ProductID = ? "
-                + "AND s.StockStatus IN ('Pending', 'Completed') "
                 + "AND ISNULL(d.ReceivedQuantity, 0) > 0 "
                 + "AND (CAST(d.DetailID AS NVARCHAR) LIKE ? OR CAST(d.StockInID AS NVARCHAR) LIKE ?) "
                 + "AND (ISNULL(d.ReceivedQuantity, 0) - ISNULL(( "
                 + "    SELECT SUM(rtd.Quantity) "
                 + "    FROM ReturnToVendorDetails rtd "
                 + "    INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
-                + "    WHERE rtd.DetailID = d.DetailID "
+                + "    WHERE rtd.StockInDetailID = d.DetailID "
                 + "      AND rtv.Status IN ('Pending', 'Approved', 'Completed') "
                 + "), 0)) > 0 "
                 + "ORDER BY d.DetailID DESC "
@@ -508,7 +513,6 @@ public class StockInDAO extends DBContext {
                 + "WHERE d.DetailID = ? "
                 + "AND s.SupplierID = ? "
                 + "AND d.ProductID = ? "
-                + "AND s.StockStatus IN ('Pending', 'Completed') "
                 + "AND ISNULL(d.ReceivedQuantity, 0) > 0";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -530,14 +534,14 @@ public class StockInDAO extends DBContext {
                 + "        SELECT SUM(rtd.Quantity) "
                 + "        FROM ReturnToVendorDetails rtd "
                 + "        INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
-                + "        WHERE rtd.DetailID = d.DetailID "
+                + "        WHERE rtd.StockInDetailID = d.DetailID "
                 + "          AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
                 + "    ), 0)) < 0 THEN 0 "
                 + "    ELSE (ISNULL(d.ReceivedQuantity, 0) - ISNULL(("
                 + "        SELECT SUM(rtd.Quantity) "
                 + "        FROM ReturnToVendorDetails rtd "
                 + "        INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
-                + "        WHERE rtd.DetailID = d.DetailID "
+                + "        WHERE rtd.StockInDetailID = d.DetailID "
                 + "          AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
                 + "    ), 0)) "
                 + "END AS RemainingQty "

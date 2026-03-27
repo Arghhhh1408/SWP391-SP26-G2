@@ -17,78 +17,87 @@ import model.Product;
 public class CartController extends HttpServlet {
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+protected void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
 
-        HttpSession session = request.getSession();
-        Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
-        if (cart == null) {
-            cart = new HashMap<>();
-        }
+    HttpSession session = request.getSession();
+    Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
+    if (cart == null) {
+        cart = new HashMap<>();
+    }
 
-        String pIdStr = request.getParameter("productId");
-        String action = request.getParameter("action");
-        String quantityStr = request.getParameter("quantity"); // Lấy thêm tham số quantity nếu gõ tay
+    String pIdStr = request.getParameter("productId");
+    String action = request.getParameter("action");
+    // Lấy thêm tham số quantity từ Ajax (Ví dụ: update&quantity=5)
+    String quantityStr = request.getParameter("quantity"); 
 
-        if (pIdStr != null) {
-            int productId = Integer.parseInt(pIdStr);
-            ProductDAO pdao = new ProductDAO();
-            Product p = pdao.getById(productId);
+    if (pIdStr != null) {
+        int productId = Integer.parseInt(pIdStr);
+        ProductDAO pdao = new ProductDAO();
+        Product p = pdao.getById(productId);
+        CartItem item = cart.get(productId);
 
-            if (p != null) {
-                CartItem item = cart.get(productId);
-
-                // XỬ LÝ HÀNH ĐỘNG THÊM (ADD)
-                if ("add".equals(action)) {
-                    if (item == null) {
-                        if (p.getQuantity() > 0) {
-                            item = new CartItem();
-                            item.setProductId(productId);
-                            item.setName(p.getName());
-                            item.setPrice(p.getPrice());
+        if (p != null) {
+            // --- 1. XỬ LÝ HÀNH ĐỘNG THÊM (ADD) ---
+            if ("add".equals(action)) {
+                if (item == null) {
+                    if (p.getQuantity() > 0) {
+                        item = new CartItem();
+                        item.setProductId(p.getId());
+                        item.setName(p.getName());
+                        item.setPrice(p.getPrice());
+                        item.setQty(1);
+                        item.setProductTotalStock(p.getQuantity());
+                        item.setMinStockThreshold(p.getLowStockThreshold());
+                        cart.put(productId, item);
+                    }
+                } else {
+                    // Kiểm tra ngưỡng kho trước khi cho cộng thêm
+                    if ((p.getQuantity() - (item.getQty() + 1)) >= p.getLowStockThreshold()) {
+                        item.setQty(item.getQty() + 1);
+                    }
+                }
+            } 
+            // --- 2. XỬ LÝ HÀNH ĐỘNG GÕ TAY (UPDATE) ---
+            else if (action != null && action.startsWith("update")) {
+                if (item != null && quantityStr != null) {
+                    try {
+                        int newQty = Integer.parseInt(quantityStr);
+                        // Chặn gõ lố tồn kho trừ ngưỡng
+                        int maxAvailable = p.getQuantity() - p.getLowStockThreshold();
+                        
+                        if (newQty > maxAvailable) {
+                            item.setQty(maxAvailable > 0 ? maxAvailable : 1);
+                        } else if (newQty < 1) {
                             item.setQty(1);
-                            item.setStockQuantity(p.getQuantity()); // QUAN TRỌNG: Gán tồn kho ở đây
-                            cart.put(productId, item);
                         } else {
-                            request.setAttribute("error", "Sản phẩm đã hết hàng!");
-                        }
-                    } else {
-                        if (item.getQty() + 1 <= p.getQuantity()) {
-                            item.setQty(item.getQty() + 1);
-                        } else {
-                            request.setAttribute("error", "Chỉ còn " + p.getQuantity() + " sản phẩm!");
-                        }
-                    }
-                } // XỬ LÝ HÀNH ĐỘNG GÕ TAY SỐ LƯỢNG (UPDATE)
-                else if ("update".equals(action) && quantityStr != null) {
-                    int newQty = Integer.parseInt(quantityStr);
-                    if (item != null) {
-                        if (newQty <= p.getQuantity()) {
                             item.setQty(newQty);
-                        } else {
-                            item.setQty(p.getQuantity());
-                            request.setAttribute("error", "Tự động điều chỉnh về tối đa " + p.getQuantity() + " sản phẩm!");
                         }
+                    } catch (NumberFormatException e) {
+                        // Nếu gõ chữ thì giữ nguyên hoặc về 1
                     }
-                } // XỬ LÝ HÀNH ĐỘNG GIẢM (SUB)
-                else if ("sub".equals(action)) {
-                    if (item != null) {
-                        if (item.getQty() > 1) {
-                            item.setQty(item.getQty() - 1);
-                        } else {
-                            cart.remove(productId);
-                        }
-                    }
-                } // XỬ LÝ XÓA (REMOVE)
-                else if ("remove".equals(action)) {
-                    cart.remove(productId);
                 }
             }
+            // --- 3. XỬ LÝ HÀNH ĐỘNG GIẢM (SUB) ---
+            else if ("sub".equals(action)) {
+                if (item != null) {
+                    if (item.getQty() > 1) {
+                        item.setQty(item.getQty() - 1);
+                    } else {
+                        cart.remove(productId);
+                    }
+                }
+            }
+            // --- 4. XỬ LÝ XÓA (REMOVE) ---
+            else if ("remove".equals(action)) {
+                cart.remove(productId);
+            }
         }
-
-        session.setAttribute("cart", cart);
-        request.getRequestDispatcher("_cart_content.jsp").forward(request, response);
     }
+
+    session.setAttribute("cart", cart);
+    request.getRequestDispatcher("_cart_content.jsp").forward(request, response);
+}
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)

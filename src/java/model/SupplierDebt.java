@@ -21,6 +21,8 @@ public class SupplierDebt {
     private String status;
 
     private String supplierName;
+    private double originalAmount;
+    private double paidAmount;
 
     public SupplierDebt() {
     }
@@ -71,6 +73,23 @@ public class SupplierDebt {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+
+    public double getOriginalAmount() {
+        return originalAmount;
+    }
+
+    public void setOriginalAmount(double originalAmount) {
+        this.originalAmount = originalAmount;
+    }
+
+    public double getPaidAmount() {
+        return paidAmount;
+    }
+
+    public void setPaidAmount(double paidAmount) {
+        this.paidAmount = paidAmount;
     }
 
     public String getSupplierName() {

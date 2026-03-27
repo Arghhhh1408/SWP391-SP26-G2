@@ -16,6 +16,7 @@ public class ReturnToVendor {
     private int rtvID;
     private String returnCode;
     private int supplierID;
+    private int stockInID;
     private int createdBy;
     private Integer approvedBy;
     private Integer completedBy;
@@ -57,6 +58,14 @@ public class ReturnToVendor {
 
     public void setSupplierID(int supplierID) {
         this.supplierID = supplierID;
+    }
+
+    public int getStockInID() {
+        return stockInID;
+    }
+
+    public void setStockInID(int stockInID) {
+        this.stockInID = stockInID;
     }
 
     public int getCreatedBy() {

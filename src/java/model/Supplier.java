@@ -1,13 +1,7 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
-/**
- *
- * @author dotha
- */
+import java.sql.Timestamp;
+
 public class Supplier {
     private int id;
     private String supplierName;
@@ -15,6 +9,9 @@ public class Supplier {
     private String address;
     private String email;
     private boolean status;
+    private boolean emailVerified;
+    private Timestamp verificationSentAt;
+    private Timestamp lastVerifiedAt;
 
     public Supplier() {
     }
@@ -28,57 +25,35 @@ public class Supplier {
         this.status = status;
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public String getSupplierName() { return supplierName; }
+    public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
 
-    public String getSupplierName() {
-        return supplierName;
-    }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-    public void setSupplierName(String supplierName) {
-        this.supplierName = supplierName;
-    }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 
-    public String getPhone() {
-        return phone;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
+    public boolean isStatus() { return status; }
+    public void setStatus(boolean status) { this.status = status; }
 
-    public String getAddress() {
-        return address;
-    }
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 
-    public void setAddress(String address) {
-        this.address = address;
-    }
+    public Timestamp getVerificationSentAt() { return verificationSentAt; }
+    public void setVerificationSentAt(Timestamp verificationSentAt) { this.verificationSentAt = verificationSentAt; }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public boolean isStatus() {
-        return status;
-    }
-
-    public void setStatus(boolean status) {
-        this.status = status;
-    }
+    public Timestamp getLastVerifiedAt() { return lastVerifiedAt; }
+    public void setLastVerifiedAt(Timestamp lastVerifiedAt) { this.lastVerifiedAt = lastVerifiedAt; }
 
     @Override
     public String toString() {
-        return "Supplier{" + "id=" + id + ", supplierName=" + supplierName + ", phone=" + phone + ", address=" + address + ", email=" + email + ", status=" + status + '}';
+        return "Supplier{" + "id=" + id + ", supplierName=" + supplierName + ", phone=" + phone + ", address=" + address + ", email=" + email + ", status=" + status + ", emailVerified=" + emailVerified + '}';
     }
-    
 }

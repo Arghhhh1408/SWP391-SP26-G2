@@ -106,6 +106,23 @@ public class User {
     public void setIsActive(boolean isActive) {
         this.isActive = isActive;
     }
-    
-    
+
+    private int failedAttempts;
+    private java.sql.Timestamp lockoutEnd;
+
+    public int getFailedAttempts() {
+        return failedAttempts;
+    }
+
+    public void setFailedAttempts(int failedAttempts) {
+        this.failedAttempts = failedAttempts;
+    }
+
+    public java.sql.Timestamp getLockoutEnd() {
+        return lockoutEnd;
+    }
+
+    public void setLockoutEnd(java.sql.Timestamp lockoutEnd) {
+        this.lockoutEnd = lockoutEnd;
+    }
 }

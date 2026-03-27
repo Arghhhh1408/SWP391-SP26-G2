@@ -341,10 +341,13 @@
         </a>
 
         <div class="menu-section-title">Hệ thống</div>
-        <a href="systemlog" class="menu-item ${param.currentPage == 'systemLog' ? 'active' : ''}">
+        <a href="lockedUsers" class="menu-item ${currentPage == 'lockedUsers' ? 'active' : ''}">
+            <span class="menu-icon">🔒</span> Tài khoản bị khóa
+        </a>
+        <a href="systemlog" class="menu-item ${currentPage == 'systemLog' ? 'active' : ''}">
             <span class="menu-icon">📄</span> Logs Hoạt động
         </a>
-        <a href="personalProfile" class="menu-item ${param.currentPage == 'personalProfile' ? 'active' : ''}">
+        <a href="personalProfile" class="menu-item ${currentPage == 'personalProfile' ? 'active' : ''}">
             <span class="menu-icon">👤</span> Hồ sơ cá nhân
         </a>
     </nav>

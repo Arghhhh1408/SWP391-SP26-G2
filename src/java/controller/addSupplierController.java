@@ -1,27 +1,23 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package controller;
 
 import dao.SupplierDAO;
+import dao.SupplierUpdateRequestDAO;
 import dao.SystemLogDAO;
-import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
 import model.Supplier;
+import model.SupplierUpdateRequest;
 import model.SystemLog;
 import model.User;
+import utils.AppUrlUtils;
+import utils.SupplierEmailService;
 import utils.ValidationUtils;
 
-/**
- *
- * @author dotha
- */
 @WebServlet(name = "addSupplierController", urlPatterns = {"/addSupplier"})
 public class addSupplierController extends HttpServlet {
 
@@ -33,9 +29,7 @@ public class addSupplierController extends HttpServlet {
     }
 
     private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
+        if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
@@ -56,21 +50,12 @@ public class addSupplierController extends HttpServlet {
         request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
     }
 
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         HttpSession session = request.getSession();
         User u = (User) session.getAttribute("acc");
-
         if (u == null) {
             response.sendRedirect("login.jsp");
             return;
@@ -96,33 +81,19 @@ public class addSupplierController extends HttpServlet {
                 int id = Integer.parseInt(idStr);
                 Supplier s = dao.getSupplierById(id);
                 boolean ok = dao.deactivateSupplier(id);
-
                 if (ok) {
                     session.setAttribute("message", "Ngừng hoạt động nhà cung cấp thành công!");
                     session.setAttribute("status", "success");
-
-                    SystemLogDAO logDao = new SystemLogDAO();
-                    SystemLog log = new SystemLog();
-                    log.setUserID(u.getUserID());
-                    log.setAction("DEACTIVATE_SUPPLIER");
-                    log.setTargetObject("Supplier ID: " + id);
-                    String sName = (s != null) ? s.getSupplierName() : "Unknown";
-                    log.setDescription("Ngừng hoạt động nhà cung cấp: " + sName + " (ID: " + id + ")");
-                    log.setIpAddress(request.getRemoteAddr());
-                    logDao.insertLog(log);
+                    insertLog(u, request, "DEACTIVATE_SUPPLIER", "Supplier ID: " + id,
+                            "Ngừng hoạt động nhà cung cấp: " + (s != null ? s.getSupplierName() : "Unknown") + " (ID: " + id + ")");
                 } else {
                     session.setAttribute("message", "Không tìm thấy nhà cung cấp để cập nhật trạng thái!");
                     session.setAttribute("status", "error");
                 }
-
-            } catch (NumberFormatException e) {
-                session.setAttribute("message", "Lỗi định dạng ID: " + e.getMessage());
-                session.setAttribute("status", "error");
             } catch (Exception e) {
                 session.setAttribute("message", "Lỗi xử lý nhà cung cấp: " + e.getMessage());
                 session.setAttribute("status", "error");
             }
-
             response.sendRedirect(request.getContextPath() + "/supplierList");
             return;
         }
@@ -137,17 +108,11 @@ public class addSupplierController extends HttpServlet {
             try {
                 int id = Integer.parseInt(idStr);
                 Supplier supplier = dao.getSupplierById(id);
-                if (supplier != null) {
-                    request.setAttribute("supplier", supplier);
-                } else {
-                    request.setAttribute("error", "Không tìm thấy nhà cung cấp!");
-                }
-            } catch (NumberFormatException e) {
-                request.setAttribute("error", "Lỗi định dạng ID: " + e.getMessage());
+                if (supplier != null) request.setAttribute("supplier", supplier);
+                else request.setAttribute("error", "Không tìm thấy nhà cung cấp!");
             } catch (Exception e) {
                 request.setAttribute("error", "Lỗi tải nhà cung cấp: " + e.getMessage());
             }
-
             request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
             return;
         }
@@ -155,20 +120,11 @@ public class addSupplierController extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/supplierList");
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         request.setCharacterEncoding("UTF-8");
-
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("acc") == null) {
             response.sendRedirect("login.jsp");
@@ -182,8 +138,8 @@ public class addSupplierController extends HttpServlet {
         }
 
         String action = request.getParameter("action");
-        String message = "";
-        String status = "";
+        String message = null;
+        String status = null;
 
         try {
             if ("addSupplier".equals(action)) {
@@ -201,30 +157,20 @@ public class addSupplierController extends HttpServlet {
                     forwardAddFormError(request, response, "Email không hợp lệ!", supplierActive);
                     return;
                 }
-
                 String error = dao.checkDuplicate(name, email, phone, supplierActive);
                 if (error != null) {
                     forwardAddFormError(request, response, error, supplierActive);
                     return;
                 }
-
                 boolean ok = dao.addSupplier(name, phone, address, email, supplierActive);
-                if (ok) {
-                    message = "Thêm nhà cung cấp thành công!";
-                    status = "success";
-
-                    SystemLogDAO logDao = new SystemLogDAO();
-                    SystemLog log = new SystemLog();
-                    log.setUserID(user.getUserID());
-                    log.setAction("CREATE_SUPPLIER");
-                    log.setTargetObject("Supplier: " + name);
-                    log.setDescription("Thêm nhà cung cấp mới: " + name + " | Active=" + supplierActive);
-                    log.setIpAddress(request.getRemoteAddr());
-                    logDao.insertLog(log);
-                } else {
+                if (!ok) {
                     forwardAddFormError(request, response, "Thêm nhà cung cấp thất bại!", supplierActive);
                     return;
                 }
+                message = "Thêm nhà cung cấp thành công. Vui lòng gửi email xác nhận để nhà cung cấp kích hoạt tài khoản làm việc.";
+                status = "success";
+                insertLog(user, request, "CREATE_SUPPLIER", "Supplier: " + name,
+                        "Thêm nhà cung cấp mới: " + name + " | Active=" + supplierActive + " | EmailVerified=false");
 
             } else if ("updateSupplier".equals(action)) {
                 int id = Integer.parseInt(request.getParameter("supplierID"));
@@ -233,7 +179,6 @@ public class addSupplierController extends HttpServlet {
                 String newAddress = trimToNull(request.getParameter("address"));
                 String newEmail = trimToNull(request.getParameter("email"));
                 boolean newStatus = request.getParameter("status") != null;
-
                 Supplier supplierForm = new Supplier(id, newName, newPhone, newAddress, newEmail, newStatus);
 
                 if (!ValidationUtils.isValidPhone(newPhone)) {
@@ -244,50 +189,39 @@ public class addSupplierController extends HttpServlet {
                     forwardEditFormError(request, response, supplierForm, "Email không hợp lệ!");
                     return;
                 }
-
-                Supplier oldSupplier = dao.getSupplierById(id);
-                if (oldSupplier == null) {
-                    forwardEditFormError(request, response, supplierForm, "Không tìm thấy nhà cung cấp!");
-                    return;
-                }
-
                 String duplicateError = dao.checkDuplicateForUpdate(id, newName, newEmail, newPhone, newStatus);
                 if (duplicateError != null) {
                     forwardEditFormError(request, response, supplierForm, duplicateError);
                     return;
                 }
 
-                boolean ok = dao.updateSupplier(id, newName, newPhone, newEmail, newAddress, newStatus);
-                if (ok) {
-                    message = "Cập nhật nhà cung cấp thành công!";
-                    status = "success";
-
-                    SystemLogDAO logDAO = new SystemLogDAO();
-                    SystemLog log = new SystemLog();
-                    log.setUserID(user.getUserID());
-                    log.setAction("UPDATE_SUPPLIER");
-                    log.setTargetObject("Supplier ID: " + id);
-                    log.setDescription("Cập nhật thông tin nhà cung cấp: " + newName + " (ID: " + id + ") | Active=" + newStatus);
-                    log.setIpAddress(request.getRemoteAddr());
-                    logDAO.insertLog(log);
-                } else {
-                    forwardEditFormError(request, response, supplierForm, "Cập nhật nhà cung cấp thất bại!");
+                Supplier current = dao.getSupplierById(id);
+                if (current == null) {
+                    forwardEditFormError(request, response, supplierForm, "Không tìm thấy nhà cung cấp để cập nhật!");
                     return;
                 }
 
-            } else {
-                message = "Hành động không hợp lệ!";
-                status = "error";
-            }
+                SupplierEmailService emailService = new SupplierEmailService();
+                SupplierUpdateRequest req = emailService.createSupplierUpdateRequest(id, user.getUserID(), newName, newPhone, newAddress, newEmail, newStatus);
+                if (req == null) {
+                    forwardEditFormError(request, response, supplierForm, "Không thể tạo yêu cầu xác nhận cập nhật thông tin.");
+                    return;
+                }
+                boolean mailSent = emailService.sendSupplierUpdateApprovalEmail(current, req, AppUrlUtils.resolveBaseUrl(request));
+                if (!mailSent) {
+                    forwardEditFormError(request, response, supplierForm, "Không thể gửi email xác nhận cho nhà cung cấp.");
+                    return;
+                }
 
-        } catch (NumberFormatException e) {
-            request.setAttribute("error", "Lỗi định dạng số: " + e.getMessage());
-            request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
-            return;
-        } catch (Exception e) {
-            request.setAttribute("error", "Lỗi: " + e.getMessage());
-            request.getRequestDispatcher("addsupplierform.jsp").forward(request, response);
-            return;
+                message = "Đã gửi email xác nhận cập nhật cho nhà cung cấp. Thông tin mới chỉ được áp dụng sau khi nhà cung cấp chấp nhận.";
+                status = "success";
+                insertLog(user, request, "REQUEST_SUPPLIER_UPDATE", "Supplier ID: " + id,
+                        "Tạo yêu cầu cập nhật nhà cung cấp và gửi email xác nhận.");
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            message = "Lỗi xử lý nhà cung cấp: " + ex.getMessage();
+            status = "error";
         }
 
         session.setAttribute("message", message);
@@ -295,13 +229,18 @@ public class addSupplierController extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/supplierList");
     }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
+    private void insertLog(User user, HttpServletRequest request, String action, String target, String desc) {
+        try {
+            SystemLogDAO logDao = new SystemLogDAO();
+            SystemLog log = new SystemLog();
+            log.setUserID(user.getUserID());
+            log.setAction(action);
+            log.setTargetObject(target);
+            log.setDescription(desc);
+            log.setIpAddress(request.getRemoteAddr());
+            logDao.insertLog(log);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

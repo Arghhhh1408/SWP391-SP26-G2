@@ -158,10 +158,15 @@
     <body>
         <div class="container">
             <h1>Công nợ nhà cung cấp</h1>
-                <a class="top-link" href="supplierList">← Quay lại danh sách nhà cung cấp</a>
+            <a class="top-link" href="supplierList">← Quay lại danh sách nhà cung cấp</a>
 
-            <c:if test="${not empty requestScope.error}">
-                <div class="error">${requestScope.error}</div>
+            <c:if test="${not empty requestScope.error || not empty param.error}">
+                <div class="error">${not empty requestScope.error ? requestScope.error : param.error}</div>
+            </c:if>
+            <c:if test="${param.msg eq 'paid_confirmed'}">
+                <div class="message success" style="margin-bottom:15px;padding:12px 16px;border:1px solid #b7ebc6;background:#e8f8ee;color:#1e7e34;border-radius:8px;">
+                    Đã xác nhận thanh toán công nợ cho nhà cung cấp.
+                </div>
             </c:if>
 
             <div class="supplier-info">
@@ -219,9 +224,11 @@
                             <th>Số tiền nợ</th>
                             <th>Hạn thanh toán</th>
                             <th>Trạng thái</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                            <th>Theo dõi thanh toán</th>
+                            <c:if test="${sessionScope.acc.roleID == 2}"><th>Xác nhận thanh toán</th></c:if>
+                            </tr>
+                        </thead>
+                        <tbody>
                         <c:choose>
                             <c:when test="${not empty debtList}">
                                 <c:forEach items="${debtList}" var="d">
@@ -229,39 +236,63 @@
                                         <td>${d.debtID}</td>
                                         <td>${d.stockInID}</td>
                                         <td>
-                                <fmt:formatNumber value="${d.amount}" type="number" groupingUsed="true"/>
-                                </td>
-                                <td>
-                                <fmt:formatDate value="${d.dueDate}" pattern="dd/MM/yyyy"/>
-                                </td>
-                                <td>
-                                    <c:choose>
-                                        <c:when test="${d.status == 'Pending'}">
-                                            <span class="status-pending">Pending</span>
-                                        </c:when>
-                                        <c:when test="${d.status == 'Partial'}">
-                                            <span class="status-partial">Partial</span>
-                                        </c:when>
-                                        <c:when test="${d.status == 'Paid'}">
-                                            <span class="status-paid">Paid</span>
-                                        </c:when>
-                                        <c:when test="${d.status == 'Cancelled'}">
-                                            <span class="status-cancelled">Cancelled</span>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <span class="status-overdue">Overdue</span>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </td>
+                                            <fmt:formatNumber value="${d.amount}" type="number" groupingUsed="true"/>
+                                        </td>
+                                        <td>
+                                            <fmt:formatDate value="${d.dueDate}" pattern="dd/MM/yyyy"/>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${d.status == 'Pending'}">
+                                                    <span class="status-pending">Pending</span>
+                                                </c:when>
+                                                <c:when test="${d.status == 'Partial'}">
+                                                    <span class="status-partial">Partial</span>
+                                                </c:when>
+                                                <c:when test="${d.status == 'Paid'}">
+                                                    <span class="status-paid">Paid</span>
+                                                </c:when>
+                                                <c:when test="${d.status == 'Cancelled'}">
+                                                    <span class="status-cancelled">Cancelled</span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="status-overdue">Overdue</span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                                                Đã trả: <fmt:formatNumber value="${d.paidAmount}" type="number" groupingUsed="true"/>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a class="btn btn-secondary" style="padding:8px 12px;" href="supplierDebtPayments?supplierId=${selectedSupplierId}&debtId=${d.debtID}">Xem theo đợt</a>
+                                        </td>
+                                        <c:if test="${sessionScope.acc.roleID == 2}">
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${d.status == 'Pending' || d.status == 'Partial' || d.status == 'Overdue'}">
+                                                        <form action="supplierDebt" method="post" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                                            <input type="hidden" name="action" value="confirmPaid">
+                                                            <input type="hidden" name="supplierId" value="${selectedSupplierId}">
+                                                            <input type="hidden" name="debtId" value="${d.debtID}">
+                                                            <input type="text" name="note" placeholder="Ghi chú" style="padding:6px 8px;border:1px solid #cfd9e6;border-radius:6px;">
+                                                            <button type="submit" class="btn btn-primary" style="padding:8px 12px;">Xác nhận đã thanh toán</button>
+                                                        </form>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span style="color:#777;">-</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
+                                        </c:if>
+                                    </tr>
+                                </c:forEach>
+                            </c:when>
+                            <c:otherwise>
+                                <tr>
+                                    <td colspan="${sessionScope.acc.roleID == 2 || sessionScope.acc.roleID == 0 ? 7 : 6}" class="empty-row">Không có dữ liệu công nợ.</td>
                                 </tr>
-                            </c:forEach>
-                        </c:when>
-                        <c:otherwise>
-                            <tr>
-                                <td colspan="5" class="empty-row">Không có dữ liệu công nợ.</td>
-                            </tr>
-                        </c:otherwise>
-                    </c:choose>
+                            </c:otherwise>
+                        </c:choose>
                     </tbody>
                 </table>
             </div>

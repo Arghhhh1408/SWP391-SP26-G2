@@ -4,6 +4,7 @@ import dao.CategoryDAO;
 import dao.ProductDAO;
 import dao.ReturnDAO;
 import dao.ReturnToVendorDAO;
+import dao.SupplierDAO;
 import dao.WarrantyClaimDAO;
 import dao.WarrantyLookupDAO;
 import java.io.IOException;
@@ -11,7 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import model.ReturnStatus;
+import model.ReturnToVendor;
 import model.User;
+import model.Supplier;
 import model.WarrantyClaim;
 import model.WarrantyClaimStatus;
 import jakarta.servlet.ServletException;
@@ -20,6 +23,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import utils.SupplierEmailService;
 
 @WebServlet(name = "ManagerController", urlPatterns = {"/manager_dashboard"})
 public class ManagerController extends HttpServlet {
@@ -151,6 +155,9 @@ public class ManagerController extends HttpServlet {
             }
             ReturnToVendorDAO dao = new ReturnToVendorDAO();
             boolean ok = dao.approveReturn(rtvID, currentUser.getUserID(), ipAddress);
+            if (ok) {
+                sendSupplierRtvApprovedEmail(rtvID);
+            }
             response.sendRedirect("manager_dashboard?tab=vendorReturns" + (ok ? "&msg=approved" : "&err=approve_failed"));
             return;
         }
@@ -172,6 +179,23 @@ public class ManagerController extends HttpServlet {
         }
 
         response.sendRedirect("manager_dashboard");
+    }
+
+    private void sendSupplierRtvApprovedEmail(int rtvId) {
+        try {
+            ReturnToVendorDAO dao = new ReturnToVendorDAO();
+            ReturnToVendor rtv = dao.getById(rtvId);
+            if (rtv == null) {
+                return;
+            }
+            Supplier supplier = new SupplierDAO().getSupplierById(rtv.getSupplierID());
+            if (supplier == null || supplier.getEmail() == null || supplier.getEmail().trim().isEmpty()) {
+                return;
+            }
+            new SupplierEmailService().sendReturnApprovedEmail(supplier, rtv, rtv.getDetails());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private boolean ensureManager(HttpServletRequest request, HttpServletResponse response) throws IOException {

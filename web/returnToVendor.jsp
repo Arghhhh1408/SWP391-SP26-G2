@@ -150,6 +150,7 @@
                             <th>ID</th>
                             <th>Return Code</th>
                             <th>Supplier</th>
+                            <th>StockIn ID</th>
                             <th>Created By</th>
                             <th>Status</th>
                             <th>Total Amount</th>
@@ -171,6 +172,7 @@
                             <td><%= rtv.getRtvID() %></td>
                             <td><%= rtv.getReturnCode() %></td>
                             <td><%= rtv.getSupplierName() != null ? rtv.getSupplierName() : rtv.getSupplierID() %></td>
+                            <td><%= rtv.getStockInID() %></td>
                             <td><%= rtv.getCreatedByName() != null ? rtv.getCreatedByName() : rtv.getCreatedBy() %></td>
                             <td><span class="status <%= statusClass %>"><%= rtv.getStatus() %></span></td>
                             <td><%= String.format("%,.0f", rtv.getTotalAmount()) %></td>
@@ -181,7 +183,7 @@
                         <% } %>
                         <% } else { %>
                         <tr>
-                            <td colspan="9" class="empty">No return to vendor records found.</td>
+                            <td colspan="10" class="empty">No return to vendor records found.</td>
                         </tr>
                         <% } %>
                     </tbody>

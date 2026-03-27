@@ -272,6 +272,22 @@
                                                 🏢 Xem danh sách nhà cung cấp
                                             </a>
                                         </c:if>
+                                        
+                                        <c:if test="${n.type == 'WARRANTY_CLAIM_CREATED'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToWarrantyList(this, ${n.notificationId}, ${n.read}); return false;">
+                                                🔧 Xem danh sách bảo hành
+                                            </a>
+                                        </c:if>
+
+                                        <c:if test="${n.type == 'RETURN_REQUEST_CREATED'}">
+                                            <a class="btn-view-detail"
+                                               href="#"
+                                               onclick="goToReturnList(this, ${n.notificationId}, ${n.read}); return false;">
+                                                📦 Xem danh sách trả hàng
+                                            </a>
+                                        </c:if>
 
                                         <c:if test="${not n.read}">
                                             <div class="notif-actions" id="notif-action-${n.notificationId}">
@@ -333,6 +349,20 @@
                             await markAsRead(notifId);
                         }
                         window.location.href = ctx + '/supplierList';
+                    }
+
+                    async function goToWarrantyList(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/staff_dashboard?tab=warranty';
+                    }
+
+                    async function goToReturnList(link, notifId, isRead) {
+                        if (!isRead && notifId) {
+                            await markAsRead(notifId);
+                        }
+                        window.location.href = ctx + '/staff_dashboard?tab=returns';
                     }
 
                     function markAsRead(notifId) {
