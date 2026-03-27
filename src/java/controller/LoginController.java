@@ -105,12 +105,17 @@ public class LoginController extends HttpServlet {
 
             dao.SystemLogDAO logDAO = new dao.SystemLogDAO();
             model.SystemLog log = new model.SystemLog();
-            log.setUserID(0);
             log.setAction("LOGIN_FAILED");
             log.setTargetObject("IP: " + request.getRemoteAddr());
             log.setDescription("Failed login attempt for username: " + username);
             log.setIpAddress(request.getRemoteAddr());
-            logDAO.insertLog(log);
+
+            // SystemLog.UserID có FK bắt buộc tồn tại trong dbo.User.
+            // Nếu không tìm thấy user theo username thì không insert log để tránh lỗi FK.
+            if (failedUser != null) {
+                log.setUserID(failedUser.getUserID());
+                logDAO.insertLog(log);
+            }
 
             request.getRequestDispatcher("login.jsp").forward(request, response);
         }
