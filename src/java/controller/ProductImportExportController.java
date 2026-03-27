@@ -116,7 +116,7 @@ public class ProductImportExportController extends HttpServlet {
             int totalAttempted = imported.size();
             
             for (ExcelUtils.ImportedProduct ip : imported) {
-                // Validation (Logic moved from Utility to Controller)
+                // Basic Validation
                 if (ip.name == null || ip.name.isEmpty() || ip.sku == null || ip.sku.isEmpty()) {
                     dataErrors.add("Dòng " + ip.rowNum + ": Tên và SKU là bắt buộc.");
                     continue;
@@ -131,12 +131,53 @@ public class ProductImportExportController extends HttpServlet {
                     continue;
                 }
 
+                // Numeric Validation
+                double cost = 0;
+                double price = 0;
+                int quantity = 0;
+                boolean numericError = false;
+
+                try {
+                    cost = (ip.cost == null || ip.cost.isEmpty()) ? 0 : Double.parseDouble(ip.cost);
+                    if (cost < 0) {
+                        dataErrors.add("Dòng " + ip.rowNum + ": Giá vốn không được âm.");
+                        numericError = true;
+                    }
+                } catch (NumberFormatException e) {
+                    dataErrors.add("Dòng " + ip.rowNum + ": Giá vốn '" + ip.cost + "' không hợp lệ.");
+                    numericError = true;
+                }
+
+                try {
+                    price = (ip.price == null || ip.price.isEmpty()) ? 0 : Double.parseDouble(ip.price);
+                    if (price < 0) {
+                        dataErrors.add("Dòng " + ip.rowNum + ": Giá bán không được âm.");
+                        numericError = true;
+                    }
+                } catch (NumberFormatException e) {
+                    dataErrors.add("Dòng " + ip.rowNum + ": Giá bán '" + ip.price + "' không hợp lệ.");
+                    numericError = true;
+                }
+
+                try {
+                    quantity = (ip.quantity == null || ip.quantity.isEmpty()) ? 0 : Integer.parseInt(ip.quantity);
+                    if (quantity < 0) {
+                        dataErrors.add("Dòng " + ip.rowNum + ": Số lượng không được âm.");
+                        numericError = true;
+                    }
+                } catch (NumberFormatException e) {
+                    dataErrors.add("Dòng " + ip.rowNum + ": Số lượng '" + ip.quantity + "' không hợp lệ.");
+                    numericError = true;
+                }
+
+                if (numericError) continue;
+
                 Product p = new Product();
                 p.setName(ip.name);
                 p.setSku(ip.sku);
-                p.setCost(ip.cost);
-                p.setPrice(ip.price);
-                p.setQuantity(ip.quantity);
+                p.setCost(cost);
+                p.setPrice(price);
+                p.setQuantity(quantity);
                 p.setUnit(ip.unit);
                 p.setCategoryId(categoryId);
                 p.setStatus(ip.status == null || ip.status.isEmpty() ? "Active" : ip.status);
