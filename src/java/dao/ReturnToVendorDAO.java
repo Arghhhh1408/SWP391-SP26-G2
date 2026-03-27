@@ -164,7 +164,36 @@ public class ReturnToVendorDAO extends DBContext {
 
     public List<ReturnToVendor> getAllReturns() {
         List<ReturnToVendor> list = new ArrayList<>();
-        String sql = "SELECT rtv.*, s.Name AS SupplierName, u.FullName AS CreatedByName FROM ReturnToVendors rtv LEFT JOIN Suppliers s ON rtv.SupplierID = s.SupplierID LEFT JOIN [User] u ON rtv.CreatedBy = u.UserID ORDER BY rtv.CreatedDate DESC";
+        // Lưu ý: tránh phụ thuộc cột ReturnToVendors.SupplierID (có thể bị thiếu ở DB cũ).
+        // Lấy SupplierID từ StockInID để JOIN Suppliers và map vào model.
+        String sql = """
+            SELECT
+                rtv.RTVID,
+                rtv.ReturnCode,
+                si.SupplierID AS SupplierID,
+                rtv.StockInID,
+                rtv.CreatedBy,
+                rtv.ApprovedBy,
+                rtv.CompletedBy,
+                rtv.CreatedDate,
+                rtv.ApprovedDate,
+                rtv.CompletedDate,
+                rtv.Status,
+                rtv.Reason,
+                rtv.Note,
+                rtv.TotalAmount,
+                rtv.SettlementType,
+                rtv.RelatedDebtID,
+                rtv.IsInventoryAdjusted,
+                rtv.IsFinancialAdjusted,
+                s.Name AS SupplierName,
+                u.FullName AS CreatedByName
+            FROM ReturnToVendors rtv
+            LEFT JOIN StockIn si ON rtv.StockInID = si.StockInID
+            LEFT JOIN Suppliers s ON si.SupplierID = s.SupplierID
+            LEFT JOIN [User] u ON rtv.CreatedBy = u.UserID
+            ORDER BY rtv.CreatedDate DESC
+        """;
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 ReturnToVendor rtv = mapRtv(rs);
@@ -175,7 +204,35 @@ public class ReturnToVendorDAO extends DBContext {
     }
 
     public ReturnToVendor getById(int rtvID) {
-        String sql = "SELECT rtv.*, s.Name AS SupplierName, u.FullName AS CreatedByName FROM ReturnToVendors rtv LEFT JOIN Suppliers s ON rtv.SupplierID = s.SupplierID LEFT JOIN [User] u ON rtv.CreatedBy = u.UserID WHERE rtv.RTVID = ?";
+        // Tương tự getAllReturns: SupplierID lấy từ StockIn để tránh phụ thuộc cột có thể thiếu.
+        String sql = """
+            SELECT
+                rtv.RTVID,
+                rtv.ReturnCode,
+                si.SupplierID AS SupplierID,
+                rtv.StockInID,
+                rtv.CreatedBy,
+                rtv.ApprovedBy,
+                rtv.CompletedBy,
+                rtv.CreatedDate,
+                rtv.ApprovedDate,
+                rtv.CompletedDate,
+                rtv.Status,
+                rtv.Reason,
+                rtv.Note,
+                rtv.TotalAmount,
+                rtv.SettlementType,
+                rtv.RelatedDebtID,
+                rtv.IsInventoryAdjusted,
+                rtv.IsFinancialAdjusted,
+                s.Name AS SupplierName,
+                u.FullName AS CreatedByName
+            FROM ReturnToVendors rtv
+            LEFT JOIN StockIn si ON rtv.StockInID = si.StockInID
+            LEFT JOIN Suppliers s ON si.SupplierID = s.SupplierID
+            LEFT JOIN [User] u ON rtv.CreatedBy = u.UserID
+            WHERE rtv.RTVID = ?
+        """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, rtvID);
             try (ResultSet rs = ps.executeQuery()) {

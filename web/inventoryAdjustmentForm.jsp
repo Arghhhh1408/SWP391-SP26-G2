@@ -5,7 +5,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Dieu chinh ton kho</title>
+<title>Điều chỉnh tồn kho</title>
 <link rel="stylesheet" href="css/inventoryAdjustment.css">
 </head>
 <body>
@@ -23,27 +23,27 @@
 <c:choose>
 <c:when test="${mode == 'view' and adj != null}">
 <div class="adj-topbar">
-  <a href="inventoryAdjustment" class="back-btn">&larr; Quay lai</a>
-  <h2>Dieu chinh ton kho</h2>
+  <a href="inventoryAdjustment" class="back-btn">&larr; Quay lại</a>
+  <h2>Điều chỉnh tồn kho</h2>
   <span class="status-badge ${adj.status == 'Confirmed' ? 'status-confirmed' : 'status-draft'}">
-    ${adj.status == 'Confirmed' ? 'Da xac nhan' : 'Nhap'}
+    ${adj.status == 'Confirmed' ? 'Đã xác nhận' : 'Nhập'}
   </span>
   <c:if test="${adj.status == 'Draft'}">
     <form method="post" action="inventoryAdjustment" style="margin:0">
       <input type="hidden" name="action" value="confirmExisting">
       <input type="hidden" name="id" value="${adj.adjustmentId}">
-      <button type="submit" class="btn btn-confirm">Xac nhan dieu chinh</button>
+      <button type="submit" class="btn btn-confirm">Xác nhận điều chỉnh</button>
     </form>
   </c:if>
 </div>
 <div class="adj-summary">
-  <div class="sum-card"><div class="label">Tong san pham</div>
-    <div class="value val-neutral">${adj.totalProducts} <span class="val-sub">dong</span></div></div>
-  <div class="sum-card"><div class="label">Tang ton kho</div>
-    <div class="value val-up">+${adj.totalIncrease} <span class="val-sub">don vi</span></div></div>
-  <div class="sum-card"><div class="label">Giam ton kho</div>
-    <div class="value val-down">-${adj.totalDecrease} <span class="val-sub">don vi</span></div></div>
-  <div class="sum-card"><div class="label">Gia tri thay doi</div>
+  <div class="sum-card"><div class="label">Tổng sản phẩm</div>
+    <div class="value val-neutral">${adj.totalProducts} <span class="val-sub">dòng</span></div></div>
+  <div class="sum-card"><div class="label">Tăng tồn kho</div>
+    <div class="value val-up">+${adj.totalIncrease} <span class="val-sub">đơn vị</span></div></div>
+  <div class="sum-card"><div class="label">Giảm tồn kho</div>
+    <div class="value val-down">-${adj.totalDecrease} <span class="val-sub">đơn vị</span></div></div>
+  <div class="sum-card"><div class="label">Giá trị thay đổi</div>
     <div class="value val-money">
       <c:choose>
         <c:when test="${adj.totalValueChange != null}"><fmt:formatNumber value="${adj.totalValueChange}" maxFractionDigits="0"/> d</c:when>
@@ -53,30 +53,29 @@
 </div>
 <div class="adj-body">
   <div class="adj-card">
-    <h4>THONG TIN PHIEU</h4>
+    <h4>THÔNG TIN PHIẾU</h4>
     <div class="form-row">
-      <div class="form-group"><label>Ma phieu</label><input type="text" value="${adj.adjustmentCode}" readonly></div>
-      <div class="form-group"><label>Ngay dieu chinh</label><input type="text" value="${adj.adjustmentDate}" readonly></div>
+      <div class="form-group"><label>Mã Phiếu</label><input type="text" value="${adj.adjustmentCode}" readonly></div>
+      <div class="form-group"><label>Ngày Điều Chỉnh</label><input type="text" value="${adj.adjustmentDate}" readonly></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Kho hang</label><input type="text" value="${adj.warehouse}" readonly></div>
-      <div class="form-group"><label>Nguoi tao</label><input type="text" value="${adj.createdByName}" readonly></div>
+      <div class="form-group"><label>Người tạo</label><input type="text" value="${adj.createdByName}" readonly></div>
     </div>
   </div>
   <div class="adj-card">
-    <h4>GHI CHU &amp; PHE DUYET</h4>
+    <h4>GHI CHÚ &amp; PHÊ DUYỆT</h4>
     <div class="form-group" style="margin-bottom:12px">
-      <label>Ly do dieu chinh chung</label>
+      <label>Lý do điều chỉnh chung</label>
       <input type="text" value="${adj.generalReason}" readonly>
     </div>
-    <div class="form-group"><label>Ghi chu</label><textarea readonly>${adj.note}</textarea></div>
+    <div class="form-group"><label>Ghi chú</label><textarea readonly>${adj.note}</textarea></div>
   </div>
 </div>
 <div class="adj-card">
   <table class="prod-table">
     <thead><tr>
-      <th>San pham</th><th>Don vi</th><th>Ton hien tai</th>
-      <th>So luong moi</th><th>Chenh lech</th><th>Ly do</th><th>Ghi chu</th>
+      <th>Sản phẩm</th><th>Đơn vị</th><th>Tồn hiện tại</th>
+      <th>Số lượng mới</th><th>Chênh lệch</th><th>Lý do</th><th>Ghi chú</th>
     </tr></thead>
     <tbody>
     <c:forEach items="${adj.items}" var="item">
@@ -97,7 +96,7 @@
         <td><c:out value="${not empty item.itemNote ? item.itemNote : '--'}"/></td>
       </tr>
     </c:forEach>
-    <c:if test="${empty adj.items}"><tr><td colspan="7" class="empty-state">Khong co dong nao.</td></tr></c:if>
+    <c:if test="${empty adj.items}"><tr><td colspan="7" class="empty-state">Không có dòng nào.</td></tr></c:if>
     </tbody>
   </table>
 </div>
@@ -105,57 +104,49 @@
 <c:otherwise><%-- CREATE MODE --%>
 <form method="post" action="inventoryAdjustment" id="adjForm">
 <div class="adj-topbar">
-  <a href="inventoryAdjustment" class="back-btn">&larr; Quay lai</a>
-  <h2>Dieu chinh ton kho</h2>
-  <span class="status-badge status-draft">Nhap</span>
-  <button type="button" class="btn btn-cancel" onclick="location.href='inventoryAdjustment'">Huy</button>
-  <button type="submit" name="action" value="save" class="btn btn-save">Luu nhap</button>
-  <button type="submit" name="action" value="confirm" class="btn btn-confirm">Xac nhan dieu chinh</button>
+  <a href="inventoryAdjustment" class="back-btn">&larr; Quay lại</a>
+  <h2>Điều chỉnh tồn kho</h2>
+  <span class="status-badge status-draft">Nhập</span>
+  <button type="button" class="btn btn-cancel" onclick="location.href='inventoryAdjustment'">Hủy</button>
+  <button type="submit" name="action" value="save" class="btn btn-save">Lưu nháp</button>
+  <button type="submit" name="action" value="confirm" class="btn btn-confirm">Xác nhận điều chỉnh</button>
 </div>
 <div class="adj-summary">
-  <div class="sum-card"><div class="label">Tong san pham</div><div class="value val-neutral" id="sumTotal">0 <span class="val-sub">dong</span></div></div>
-  <div class="sum-card"><div class="label">Tang ton kho</div><div class="value val-up" id="sumUp">+0 <span class="val-sub">don vi</span></div></div>
-  <div class="sum-card"><div class="label">Giam ton kho</div><div class="value val-down" id="sumDown">-0 <span class="val-sub">don vi</span></div></div>
-  <div class="sum-card"><div class="label">Gia tri thay doi</div><div class="value val-money" id="sumValue">0 d</div></div>
+  <div class="sum-card"><div class="label">Tổng sản phẩm</div><div class="value val-neutral" id="sumTotal">0 <span class="val-sub">dòng</span></div></div>
+  <div class="sum-card"><div class="label">Tăng tồn kho</div><div class="value val-up" id="sumUp">+0 <span class="val-sub">đơn vị</span></div></div>
+  <div class="sum-card"><div class="label">Giảm tồn kho</div><div class="value val-down" id="sumDown">-0 <span class="val-sub">đơn vị</span></div></div>
+  <div class="sum-card"><div class="label">Giá trị thay đổi</div><div class="value val-money" id="sumValue">0 d</div></div>
 </div>
 <div class="adj-body">
   <div class="adj-card">
-    <h4>THONG TIN PHIEU</h4>
+    <h4>THÔNG TIN PHIẾU</h4>
     <div class="form-row">
-      <div class="form-group"><label>Ma phieu</label><input type="text" name="adjCode" value="${adjCode}" readonly></div>
-      <div class="form-group"><label>Ngay dieu chinh</label><input type="date" name="adjDate" id="adjDate" required></div>
+      <div class="form-group"><label>Mã Phiếu</label><input type="text" name="adjCode" value="${adjCode}" readonly></div>
+      <div class="form-group"><label>Ngày Điều Chỉnh</label><input type="date" name="adjDate" id="adjDate" required></div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Kho hang</label>
-        <select name="warehouse">
-          <option value="Kho chinh - Ha Noi">Kho chinh - Ha Noi</option>
-          <option value="Kho phu - HCM">Kho phu - HCM</option>
-          <option value="Kho trung chuyen">Kho trung chuyen</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Nguoi tao</label>
+        <label>Người tạo</label>
         <input type="text" value="${not empty sessionScope.acc.fullName ? sessionScope.acc.fullName : sessionScope.acc.username}" readonly>
       </div>
     </div>
   </div>
   <div class="adj-card">
-    <h4>GHI CHU &amp; PHE DUYET</h4>
+    <h4>GHI CHÚ &amp; PHÊ DUYỆT</h4>
     <div class="form-group" style="margin-bottom:12px">
-      <label>Ly do dieu chinh chung</label>
+      <label>Lý do điều chỉnh chung</label>
       <select name="generalReason">
-        <option value="Kiem ke dinh ky">Kiem ke dinh ky</option>
-        <option value="Hang hong / het han">Hang hong / het han</option>
-        <option value="Nhap thua / nhap nham">Nhap thua / nhap nham</option>
-        <option value="Mat mat / that thoat">Mat mat / that thoat</option>
-        <option value="Dieu chuyen noi bo">Dieu chuyen noi bo</option>
-        <option value="Khac">Khac</option>
+        <option value="Kiem ke dinh ky">Kiểm kê định kỳ</option>
+        <option value="Hang hong / het han">Hàng hỏng / hết hạn</option>
+        <option value="Nhap thua / nhap nham">Nhập thừa / nhập nhầm</option>
+        <option value="Mat mat / that thoat">Mất mát / thất thoát</option>
+        <option value="Dieu chuyen noi bo">Điều chuyển nội bộ</option>
+        <option value="Khac">Khác</option>
       </select>
     </div>
     <div class="form-group">
-      <label>Ghi chu</label>
-      <textarea name="note" placeholder="Nhap mo ta them ve dot dieu chinh nay..."></textarea>
+      <label>Ghi chú</label>
+      <textarea name="note" placeholder="Nhập mô tả thêm về đợt điều chỉnh này..."></textarea>
     </div>
   </div>
 </div>
@@ -163,24 +154,24 @@
   <div class="prod-toolbar">
     <div class="search-wrap">
       <span class="search-icon">&#128269;</span>
-      <input type="text" id="productSearch" placeholder="Tim theo ten san pham hoac SKU..." autocomplete="off">
+      <input type="text" id="productSearch" placeholder="Tìm theo tên sản phẩm hoặc SKU..." autocomplete="off">
       <div class="search-dropdown" id="searchDropdown"></div>
     </div>
     <div class="filter-tabs">
-      <span class="ftab active" onclick="filterRows('all',this)" id="tabAll">Tat ca (0)</span>
-      <span class="ftab ftab-up" onclick="filterRows('up',this)" id="tabUp">Tang (0)</span>
-      <span class="ftab ftab-down" onclick="filterRows('down',this)" id="tabDown">Giam (0)</span>
-      <button type="button" class="btn-excel">Nhap tu Excel</button>
+      <span class="ftab active" onclick="filterRows('all',this)" id="tabAll">Tất cả (0)</span>
+      <span class="ftab ftab-up" onclick="filterRows('up',this)" id="tabUp">Tăng (0)</span>
+      <span class="ftab ftab-down" onclick="filterRows('down',this)" id="tabDown">Giảm (0)</span>
+      <button type="button" class="btn-excel">Nhập từ Excel</button>
     </div>
   </div>
   <table class="prod-table" id="prodTable">
     <thead><tr>
       <th><input type="checkbox" class="cb-row" id="cbAll" onclick="toggleAll(this)"></th>
-      <th>San pham</th><th>Don vi</th><th>Ton hien tai</th>
-      <th>So luong moi</th><th>Chenh lech</th><th>Ly do</th><th>Ghi chu</th><th></th>
+      <th>Sản phẩm</th><th>Đơn vị</th><th>Tồn hiện tại</th>
+      <th>Số lượng mới</th><th>Chênh lệch</th><th>Lý do</th><th>Ghi chú</th><th></th>
     </tr></thead>
     <tbody id="prodBody">
-      <tr id="emptyRow"><td colspan="9" class="empty-state">Tim va them san pham can dieu chinh</td></tr>
+      <tr id="emptyRow"><td colspan="9" class="empty-state">Tìm và thêm sản phẩm cần điều chỉnh</td></tr>
     </tbody>
   </table>
 </div>
@@ -208,7 +199,7 @@
         .then(function(data) {
           dropdown.innerHTML = '';
           if (!data.length) {
-            dropdown.innerHTML = '<div style="padding:12px;color:#94a3b8;font-size:13px">Khong tim thay san pham</div>';
+            dropdown.innerHTML = '<div style="padding:12px;color:#94a3b8;font-size:13px">Không tìm thấy sản phẩm</div>';
           } else {
             data.forEach(function(p) {
               var div = document.createElement('div');
@@ -266,7 +257,7 @@
   function renderTable() {
     var tbody = document.getElementById('prodBody');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Tim va them san pham can dieu chinh</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Tìm và thêm sản phẩm cần điều chỉnh</td></tr>';
       updateSummary(); updateTabs(); return;
     }
     var html = '';
@@ -275,7 +266,7 @@
       var varClass = variance>0?'var-up':(variance<0?'var-down':'var-zero');
       var varText = (variance>0?'+':'')+variance;
       var imgHtml = r.image ? '<img src="'+r.image+'" class="prod-img" alt="">' : '<div class="prod-img prod-img-placeholder">P</div>';
-      var reasonOpts = [['',''],['Kiem ke dinh ky','Kiem ke dinh ky'],['Hang hong','Hang hong'],['Nhap nham','Nhap nham'],['Mat mat','Mat mat'],['Dieu chuyen','Dieu chuyen'],['Khac','Khac']];
+      var reasonOpts = [['',''],['Kiem ke dinh ky','Kiểm kê định kỳ'],['Hang hong','Hàng hỏng'],['Nhap nham','Nhập nhầm'],['Mat mat','Mất mát'],['Dieu chuyen','Điều chuyển'],['Khac','Khác']];
       var sel = '<select class="reason-select" name="reason[]" onchange="rows['+idx+'].reason=this.value">';
       reasonOpts.forEach(function(ro){ sel+='<option value="'+ro[0]+'"'+(r.reason===ro[0]?' selected':'')+'>'+ro[1]+'</option>'; });
       sel += '</select>';
@@ -288,8 +279,8 @@
       html += '<td><input type="number" class="qty-input" name="newQty[]" value="'+r.newQty+'" min="0" oninput="onQtyChange('+idx+',this.value)"></td>';
       html += '<td><span class="variance-badge '+varClass+'" id="var_'+idx+'">'+varText+'</span></td>';
       html += '<td>'+sel+'</td>';
-      html += '<td><input type="text" class="note-input" name="itemNote[]" value="'+esc(r.note)+'" placeholder="Ghi chu..." onchange="rows['+idx+'].note=this.value"></td>';
-      html += '<td><button type="button" class="del-btn" onclick="removeRow('+idx+')" title="Xoa">&#10005;</button></td>';
+      html += '<td><input type="text" class="note-input" name="itemNote[]" value="'+esc(r.note)+'" placeholder="Ghi chú..." onchange="rows['+idx+'].note=this.value"></td>';
+      html += '<td><button type="button" class="del-btn" onclick="removeRow('+idx+')" title="Xóa">&#10005;</button></td>';
       html += '</tr>';
     });
     tbody.innerHTML = html;
@@ -302,9 +293,9 @@
     var total=rows.length, up=0, down=0, val=0;
     rows.forEach(function(r){ var v=r.newQty-r.stock; if(v>0)up+=v; else if(v<0)down+=Math.abs(v); val+=Math.abs(v)*(r.cost||0); });
     var g=function(id){return document.getElementById(id);};
-    if(g('sumTotal')) g('sumTotal').innerHTML=total+' <span class="val-sub">dong</span>';
-    if(g('sumUp'))    g('sumUp').innerHTML='+'+up+' <span class="val-sub">don vi</span>';
-    if(g('sumDown'))  g('sumDown').innerHTML='-'+down+' <span class="val-sub">don vi</span>';
+    if(g('sumTotal')) g('sumTotal').innerHTML=total+' <span class="val-sub">dòng</span>';
+    if(g('sumUp'))    g('sumUp').innerHTML='+'+up+' <span class="val-sub">đơn vị</span>';
+    if(g('sumDown'))  g('sumDown').innerHTML='-'+down+' <span class="val-sub">đơn vị</span>';
     if(g('sumValue')) g('sumValue').textContent=val.toLocaleString('vi-VN')+' d';
   }
 
@@ -313,9 +304,9 @@
     var upC=rows.filter(function(r){return r.newQty-r.stock>0;}).length;
     var dnC=rows.filter(function(r){return r.newQty-r.stock<0;}).length;
     var g=function(id){return document.getElementById(id);};
-    if(g('tabAll'))  g('tabAll').textContent='Tat ca ('+total+')';
-    if(g('tabUp'))   g('tabUp').textContent='Tang ('+upC+')';
-    if(g('tabDown')) g('tabDown').textContent='Giam ('+dnC+')';
+    if(g('tabAll'))  g('tabAll').textContent='Tất cả ('+total+')';
+    if(g('tabUp'))   g('tabUp').textContent='Tăng ('+upC+')';
+    if(g('tabDown')) g('tabDown').textContent='Giảm ('+dnC+')';
   }
 })();
 </script>
