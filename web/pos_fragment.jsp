@@ -145,6 +145,7 @@
                                     <option value="new" ${sort == 'new' ? 'selected' : ''}>Mới nhập</option>
                                     <option value="total_desc" ${sort == 'total_desc' ? 'selected' : ''}>Giá cao nhất</option>
                                     <option value="total_asc" ${sort == 'total_asc' ? 'selected' : ''}>Giá thấp nhất</option>
+                                    <option value="supplier" ${sort == 'supplier' ? 'selected' : ''}>Nhà cung cấp (A-Z)</option>
                                 </select>
 
                                 <input type="text" name="keyword" value="${keyword}" placeholder="Tìm sản phẩm..." style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 180px; font-size: 13px;">
@@ -163,7 +164,11 @@
                             <tbody>
                                 <c:forEach items="${products}" var="p">
                                     <tr style="border-bottom: 1px solid #f1f5f9;">
-                                        <td style="padding:15px;"><strong>${p.name}</strong><br><small style="color:#94a3b8;">SKU: ${p.sku}</small></td>
+                                        <td style="padding:15px;">
+                                            <strong>${p.name}</strong><br>
+                                            <small style="color:#94a3b8;">SKU: ${p.sku}</small><br>
+                                            <small style="color:#3b82f6;">NCC: ${p.supplierName}</small>
+                                        </td>                                        
                                         <td style="padding:15px; font-weight: 600;"><fmt:formatNumber value="${p.price}" type="number"/>đ</td>
                                         <td style="padding:15px; text-align:center;">
                                             <span class="${p.quantity <= p.lowStockThreshold ? 'stock-warning' : ''}">${p.quantity}</span>
@@ -434,10 +439,10 @@
                             "</tr>";
                 });
 
-        // Đổ dữ liệu vào Modal
+                // Đổ dữ liệu vào Modal
                 document.getElementById('invoice-items-list').innerHTML = htmlItems;
 
-        // Lấy tổng tiền thực tế từ ô ẩn (phải khớp với calculatedTotal)
+                // Lấy tổng tiền thực tế từ ô ẩn (phải khớp với calculatedTotal)
                 const finalTotal = parseInt(document.getElementById('hidden-total-val').value) || calculatedTotal;
                 document.getElementById('display-totalPrice').innerText = finalTotal.toLocaleString('vi-VN') + " đ";
                 document.getElementById('invoice-items-list').innerHTML = htmlItems;
@@ -449,18 +454,18 @@
                 document.getElementById('invoiceModal').style.display = 'none';
             }
             function submitFinalOrder() {
-    // 1. Lấy ô nhập tiền
-    const amountPaidInput = document.getElementById('amountPaid');
-    
-    // 2. XÓA SẠCH DẤU CHẤM TRƯỚC KHI GỬI (Biến "61.000.000" thành "61000000")
-    if (amountPaidInput) {
-        const cleanValue = amountPaidInput.value.replace(/\./g, '');
-        amountPaidInput.value = cleanValue;
-    }
-    
-    // 3. Bây giờ mới chính thức gửi Form lên CheckoutController
-    document.getElementById('checkout-form').submit();
-}
+                // 1. Lấy ô nhập tiền
+                const amountPaidInput = document.getElementById('amountPaid');
+
+                // 2. XÓA SẠCH DẤU CHẤM TRƯỚC KHI GỬI (Biến "61.000.000" thành "61000000")
+                if (amountPaidInput) {
+                    const cleanValue = amountPaidInput.value.replace(/\./g, '');
+                    amountPaidInput.value = cleanValue;
+                }
+
+                // 3. Bây giờ mới chính thức gửi Form lên CheckoutController
+                document.getElementById('checkout-form').submit();
+            }
 
             document.addEventListener('keydown', function (e) {
                 if (e.key === "F8") {

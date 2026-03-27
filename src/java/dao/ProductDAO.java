@@ -435,39 +435,68 @@ public class ProductDAO extends DBContext {
     }
 public List<Product> searchProducts(String keyword, String sort, String range) {
     List<Product> list = new ArrayList<>();
-    // 1. Dùng SELECT * để đảm bảo hàm map(rs) có đủ cột dữ liệu
-    StringBuilder sql = new StringBuilder("SELECT * FROM Products WHERE Status = 'Active' ");
-
-    // Lọc theo tên hoặc SKU
-    if (keyword != null && !keyword.trim().isEmpty()) {
-        sql.append(" AND (Name LIKE ? OR SKU LIKE ?) ");
-    }
     
-    // Lọc chỉ sản phẩm còn hàng
+    // 1. Đặt Alias đồng nhất là supplierName
+    StringBuilder sql = new StringBuilder("""
+        SELECT p.*, l.MinStockLevel,
+            (SELECT TOP 1 s.Name 
+             FROM dbo.Suppliers s 
+             JOIN dbo.SupplierProduct sp ON s.SupplierID = sp.SupplierID 
+             WHERE sp.ProductID = p.ProductID AND sp.IsActive = 1) as supplierName
+        FROM dbo.Products p
+        LEFT JOIN dbo.LowStockAlerts l ON p.ProductID = l.ProductID
+        WHERE p.Status = 'Active'
+    """);
+
+    if (keyword != null && !keyword.trim().isEmpty()) {
+    sql.append("""
+         AND (p.Name LIKE ? 
+              OR p.SKU LIKE ? 
+              OR EXISTS (
+                  SELECT 1 FROM dbo.Suppliers s 
+                  JOIN dbo.SupplierProduct sp ON s.SupplierID = sp.SupplierID 
+                  WHERE sp.ProductID = p.ProductID AND s.Name LIKE ?
+              )) 
+    """);
+}
+    
     if ("available".equals(range)) {
-        sql.append(" AND StockQuantity > 0 ");
+        sql.append(" AND p.StockQuantity > 0 ");
     }
 
-    // Sắp xếp giá
-    if ("total_desc".equals(sort)) {
-        sql.append(" ORDER BY Price DESC ");
+    // 2. Sửa ORDER BY cho khớp với Alias bên trên
+    if ("supplier".equals(sort)) {
+        sql.append(" ORDER BY supplierName ASC, p.Name ASC ");
+    } else if ("total_desc".equals(sort)) {
+        sql.append(" ORDER BY p.Price DESC ");
     } else if ("total_asc".equals(sort)) {
-        sql.append(" ORDER BY Price ASC ");
+        sql.append(" ORDER BY p.Price ASC ");
     } else {
-        sql.append(" ORDER BY ProductID DESC "); 
+        sql.append(" ORDER BY p.ProductID DESC "); 
     }
 
     try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            String p = "%" + keyword.trim() + "%";
-            ps.setString(1, p);
-            ps.setString(2, p);
-        }
+    int idx = 1;
+    if (keyword != null && !keyword.trim().isEmpty()) {
+        String pStr = "%" + keyword.trim() + "%";
+        ps.setString(idx++, pStr); // Cho p.Name
+        ps.setString(idx++, pStr); // Cho p.SKU
+        ps.setString(idx++, pStr); // Cho s.Name (Nhà cung cấp)
+    }
 
         try (ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                // Tận dụng hàm map(rs) đã có sẵn của Mạnh Lý ở dòng 156
-                list.add(map(rs));
+                Product p = map(rs);
+                
+                // 3. Lấy đúng tên cột "supplierName"
+                try {
+                    String sName = rs.getString("supplierName");
+                    p.setSupplierName(sName != null ? sName : "N/A");
+                } catch (Exception e) {
+                    System.out.println("Lỗi lấy supplierName: " + e.getMessage());
+                }
+                
+                list.add(p);
             }
         }
     } catch (Exception e) {

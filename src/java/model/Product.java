@@ -18,6 +18,33 @@ public class Product {
     private Timestamp createDate;
     private Timestamp updateDate;
     private int lowStockThreshold = 5; // Default threshold
+    private String supplierName;
+
+    public Product(int id, String name, String sku, int warrantyPeriod, double cost, double price, int quantity, String unit, String description, String imageURL, String status, int categoryId, Timestamp createDate, Timestamp updateDate, String supplierName) {
+        this.id = id;
+        this.name = name;
+        this.sku = sku;
+        this.warrantyPeriod = warrantyPeriod;
+        this.cost = cost;
+        this.price = price;
+        this.quantity = quantity;
+        this.unit = unit;
+        this.description = description;
+        this.imageURL = imageURL;
+        this.status = status;
+        this.categoryId = categoryId;
+        this.createDate = createDate;
+        this.updateDate = updateDate;
+        this.supplierName = supplierName;
+    }
+
+    public String getSupplierName() {
+        return supplierName;
+    }
+
+    public void setSupplierName(String supplierName) {
+        this.supplierName = supplierName;
+    }
     
     public Product() {
     }
