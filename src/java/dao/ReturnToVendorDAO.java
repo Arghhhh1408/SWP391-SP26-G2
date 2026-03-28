@@ -4,7 +4,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import model.ReturnReplacementReceipt;
 import model.ReturnToVendor;
 import model.ReturnToVendorDetail;
@@ -18,7 +22,9 @@ public class ReturnToVendorDAO extends DBContext {
     private static final String SETTLEMENT_REPLACEMENT = "REPLACEMENT";
 
     private String normalizeSettlementType(String settlementType) {
-        if (settlementType == null || settlementType.trim().isEmpty()) return SETTLEMENT_OFFSET_DEBT;
+        if (settlementType == null || settlementType.trim().isEmpty()) {
+            return SETTLEMENT_OFFSET_DEBT;
+        }
         return settlementType.trim().toUpperCase();
     }
 
@@ -37,12 +43,16 @@ public class ReturnToVendorDAO extends DBContext {
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getInt("StockQuantity") >= requiredQty;
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return false;
     }
 
     private boolean decreaseProductStock(int productId, int quantity) {
-        if (quantity <= 0) return false;
+        if (quantity <= 0) {
+            return false;
+        }
         String sql = "UPDATE Products SET StockQuantity = StockQuantity - ?, UpdatedDate = GETDATE() WHERE ProductID = ? AND StockQuantity >= ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, quantity);
@@ -56,23 +66,31 @@ public class ReturnToVendorDAO extends DBContext {
                 }
             }
             return ok;
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return false;
     }
 
     private boolean increaseProductStock(int productId, int quantity) {
-        if (quantity <= 0) return false;
+        if (quantity <= 0) {
+            return false;
+        }
         String sql = "UPDATE Products SET StockQuantity = StockQuantity + ?, UpdatedDate = GETDATE(), Status = CASE WHEN Status = 'Deactivated' THEN 'Active' ELSE Status END WHERE ProductID = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, quantity);
             ps.setInt(2, productId);
             return ps.executeUpdate() > 0;
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return false;
     }
 
     private boolean adjustProductStock(int productId, int delta) {
-        if (delta == 0) return true;
+        if (delta == 0) {
+            return true;
+        }
         return delta > 0 ? increaseProductStock(productId, delta) : decreaseProductStock(productId, -delta);
     }
 
@@ -82,19 +100,70 @@ public class ReturnToVendorDAO extends DBContext {
         StockInDAO stockInDAO = new StockInDAO();
         int rtvID = -1;
         try {
-            if (!supplierDAO.isActiveSupplier(rtv.getSupplierID())) return -1;
-            if (details == null || details.isEmpty()) return -1;
+            if (!supplierDAO.isActiveSupplier(rtv.getSupplierID())) {
+                return -1;
+            }
+            if (details == null || details.isEmpty()) {
+                return -1;
+            }
             rtv.setSettlementType(normalizeSettlementType(rtv.getSettlementType()));
 
-            Integer headerStockInID = rtv.getStockInID() > 0 ? rtv.getStockInID() : null;
+            List<Integer> detailIds = new ArrayList<>();
+            Map<Integer, Integer> requestedQtyByDetailId = new HashMap<>();
             for (ReturnToVendorDetail d : details) {
-                StockInDetail sid = stockInDAO.getStockInDetailByDetailId(d.getStockInDetailID());
-                if (sid == null) return -1;
-                d.setStockInID(sid.getStockInId());
-                if (headerStockInID == null) headerStockInID = sid.getStockInId();
-                else if (headerStockInID != sid.getStockInId()) return -1;
+                if (d == null || d.getStockInDetailID() <= 0 || d.getProductID() <= 0 || d.getQuantity() <= 0) {
+                    return -1;
+                }
+                detailIds.add(d.getStockInDetailID());
+                requestedQtyByDetailId.merge(d.getStockInDetailID(), d.getQuantity(), Integer::sum);
             }
-            if (headerStockInID == null) return -1;
+
+            Map<Integer, StockInDetail> stockInDetailMap = stockInDAO.getStockInDetailsByIds(detailIds);
+            Map<Integer, Integer> remainingQtyMap = stockInDAO.getRemainingReturnableQuantityMap(detailIds);
+            if (stockInDetailMap.size() != requestedQtyByDetailId.size()) {
+                return -1;
+            }
+
+            Integer headerStockInID = rtv.getStockInID() > 0 ? rtv.getStockInID() : null;
+            Set<Integer> validatedProductIds = new HashSet<>();
+            for (ReturnToVendorDetail d : details) {
+                StockInDetail sid = stockInDetailMap.get(d.getStockInDetailID());
+                if (sid == null) {
+                    return -1;
+                }
+                if (sid.getProductId() != d.getProductID()) {
+                    return -1;
+                }
+                d.setStockInID(sid.getStockInId());
+                d.setUnitCost(sid.getUnitCost());
+                d.setLineTotal(d.getQuantity() * d.getUnitCost());
+
+                if (headerStockInID == null) {
+                    headerStockInID = sid.getStockInId();
+                } else if (headerStockInID != sid.getStockInId()) {
+                    return -1;
+                }
+
+                if (sid.getReceivedQuantity() <= 0) {
+                    return -1;
+                }
+
+                if (validatedProductIds.add(d.getProductID())
+                        && !supplierProductDAO.isValidSupplierProduct(rtv.getSupplierID(), d.getProductID())) {
+                    return -1;
+                }
+            }
+
+            for (Map.Entry<Integer, Integer> entry : requestedQtyByDetailId.entrySet()) {
+                int remainingQty = remainingQtyMap.getOrDefault(entry.getKey(), 0);
+                if (entry.getValue() > remainingQty) {
+                    return -1;
+                }
+            }
+
+            if (headerStockInID == null) {
+                return -1;
+            }
             rtv.setStockInID(headerStockInID);
 
             connection.setAutoCommit(false);
@@ -114,23 +183,19 @@ public class ReturnToVendorDAO extends DBContext {
                     return -1;
                 }
                 try (ResultSet rs = psHeader.getGeneratedKeys()) {
-                    if (rs.next()) rtvID = rs.getInt(1); else { connection.rollback(); return -1; }
+                    if (rs.next()) {
+                        rtvID = rs.getInt(1);
+                    } else {
+                        connection.rollback();
+                        return -1;
+                    }
                 }
             }
 
             String insertDetailSql = "INSERT INTO ReturnToVendorDetails (RTVID, StockInDetailID, ProductID, Quantity, UnitCost, LineTotal, ReasonDetail, ItemCondition) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             double totalAmount = 0;
-            for (ReturnToVendorDetail d : details) {
-                if (!supplierProductDAO.isValidSupplierProduct(rtv.getSupplierID(), d.getProductID())) { connection.rollback(); return -1; }
-                if (!stockInDAO.isValidStockInDetailForReturn(d.getStockInDetailID(), rtv.getSupplierID(), d.getProductID())) { connection.rollback(); return -1; }
-                int remainingQty = stockInDAO.getRemainingReturnableQuantity(d.getStockInDetailID());
-                if (d.getQuantity() <= 0 || d.getQuantity() > remainingQty) { connection.rollback(); return -1; }
-                StockInDetail sid = stockInDAO.getStockInDetailByDetailId(d.getStockInDetailID());
-                if (sid == null) { connection.rollback(); return -1; }
-                d.setStockInID(sid.getStockInId());
-                d.setUnitCost(sid.getUnitCost());
-                d.setLineTotal(d.getQuantity() * d.getUnitCost());
-                try (PreparedStatement psDetail = connection.prepareStatement(insertDetailSql)) {
+            try (PreparedStatement psDetail = connection.prepareStatement(insertDetailSql)) {
+                for (ReturnToVendorDetail d : details) {
                     psDetail.setInt(1, rtvID);
                     psDetail.setInt(2, d.getStockInDetailID());
                     psDetail.setInt(3, d.getProductID());
@@ -139,9 +204,16 @@ public class ReturnToVendorDAO extends DBContext {
                     psDetail.setDouble(6, d.getLineTotal());
                     psDetail.setString(7, d.getReasonDetail());
                     psDetail.setString(8, d.getItemCondition());
-                    if (psDetail.executeUpdate() <= 0) { connection.rollback(); return -1; }
+                    psDetail.addBatch();
+                    totalAmount += d.getLineTotal();
                 }
-                totalAmount += d.getLineTotal();
+                int[] result = psDetail.executeBatch();
+                for (int value : result) {
+                    if (value == Statement.EXECUTE_FAILED) {
+                        connection.rollback();
+                        return -1;
+                    }
+                }
             }
 
             try (PreparedStatement psTotal = connection.prepareStatement("UPDATE ReturnToVendors SET TotalAmount = ? WHERE RTVID = ?")) {
@@ -149,15 +221,24 @@ public class ReturnToVendorDAO extends DBContext {
                 psTotal.setInt(2, rtvID);
                 psTotal.executeUpdate();
             }
+
             insertSystemLog(rtv.getCreatedBy(), "CREATE_RETURN_VENDOR", "ReturnToVendor ID: " + rtvID,
                     "Created return to vendor. ReturnCode: " + rtv.getReturnCode() + ", TotalAmount: " + totalAmount, ipAddress);
+
             connection.commit();
             return rtvID;
         } catch (Exception e) {
             e.printStackTrace();
-            try { connection.rollback(); } catch (Exception ex) { ex.printStackTrace(); }
+            try {
+                connection.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         } finally {
-            try { connection.setAutoCommit(true); } catch (Exception ignored) {}
+            try {
+                connection.setAutoCommit(true);
+            } catch (Exception ignored) {
+            }
         }
         return -1;
     }
@@ -199,7 +280,9 @@ public class ReturnToVendorDAO extends DBContext {
                 ReturnToVendor rtv = mapRtv(rs);
                 list.add(rtv);
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return list;
     }
 
@@ -242,7 +325,9 @@ public class ReturnToVendorDAO extends DBContext {
                     return rtv;
                 }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
@@ -270,7 +355,9 @@ public class ReturnToVendorDAO extends DBContext {
                     list.add(d);
                 }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return list;
     }
 
@@ -294,7 +381,9 @@ public class ReturnToVendorDAO extends DBContext {
                     list.add(r);
                 }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return list;
     }
 
@@ -338,9 +427,16 @@ public class ReturnToVendorDAO extends DBContext {
             return true;
         } catch (Exception e) {
             e.printStackTrace();
-            try { connection.rollback(); } catch (Exception ex) { ex.printStackTrace(); }
+            try {
+                connection.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         } finally {
-            try { connection.setAutoCommit(true); } catch (Exception ignored) {}
+            try {
+                connection.setAutoCommit(true);
+            } catch (Exception ignored) {
+            }
         }
         return false;
     }
@@ -349,14 +445,30 @@ public class ReturnToVendorDAO extends DBContext {
         try {
             connection.setAutoCommit(false);
             ReturnToVendor rtv = getById(rtvID);
-            if (rtv == null || !"Pending".equalsIgnoreCase(rtv.getStatus())) { connection.rollback(); return false; }
+            if (rtv == null || !"Pending".equalsIgnoreCase(rtv.getStatus())) {
+                connection.rollback();
+                return false;
+            }
             List<ReturnToVendorDetail> details = getDetailsByRTVID(rtvID);
-            if (details == null || details.isEmpty()) { connection.rollback(); return false; }
+            if (details == null || details.isEmpty()) {
+                connection.rollback();
+                return false;
+            }
             String settlementType = normalizeSettlementType(rtv.getSettlementType());
             boolean inventoryAdjustedOnApprove = false;
             if (isReplacementSettlement(settlementType)) {
-                for (ReturnToVendorDetail d : details) if (!hasEnoughStock(d.getProductID(), d.getQuantity())) { connection.rollback(); return false; }
-                for (ReturnToVendorDetail d : details) if (!adjustProductStock(d.getProductID(), -d.getQuantity())) { connection.rollback(); return false; }
+                for (ReturnToVendorDetail d : details) {
+                    if (!hasEnoughStock(d.getProductID(), d.getQuantity())) {
+                        connection.rollback();
+                        return false;
+                    }
+                }
+                for (ReturnToVendorDetail d : details) {
+                    if (!adjustProductStock(d.getProductID(), -d.getQuantity())) {
+                        connection.rollback();
+                        return false;
+                    }
+                }
                 inventoryAdjustedOnApprove = true;
             }
             if (isOffsetDebtSettlement(settlementType)) {
@@ -370,7 +482,10 @@ public class ReturnToVendorDAO extends DBContext {
                 ps.setInt(1, approvedBy);
                 ps.setBoolean(2, inventoryAdjustedOnApprove);
                 ps.setInt(3, rtvID);
-                if (ps.executeUpdate() <= 0) { connection.rollback(); return false; }
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
             }
             insertSystemLog(approvedBy, "APPROVE_RETURN_VENDOR", "ReturnToVendor ID: " + rtvID,
                     isReplacementSettlement(settlementType) ? "Approved replacement return. Inventory deducted immediately while waiting for replacement goods." : "Approved return to vendor request.", ipAddress);
@@ -378,9 +493,16 @@ public class ReturnToVendorDAO extends DBContext {
             return true;
         } catch (Exception e) {
             e.printStackTrace();
-            try { connection.rollback(); } catch (Exception ex) { ex.printStackTrace(); }
+            try {
+                connection.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         } finally {
-            try { connection.setAutoCommit(true); } catch (Exception ignored) {}
+            try {
+                connection.setAutoCommit(true);
+            } catch (Exception ignored) {
+            }
         }
         return false;
     }
@@ -392,9 +514,13 @@ public class ReturnToVendorDAO extends DBContext {
             ps.setString(2, rejectNote);
             ps.setInt(3, rtvID);
             boolean ok = ps.executeUpdate() > 0;
-            if (ok) insertSystemLog(approvedBy, "REJECT_RETURN_VENDOR", "ReturnToVendor ID: " + rtvID, "Rejected return to vendor request.", ipAddress);
+            if (ok) {
+                insertSystemLog(approvedBy, "REJECT_RETURN_VENDOR", "ReturnToVendor ID: " + rtvID, "Rejected return to vendor request.", ipAddress);
+            }
             return ok;
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return false;
     }
 
@@ -402,9 +528,15 @@ public class ReturnToVendorDAO extends DBContext {
         try {
             connection.setAutoCommit(false);
             ReturnToVendor rtv = getById(rtvID);
-            if (rtv == null || !"Approved".equalsIgnoreCase(rtv.getStatus())) { connection.rollback(); return false; }
+            if (rtv == null || !"Approved".equalsIgnoreCase(rtv.getStatus())) {
+                connection.rollback();
+                return false;
+            }
             List<ReturnToVendorDetail> details = getDetailsByRTVID(rtvID);
-            if (details == null || details.isEmpty()) { connection.rollback(); return false; }
+            if (details == null || details.isEmpty()) {
+                connection.rollback();
+                return false;
+            }
             String settlementType = normalizeSettlementType(rtv.getSettlementType());
             boolean inventoryAdjustedFlag = rtv.isInventoryAdjusted();
             boolean financialAdjustedFlag = rtv.isFinancialAdjusted();
@@ -412,22 +544,34 @@ public class ReturnToVendorDAO extends DBContext {
 
             if (isReplacementSettlement(settlementType)) {
                 for (ReturnToVendorDetail d : details) {
-                    if (d.getReplacementReceivedQuantity() < d.getQuantity()) { connection.rollback(); return false; }
+                    if (d.getReplacementReceivedQuantity() < d.getQuantity()) {
+                        connection.rollback();
+                        return false;
+                    }
                 }
             } else {
                 if (!rtv.isInventoryAdjusted()) {
                     for (ReturnToVendorDetail d : details) {
-                        if (!hasEnoughStock(d.getProductID(), d.getQuantity())) { connection.rollback(); return false; }
+                        if (!hasEnoughStock(d.getProductID(), d.getQuantity())) {
+                            connection.rollback();
+                            return false;
+                        }
                     }
                     for (ReturnToVendorDetail d : details) {
-                        if (!adjustProductStock(d.getProductID(), -d.getQuantity())) { connection.rollback(); return false; }
+                        if (!adjustProductStock(d.getProductID(), -d.getQuantity())) {
+                            connection.rollback();
+                            return false;
+                        }
                     }
                     inventoryAdjustedFlag = true;
                 }
             }
 
             if (isOffsetDebtSettlement(settlementType) && !financialAdjustedFlag) {
-                if (!offsetDebtAcrossSupplier(rtv.getSupplierID(), rtv.getTotalAmount())) { connection.rollback(); return false; }
+                if (!offsetDebtAcrossSupplier(rtv.getSupplierID(), rtv.getTotalAmount())) {
+                    connection.rollback();
+                    return false;
+                }
                 relatedDebtID = getLatestLinkedDebtId(rtv.getSupplierID());
                 financialAdjustedFlag = true;
             }
@@ -436,9 +580,16 @@ public class ReturnToVendorDAO extends DBContext {
                 ps.setInt(1, completedBy);
                 ps.setBoolean(2, inventoryAdjustedFlag);
                 ps.setBoolean(3, financialAdjustedFlag);
-                if (relatedDebtID == null) ps.setNull(4, java.sql.Types.INTEGER); else ps.setInt(4, relatedDebtID);
+                if (relatedDebtID == null) {
+                    ps.setNull(4, java.sql.Types.INTEGER);
+                } else {
+                    ps.setInt(4, relatedDebtID);
+                }
                 ps.setInt(5, rtvID);
-                if (ps.executeUpdate() <= 0) { connection.rollback(); return false; }
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
             }
             insertSystemLog(completedBy, "COMPLETE_RETURN_VENDOR", "ReturnToVendor ID: " + rtvID,
                     "Completed return to vendor. ReturnCode: " + rtv.getReturnCode() + ", TotalAmount: " + rtv.getTotalAmount(), ipAddress);
@@ -446,9 +597,16 @@ public class ReturnToVendorDAO extends DBContext {
             return true;
         } catch (Exception e) {
             e.printStackTrace();
-            try { connection.rollback(); } catch (Exception ex) { ex.printStackTrace(); }
+            try {
+                connection.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         } finally {
-            try { connection.setAutoCommit(true); } catch (Exception ignored) {}
+            try {
+                connection.setAutoCommit(true);
+            } catch (Exception ignored) {
+            }
         }
         return false;
     }
@@ -466,8 +624,12 @@ public class ReturnToVendorDAO extends DBContext {
                     debtAmounts.add(rs.getDouble("Amount"));
                 }
                 double total = 0;
-                for (double d : debtAmounts) total += d;
-                if (total + 0.0001 < amount) return false;
+                for (double d : debtAmounts) {
+                    total += d;
+                }
+                if (total + 0.0001 < amount) {
+                    return false;
+                }
                 for (int i = 0; i < debtIds.size() && remaining > 0; i++) {
                     int debtId = debtIds.get(i)[0];
                     double current = debtAmounts.get(i);
@@ -478,13 +640,17 @@ public class ReturnToVendorDAO extends DBContext {
                         ups.setDouble(1, newAmount);
                         ups.setString(2, status);
                         ups.setInt(3, debtId);
-                        if (ups.executeUpdate() <= 0) return false;
+                        if (ups.executeUpdate() <= 0) {
+                            return false;
+                        }
                     }
                     remaining -= used;
                 }
                 return remaining <= 0.0001;
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return false;
     }
 
@@ -492,8 +658,14 @@ public class ReturnToVendorDAO extends DBContext {
         String sql = "SELECT TOP 1 DebtID FROM SupplierDebts WHERE SupplierID = ? ORDER BY DebtID DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, supplierId);
-            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return rs.getInt("DebtID"); }
-        } catch (Exception e) { e.printStackTrace(); }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("DebtID");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
@@ -531,6 +703,8 @@ public class ReturnToVendorDAO extends DBContext {
             ps.setString(4, description);
             ps.setString(5, ipAddress);
             ps.executeUpdate();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

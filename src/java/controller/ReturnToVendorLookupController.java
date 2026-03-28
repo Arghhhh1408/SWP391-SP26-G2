@@ -107,7 +107,7 @@ public class ReturnToVendorLookupController extends HttpServlet {
                 }
                 StockInDAO dao = new StockInDAO();
                 List<StockInDetail> list = dao.searchReturnableStockInDetails(supplierID, productID, keyword, page, pageSize);
-                out.print(renderDetailHtml(list, dao));
+                out.print(renderDetailHtml(list));
                 return;
             }
 
@@ -168,7 +168,7 @@ public class ReturnToVendorLookupController extends HttpServlet {
         return sb.toString();
     }
 
-    private String renderDetailHtml(List<StockInDetail> list, StockInDAO dao) {
+    private String renderDetailHtml(List<StockInDetail> list) {
         StringBuilder sb = new StringBuilder();
 
         if (list == null || list.isEmpty()) {
@@ -177,7 +177,7 @@ public class ReturnToVendorLookupController extends HttpServlet {
         }
 
         for (StockInDetail d : list) {
-            int remainingQty = dao.getRemainingReturnableQuantity(d.getDetailId());
+            int remainingQty = d.getRemainingReturnableQuantity();
             if (remainingQty <= 0) {
                 continue;
             }
@@ -199,13 +199,9 @@ public class ReturnToVendorLookupController extends HttpServlet {
                     .append(d.getDetailId())
                     .append(" | StockIn ")
                     .append(d.getStockInId())
-                    .append(" | Received ")
-                    .append(d.getReceivedQuantity())
-                    .append("/")
-                    .append(d.getQuantity())
-                    .append(" | Returnable ")
+                    .append(" | Remaining: ")
                     .append(remainingQty)
-                    .append(" | UnitCost ")
+                    .append(" | UnitCost: ")
                     .append(d.getUnitCost())
                     .append("</div>");
         }
@@ -213,6 +209,7 @@ public class ReturnToVendorLookupController extends HttpServlet {
         if (sb.length() == 0) {
             sb.append("<div class='lookup-item'>No stock-in detail found.</div>");
         }
+
         return sb.toString();
     }
 

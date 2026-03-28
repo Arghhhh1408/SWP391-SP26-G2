@@ -21,6 +21,7 @@ public class StockInDetail {
     private String productName;
     private String sku;
     private String unit;
+    private int remainingReturnableQuantity;
 
     public StockInDetail() {
     }
@@ -103,5 +104,13 @@ public class StockInDetail {
 
     public void setUnit(String unit) {
         this.unit = unit;
+    }
+
+    public int getRemainingReturnableQuantity() {
+        return remainingReturnableQuantity;
+    }
+
+    public void setRemainingReturnableQuantity(int remainingReturnableQuantity) {
+        this.remainingReturnableQuantity = remainingReturnableQuantity;
     }
 }

@@ -11,7 +11,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import model.StockIn;
 import model.StockInDetail;
 import utils.DBContext;
@@ -456,21 +458,22 @@ public class StockInDAO extends DBContext {
         List<StockInDetail> list = new ArrayList<>();
 
         String sql = "SELECT d.DetailID, d.StockInID, d.ProductID, d.Quantity, d.ReceivedQuantity, "
-                + "d.UnitCost, d.SubTotal, p.Name AS ProductName, p.SKU, p.Unit "
+                + "d.UnitCost, d.SubTotal, p.Name AS ProductName, p.SKU, p.Unit, "
+                + "CASE WHEN calc.RemainingQty < 0 THEN 0 ELSE calc.RemainingQty END AS RemainingQty "
                 + "FROM StockInDetails d "
                 + "INNER JOIN StockIn s ON d.StockInID = s.StockInID "
                 + "INNER JOIN Products p ON d.ProductID = p.ProductID "
-                + "WHERE s.SupplierID = ? "
-                + "AND d.ProductID = ? "
-                + "AND ISNULL(d.ReceivedQuantity, 0) > 0 "
-                + "AND (CAST(d.DetailID AS NVARCHAR) LIKE ? OR CAST(d.StockInID AS NVARCHAR) LIKE ?) "
-                + "AND (ISNULL(d.ReceivedQuantity, 0) - ISNULL(( "
-                + "    SELECT SUM(rtd.Quantity) "
+                + "OUTER APPLY ( "
+                + "    SELECT ISNULL(d.ReceivedQuantity, 0) - ISNULL(SUM(CASE WHEN rtv.Status IN ('Pending', 'Approved', 'Completed') THEN rtd.Quantity ELSE 0 END), 0) AS RemainingQty "
                 + "    FROM ReturnToVendorDetails rtd "
                 + "    INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
                 + "    WHERE rtd.StockInDetailID = d.DetailID "
-                + "      AND rtv.Status IN ('Pending', 'Approved', 'Completed') "
-                + "), 0)) > 0 "
+                + ") calc "
+                + "WHERE s.SupplierID = ? "
+                + "AND d.ProductID = ? "
+                + "AND ISNULL(d.ReceivedQuantity, 0) > 0 "
+                + "AND (CAST(d.DetailID AS NVARCHAR(50)) LIKE ? OR CAST(d.StockInID AS NVARCHAR(50)) LIKE ?) "
+                + "AND calc.RemainingQty > 0 "
                 + "ORDER BY d.DetailID DESC "
                 + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
@@ -496,6 +499,7 @@ public class StockInDAO extends DBContext {
                     d.setProductName(rs.getString("ProductName"));
                     d.setSku(rs.getString("SKU"));
                     d.setUnit(rs.getString("Unit"));
+                    d.setRemainingReturnableQuantity(rs.getInt("RemainingQty"));
                     list.add(d);
                 }
             }
@@ -529,23 +533,14 @@ public class StockInDAO extends DBContext {
     }
 
     public int getRemainingReturnableQuantity(int detailId) {
-        String sql = "SELECT CASE "
-                + "    WHEN (ISNULL(d.ReceivedQuantity, 0) - ISNULL(("
-                + "        SELECT SUM(rtd.Quantity) "
-                + "        FROM ReturnToVendorDetails rtd "
-                + "        INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
-                + "        WHERE rtd.StockInDetailID = d.DetailID "
-                + "          AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
-                + "    ), 0)) < 0 THEN 0 "
-                + "    ELSE (ISNULL(d.ReceivedQuantity, 0) - ISNULL(("
-                + "        SELECT SUM(rtd.Quantity) "
-                + "        FROM ReturnToVendorDetails rtd "
-                + "        INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
-                + "        WHERE rtd.StockInDetailID = d.DetailID "
-                + "          AND rtv.Status IN ('Pending', 'Approved', 'Completed')"
-                + "    ), 0)) "
-                + "END AS RemainingQty "
+        String sql = "SELECT CASE WHEN calc.RemainingQty < 0 THEN 0 ELSE calc.RemainingQty END AS RemainingQty "
                 + "FROM StockInDetails d "
+                + "OUTER APPLY ( "
+                + "    SELECT ISNULL(d.ReceivedQuantity, 0) - ISNULL(SUM(CASE WHEN rtv.Status IN ('Pending', 'Approved', 'Completed') THEN rtd.Quantity ELSE 0 END), 0) AS RemainingQty "
+                + "    FROM ReturnToVendorDetails rtd "
+                + "    INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID "
+                + "    WHERE rtd.StockInDetailID = d.DetailID "
+                + ") calc "
                 + "WHERE d.DetailID = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -559,6 +554,91 @@ public class StockInDAO extends DBContext {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    public Map<Integer, StockInDetail> getStockInDetailsByIds(List<Integer> detailIds) {
+        Map<Integer, StockInDetail> map = new HashMap<>();
+        if (detailIds == null || detailIds.isEmpty()) {
+            return map;
+        }
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT d.DetailID, d.StockInID, d.ProductID, d.Quantity, d.ReceivedQuantity, ")
+                .append("d.UnitCost, d.SubTotal, p.Name AS ProductName, p.SKU, p.Unit ")
+                .append("FROM StockInDetails d ")
+                .append("INNER JOIN Products p ON d.ProductID = p.ProductID ")
+                .append("WHERE d.DetailID IN (");
+        for (int i = 0; i < detailIds.size(); i++) {
+            if (i > 0) {
+                sql.append(",");
+            }
+            sql.append("?");
+        }
+        sql.append(")");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < detailIds.size(); i++) {
+                ps.setInt(i + 1, detailIds.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    StockInDetail d = new StockInDetail();
+                    d.setDetailId(rs.getInt("DetailID"));
+                    d.setStockInId(rs.getInt("StockInID"));
+                    d.setProductId(rs.getInt("ProductID"));
+                    d.setQuantity(rs.getInt("Quantity"));
+                    d.setReceivedQuantity(rs.getInt("ReceivedQuantity"));
+                    d.setUnitCost(rs.getDouble("UnitCost"));
+                    d.setSubTotal(rs.getDouble("SubTotal"));
+                    d.setProductName(rs.getString("ProductName"));
+                    d.setSku(rs.getString("SKU"));
+                    d.setUnit(rs.getString("Unit"));
+                    map.put(d.getDetailId(), d);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return map;
+    }
+
+    public Map<Integer, Integer> getRemainingReturnableQuantityMap(List<Integer> detailIds) {
+        Map<Integer, Integer> map = new HashMap<>();
+        if (detailIds == null || detailIds.isEmpty()) {
+            return map;
+        }
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT d.DetailID, CASE WHEN calc.RemainingQty < 0 THEN 0 ELSE calc.RemainingQty END AS RemainingQty ")
+                .append("FROM StockInDetails d ")
+                .append("OUTER APPLY ( ")
+                .append("    SELECT ISNULL(d.ReceivedQuantity, 0) - ISNULL(SUM(CASE WHEN rtv.Status IN ('Pending', 'Approved', 'Completed') THEN rtd.Quantity ELSE 0 END), 0) AS RemainingQty ")
+                .append("    FROM ReturnToVendorDetails rtd ")
+                .append("    INNER JOIN ReturnToVendors rtv ON rtd.RTVID = rtv.RTVID ")
+                .append("    WHERE rtd.StockInDetailID = d.DetailID ")
+                .append(") calc ")
+                .append("WHERE d.DetailID IN (");
+        for (int i = 0; i < detailIds.size(); i++) {
+            if (i > 0) {
+                sql.append(",");
+            }
+            sql.append("?");
+        }
+        sql.append(")");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < detailIds.size(); i++) {
+                ps.setInt(i + 1, detailIds.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    map.put(rs.getInt("DetailID"), rs.getInt("RemainingQty"));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return map;
     }
 
     public List<StockInDetailReport> getStockInDetailsReport(String fromDate, String toDate) {
