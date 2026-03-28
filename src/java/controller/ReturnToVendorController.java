@@ -25,21 +25,40 @@ import model.Supplier;
 import model.User;
 import utils.SupplierEmailService;
 
-@WebServlet(name = "ReturnToVendorController", urlPatterns = {"/return-to-vendor"})
+@WebServlet(name = "ReturnToVendorController", urlPatterns = { "/return-to-vendor" })
 public class ReturnToVendorController extends HttpServlet {
 
-    private String generateReturnCode() { return "RTV-" + System.currentTimeMillis(); }
-    private boolean isWarehouseOrAdmin(User acc) { return acc != null && (acc.getRoleID() == 0 || acc.getRoleID() == 1); }
-    private boolean isManagerOrAdmin(User acc) { return acc != null && (acc.getRoleID() == 0 || acc.getRoleID() == 2); }
-    private String trimToNull(String value) { if (value == null) return null; String t = value.trim(); return t.isEmpty() ? null : t; }
-    private String valueAt(String[] values, int index) { return (values == null || index < 0 || index >= values.length) ? null : values[index]; }
+    private String generateReturnCode() {
+        return "RTV-" + System.currentTimeMillis();
+    }
+
+    private boolean isWarehouseOrAdmin(User acc) {
+        return acc != null && (acc.getRoleID() == 0 || acc.getRoleID() == 1);
+    }
+
+    private boolean isManagerOrAdmin(User acc) {
+        return acc != null && (acc.getRoleID() == 0 || acc.getRoleID() == 2);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null)
+            return null;
+        String t = value.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private String valueAt(String[] values, int index) {
+        return (values == null || index < 0 || index >= values.length) ? null : values[index];
+    }
 
     private String buildDetailRedirect(HttpServletRequest request, int rtvID, String extraQuery) {
         StringBuilder url = new StringBuilder("return-to-vendor?action=detail&id=").append(rtvID);
         String from = trimToNull(request.getParameter("from"));
-        if (from != null) url.append("&from=").append(URLEncoder.encode(from, StandardCharsets.UTF_8));
+        if (from != null)
+            url.append("&from=").append(URLEncoder.encode(from, StandardCharsets.UTF_8));
         if (extraQuery != null && !extraQuery.trim().isEmpty()) {
-            if (extraQuery.charAt(0) != '&') url.append('&');
+            if (extraQuery.charAt(0) != '&')
+                url.append('&');
             url.append(extraQuery);
         }
         return url.toString();
@@ -58,7 +77,10 @@ public class ReturnToVendorController extends HttpServlet {
         String action = request.getParameter("action");
         try {
             if ("create".equals(action)) {
-                if (!isWarehouseOrAdmin(acc)) { response.sendRedirect("return-to-vendor?error=forbidden_create"); return; }
+                if (!isWarehouseOrAdmin(acc)) {
+                    response.sendRedirect("return-to-vendor?error=forbidden_create");
+                    return;
+                }
                 request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                 return;
             }
@@ -85,7 +107,10 @@ public class ReturnToVendorController extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
         User acc = (User) session.getAttribute("acc");
-        if (acc == null) { response.sendRedirect("login"); return; }
+        if (acc == null) {
+            response.sendRedirect("login");
+            return;
+        }
 
         String action = trimToNull(request.getParameter("action"));
         String ipAddress = request.getRemoteAddr();
@@ -93,31 +118,74 @@ public class ReturnToVendorController extends HttpServlet {
 
         try {
             if ("create".equals(action)) {
-                if (!isWarehouseOrAdmin(acc)) { response.sendRedirect("return-to-vendor?error=forbidden_create"); return; }
+                if (!isWarehouseOrAdmin(acc)) {
+                    response.sendRedirect("return-to-vendor?error=forbidden_create");
+                    return;
+                }
                 handleCreate(request, response, dao, acc, ipAddress);
                 return;
             }
             if ("approve".equals(action)) {
                 int rtvID = Integer.parseInt(request.getParameter("rtvID"));
-                if (!isManagerOrAdmin(acc)) { response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_approve")); return; }
+                if (!isManagerOrAdmin(acc)) {
+                    response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_approve"));
+                    return;
+                }
                 boolean ok = dao.approveReturn(rtvID, acc.getUserID(), ipAddress);
-                if (ok) sendSupplierRtvApprovedEmail(rtvID);
+                if (ok) {
+                    sendSupplierRtvApprovedEmail(rtvID);
+                    // Notify Staff
+                    ReturnToVendor rtv = dao.getById(rtvID);
+                    if (rtv != null) {
+                        dao.NotificationDAO nDAO = new dao.NotificationDAO();
+                        model.Notification n = new model.Notification();
+                        n.setUserId(rtv.getCreatedBy());
+                        n.setTitle("✅ Trả hàng #" + rtvID + " được duyệt (Phiếu nhập #" + rtv.getStockInID() + ")");
+                        String managerName = acc.getFullName() != null && !acc.getFullName().trim().isEmpty() ? acc.getFullName() : acc.getUsername();
+                        n.setMessage("Quản lý \"" + managerName + "\" đã duyệt phiếu trả hàng của bạn.");
+                        n.setType("RETURN_TO_VENDOR_APPROVED");
+                        nDAO.insert(n);
+                        websocket.NotificationEndpoint.sendToUser(rtv.getCreatedBy(), "{\"unreadCount\":" + nDAO.countUnread(rtv.getCreatedBy()) + "}");
+                    }
+                }
                 response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=approved" : "error=approve_failed_or_debt_not_enough"));
                 return;
             }
             if ("reject".equals(action)) {
                 int rtvID = Integer.parseInt(request.getParameter("rtvID"));
-                if (!isManagerOrAdmin(acc)) { response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_reject")); return; }
+                if (!isManagerOrAdmin(acc)) {
+                    response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_reject"));
+                    return;
+                }
                 String rejectNote = trimToNull(request.getParameter("rejectNote"));
                 boolean ok = dao.rejectReturn(rtvID, acc.getUserID(), rejectNote, ipAddress);
+                if (ok) {
+                    // Notify Staff
+                    ReturnToVendor rtv = dao.getById(rtvID);
+                    if (rtv != null) {
+                        dao.NotificationDAO nDAO = new dao.NotificationDAO();
+                        model.Notification n = new model.Notification();
+                        n.setUserId(rtv.getCreatedBy());
+                        n.setTitle("❌ Trả hàng #" + rtvID + " bị từ chối (Phiếu nhập #" + rtv.getStockInID() + ")");
+                        String managerName = acc.getFullName() != null && !acc.getFullName().trim().isEmpty() ? acc.getFullName() : acc.getUsername();
+                        n.setMessage("Quản lý \"" + managerName + "\" đã từ chối phiếu trả hàng của bạn." + (rejectNote != null ? "\nLý do: " + rejectNote : ""));
+                        n.setType("RETURN_TO_VENDOR_REJECTED");
+                        nDAO.insert(n);
+                        websocket.NotificationEndpoint.sendToUser(rtv.getCreatedBy(), "{\"unreadCount\":" + nDAO.countUnread(rtv.getCreatedBy()) + "}");
+                    }
+                }
                 response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=rejected" : "error=reject_failed"));
                 return;
             }
             if ("complete".equals(action)) {
                 int rtvID = Integer.parseInt(request.getParameter("rtvID"));
-                if (!isWarehouseOrAdmin(acc)) { response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_complete")); return; }
+                if (!isWarehouseOrAdmin(acc)) {
+                    response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_complete"));
+                    return;
+                }
                 boolean ok = dao.completeReturnToVendor(rtvID, acc.getUserID(), ipAddress);
-                response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=completed" : "error=complete_failed"));
+                response.sendRedirect(
+                        buildDetailRedirect(request, rtvID, ok ? "msg=completed" : "error=complete_failed"));
                 return;
             }
             if ("addReplacementReceipt".equals(action)) {
@@ -125,9 +193,13 @@ public class ReturnToVendorController extends HttpServlet {
                 int rtvDetailID = Integer.parseInt(request.getParameter("rtvDetailID"));
                 int qty = Integer.parseInt(request.getParameter("replacementQty"));
                 String note = trimToNull(request.getParameter("replacementNote"));
-                if (!isWarehouseOrAdmin(acc)) { response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_replacement_receipt")); return; }
+                if (!isWarehouseOrAdmin(acc)) {
+                    response.sendRedirect(buildDetailRedirect(request, rtvID, "error=forbidden_replacement_receipt"));
+                    return;
+                }
                 boolean ok = dao.addReplacementReceipt(rtvID, rtvDetailID, qty, note, acc.getUserID(), ipAddress);
-                response.sendRedirect(buildDetailRedirect(request, rtvID, ok ? "msg=replacement_received" : "error=replacement_receipt_failed"));
+                response.sendRedirect(buildDetailRedirect(request, rtvID,
+                        ok ? "msg=replacement_received" : "error=replacement_receipt_failed"));
                 return;
             }
             response.sendRedirect("return-to-vendor");
@@ -145,10 +217,19 @@ public class ReturnToVendorController extends HttpServlet {
             String reason = trimToNull(request.getParameter("reason"));
             String note = trimToNull(request.getParameter("note"));
             String settlementType = trimToNull(request.getParameter("settlementType"));
-            if (supplierRaw == null) { request.setAttribute("error", "Please select a supplier."); request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response); return; }
-            if (reason == null) { request.setAttribute("error", "Please enter a return reason."); request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response); return; }
+            if (supplierRaw == null) {
+                request.setAttribute("error", "Please select a supplier.");
+                request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                return;
+            }
+            if (reason == null) {
+                request.setAttribute("error", "Please enter a return reason.");
+                request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
+                return;
+            }
             int supplierID = Integer.parseInt(supplierRaw);
-            if (settlementType == null) settlementType = "OFFSET_DEBT";
+            if (settlementType == null)
+                settlementType = "OFFSET_DEBT";
 
             String[] stockInDetailIDs = request.getParameterValues("stockInDetailID");
             String[] productIDs = request.getParameterValues("productID");
@@ -181,10 +262,13 @@ public class ReturnToVendorController extends HttpServlet {
                 String quantityRaw = trimToNull(valueAt(quantities, i));
                 String reasonDetail = trimToNull(valueAt(reasonDetails, i));
                 String itemCondition = trimToNull(valueAt(itemConditions, i));
-                boolean rowCompletelyEmpty = stockInDetailRaw == null && productRaw == null && quantityRaw == null && reasonDetail == null;
-                if (rowCompletelyEmpty) continue;
+                boolean rowCompletelyEmpty = stockInDetailRaw == null && productRaw == null && quantityRaw == null
+                        && reasonDetail == null;
+                if (rowCompletelyEmpty)
+                    continue;
                 if (stockInDetailRaw == null || productRaw == null || quantityRaw == null) {
-                    request.setAttribute("error", "Please complete product, stock-in detail and quantity for every used row.");
+                    request.setAttribute("error",
+                            "Please complete product, stock-in detail and quantity for every used row.");
                     request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                     return;
                 }
@@ -212,9 +296,11 @@ public class ReturnToVendorController extends HttpServlet {
                     request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                     return;
                 }
-                if (headerStockInID == null) headerStockInID = sid.getStockInId();
+                if (headerStockInID == null)
+                    headerStockInID = sid.getStockInId();
                 else if (headerStockInID != sid.getStockInId()) {
-                    request.setAttribute("error", "Một phiếu trả NCC chỉ được chứa chi tiết thuộc cùng một phiếu nhập hàng.");
+                    request.setAttribute("error",
+                            "Một phiếu trả NCC chỉ được chứa chi tiết thuộc cùng một phiếu nhập hàng.");
                     request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                     return;
                 }
@@ -236,11 +322,13 @@ public class ReturnToVendorController extends HttpServlet {
                 request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                 return;
             }
-            if (headerStockInID != null) rtv.setStockInID(headerStockInID);
+            if (headerStockInID != null)
+                rtv.setStockInID(headerStockInID);
             if (dao.isOffsetDebtSettlement(settlementType)) {
                 SupplierDebtDAO debtDAO = new SupplierDebtDAO();
                 if (!debtDAO.hasEnoughDebtForOffset(supplierID, projectedTotal)) {
-                    request.setAttribute("error", "Công nợ hiện tại của nhà cung cấp nhỏ hơn tổng giá trị phiếu, không thể chọn phương thức OFFSET_DEBT.");
+                    request.setAttribute("error",
+                            "Công nợ hiện tại của nhà cung cấp nhỏ hơn tổng giá trị phiếu, không thể chọn phương thức OFFSET_DEBT.");
                     request.getRequestDispatcher("returnToVendorCreate.jsp").forward(request, response);
                     return;
                 }
@@ -249,7 +337,8 @@ public class ReturnToVendorController extends HttpServlet {
             if (rtvID > 0) {
                 dao.NotificationDAO nDAO = new dao.NotificationDAO();
                 List<Integer> managerIds = nDAO.getManagerIds();
-                String staffName = acc.getFullName() != null && !acc.getFullName().trim().isEmpty() ? acc.getFullName() : acc.getUsername();
+                String staffName = acc.getFullName() != null && !acc.getFullName().trim().isEmpty() ? acc.getFullName()
+                        : acc.getUsername();
                 for (Integer mId : managerIds) {
                     model.Notification n = new model.Notification();
                     n.setUserId(mId);
@@ -257,7 +346,7 @@ public class ReturnToVendorController extends HttpServlet {
                     n.setMessage("Nhân viên \"" + staffName + "\" đã tạo phiếu trả hàng cho nhà cung cấp");
                     n.setType("RETURN_TO_VENDOR_CREATED");
                     nDAO.insert(n);
-                    
+
                     int unread = nDAO.countUnread(mId);
                     websocket.NotificationEndpoint.sendToUser(mId, "{\"unreadCount\":" + unread + "}");
                 }
@@ -281,9 +370,11 @@ public class ReturnToVendorController extends HttpServlet {
         try {
             ReturnToVendorDAO dao = new ReturnToVendorDAO();
             ReturnToVendor rtv = dao.getById(rtvId);
-            if (rtv == null) return;
+            if (rtv == null)
+                return;
             Supplier supplier = new SupplierDAO().getSupplierById(rtv.getSupplierID());
-            if (supplier == null) return;
+            if (supplier == null)
+                return;
             new SupplierEmailService().sendReturnApprovedEmail(supplier, rtv, rtv.getDetails());
         } catch (Exception e) {
             e.printStackTrace();
@@ -291,5 +382,7 @@ public class ReturnToVendorController extends HttpServlet {
     }
 
     @Override
-    public String getServletInfo() { return "Return To Vendor Controller"; }
+    public String getServletInfo() {
+        return "Return To Vendor Controller";
+    }
 }
